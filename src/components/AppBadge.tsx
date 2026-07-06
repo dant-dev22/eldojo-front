@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 
 interface AppBadgeProps {
   label: string;
@@ -21,45 +21,51 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.pill,
     borderWidth: 1,
+    minHeight: 28,
+    justifyContent: "center",
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
   },
   label: {
+    fontFamily: typography.headingFamily,
     fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
   neutralContainer: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
   },
   neutralLabel: {
-    color: colors.primary,
+    color: colors.accent,
   },
   successContainer: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#BBF7D0",
+    backgroundColor: colors.successSoft,
+    borderColor: "#B7E4C7",
   },
   successLabel: {
     color: colors.success,
   },
   warningContainer: {
-    backgroundColor: "#FFFBEB",
-    borderColor: "#FDE68A",
+    backgroundColor: colors.warningSoft,
+    borderColor: "#F3C58C",
   },
   warningLabel: {
     color: colors.warning,
   },
   dangerContainer: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: colors.dangerSoft,
+    borderColor: "#F0B6B6",
   },
   dangerLabel: {
     color: colors.danger,
   },
   infoContainer: {
-    backgroundColor: "#F8FAFC",
-    borderColor: colors.border,
+    backgroundColor: colors.primarySoft,
+    borderColor: "#F7B37D",
   },
   infoLabel: {
-    color: colors.accent,
+    color: colors.primary,
   },
 });

@@ -1,7 +1,7 @@
 import { PropsWithChildren } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, shadows, spacing } from "@/constants/theme";
 
 interface AppCardProps extends PropsWithChildren {
   style?: StyleProp<ViewStyle>;
@@ -19,5 +19,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
+    ...shadows.card,
   },
 });

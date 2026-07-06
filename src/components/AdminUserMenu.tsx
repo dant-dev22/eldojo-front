@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMemo, useState } from "react";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 import type { User } from "@/types/api";
 
@@ -138,27 +138,28 @@ const styles = StyleSheet.create({
   trigger: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
   },
   triggerPressed: {
     opacity: 0.82,
   },
   avatar: {
     alignItems: "center",
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     borderRadius: radius.pill,
-    height: 30,
+    height: 34,
     justifyContent: "center",
-    width: 30,
+    width: 34,
   },
   avatarLabel: {
     color: colors.surface,
+    fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -168,13 +169,13 @@ const styles = StyleSheet.create({
     paddingRight: 2,
   },
   triggerLine: {
-    backgroundColor: colors.textMuted,
+    backgroundColor: colors.primary,
     borderRadius: radius.pill,
     height: 2,
     width: 12,
   },
   overlay: {
-    backgroundColor: "rgba(17, 24, 39, 0.24)",
+    backgroundColor: colors.overlay,
     flex: 1,
     padding: spacing.md,
   },
@@ -194,6 +195,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     padding: spacing.md,
     width: "100%",
+    ...shadows.card,
   },
   profileBlock: {
     gap: spacing.xs,
@@ -213,6 +215,7 @@ const styles = StyleSheet.create({
   },
   profileAvatarLabel: {
     color: colors.primary,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -222,19 +225,22 @@ const styles = StyleSheet.create({
   },
   profileName: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
   },
   profileRole: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
   },
   profileEmail: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
   },
   metaBlock: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
     gap: spacing.sm,
     padding: spacing.sm,
@@ -246,12 +252,14 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   metaValue: {
     color: colors.text,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
     fontWeight: "600",
     textAlign: "right",
@@ -263,6 +271,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -271,8 +280,10 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "600",
+    letterSpacing: 0.3,
   },
   actionLabelDanger: {
     color: colors.danger,

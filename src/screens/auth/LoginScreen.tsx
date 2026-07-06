@@ -9,7 +9,7 @@ import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
 import { Screen } from "@/components/Screen";
-import { colors, spacing } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -59,9 +59,15 @@ export function LoginScreen() {
             </Text>
           </View>
           <View style={styles.heroHighlights}>
-            <Text style={styles.highlight}>Acceso exclusivo para `org_admin` y `branch_admin`</Text>
-            <Text style={styles.highlight}>Experiencia optimizada para una unica interfaz responsive</Text>
-            <Text style={styles.highlight}>Base preparada para separar alumnos y super admins despues</Text>
+            <View style={styles.highlightPill}>
+              <Text style={styles.highlight}>Control diario de alumnos, pagos y clases</Text>
+            </View>
+            <View style={styles.highlightPill}>
+              <Text style={styles.highlight}>Experiencia clara para dueños y staff operativo</Text>
+            </View>
+            <View style={styles.highlightPill}>
+              <Text style={styles.highlight}>Lenguaje visual moderno para academias de combate</Text>
+            </View>
           </View>
         </AppCard>
 
@@ -126,6 +132,8 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     gap: spacing.md,
+    backgroundColor: colors.surfaceStrong,
+    borderColor: "#2E241D",
   },
   hero: {
     gap: spacing.xs,
@@ -133,38 +141,57 @@ const styles = StyleSheet.create({
   heroHighlights: {
     gap: spacing.xs,
   },
+  highlightPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#241A13",
+    borderColor: "#413127",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
   title: {
-    color: colors.text,
+    color: colors.surface,
+    fontFamily: typography.displayFamily,
     fontWeight: "800",
+    letterSpacing: 0.4,
   },
   subtitle: {
-    color: colors.textMuted,
+    color: "#D1C2B5",
+    fontFamily: typography.bodyFamily,
     lineHeight: 22,
   },
   highlight: {
-    color: colors.textMuted,
+    color: "#F7D2B4",
+    fontFamily: typography.headingFamily,
     fontSize: 13,
-    lineHeight: 20,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
   formCard: {
     gap: spacing.md,
   },
   formTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 20,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
   formSubtitle: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
   error: {
     color: colors.danger,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
   },
   helper: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -190,7 +217,7 @@ const mobileStyles = StyleSheet.create({
     minHeight: 0,
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
   },
   subtitle: {
     fontSize: 15,
@@ -215,7 +242,7 @@ const desktopStyles = StyleSheet.create({
     padding: 32,
   },
   title: {
-    fontSize: 42,
+    fontSize: 52,
   },
   subtitle: {
     fontSize: 16,

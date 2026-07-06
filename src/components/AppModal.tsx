@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 interface AppModalProps extends PropsWithChildren {
   visible: boolean;
@@ -61,7 +61,7 @@ export function AppModal({ visible, title, description, onClose, children }: App
 
 const styles = StyleSheet.create({
   overlay: {
-    backgroundColor: "rgba(17, 24, 39, 0.32)",
+    backgroundColor: colors.overlay,
     flex: 1,
     justifyContent: "center",
     padding: spacing.md,
@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.lg,
     width: "100%",
+    ...shadows.card,
   },
   header: {
     alignItems: "flex-start",
@@ -93,23 +94,31 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 20,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
   description: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
   closeButton: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
+    borderWidth: 1,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   closeLabel: {
-    color: colors.textMuted,
+    color: colors.primary,
+    fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",
+    letterSpacing: 0.5,
   },
   content: {
     gap: spacing.md,

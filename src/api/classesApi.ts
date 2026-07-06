@@ -1,5 +1,10 @@
 import { http } from "@/api/http";
-import type { MartialClass } from "@/types/api";
+import type {
+  MartialClass,
+  MartialClassCreatePayload,
+  MartialClassUpdatePayload,
+  MessageResponse,
+} from "@/types/api";
 
 export const classesApi = {
   async list(params?: {
@@ -25,6 +30,18 @@ export const classesApi = {
       params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
     });
 
+    return data;
+  },
+  async create(payload: MartialClassCreatePayload): Promise<MartialClass> {
+    const { data } = await http.post<MartialClass>("/classes", payload);
+    return data;
+  },
+  async update(classId: number, payload: MartialClassUpdatePayload): Promise<MartialClass> {
+    const { data } = await http.patch<MartialClass>(`/classes/${classId}`, payload);
+    return data;
+  },
+  async remove(classId: number): Promise<MessageResponse> {
+    const { data } = await http.delete<MessageResponse>(`/classes/${classId}`);
     return data;
   },
 };

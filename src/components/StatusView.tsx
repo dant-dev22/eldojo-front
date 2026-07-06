@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 
 interface StatusViewProps {
   title: string;
@@ -28,13 +28,17 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
+    letterSpacing: 0.2,
     textAlign: "center",
   },
   description: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
+    lineHeight: 20,
     textAlign: "center",
   },
 });

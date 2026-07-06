@@ -17,7 +17,7 @@ import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
@@ -985,12 +985,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   feedbackSuccess: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#BBF7D0",
+    backgroundColor: colors.successSoft,
+    borderColor: "#B7E4C7",
   },
   feedbackDanger: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: colors.dangerSoft,
+    borderColor: "#F0B6B6",
   },
   feedbackCopy: {
     flex: 1,
@@ -998,21 +998,26 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
   },
   feedbackDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1021,14 +1026,19 @@ const styles = StyleSheet.create({
   },
   searchCard: {
     gap: spacing.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
   },
   sectionTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 17,
     fontWeight: "700",
+    letterSpacing: 0.2,
   },
   sectionDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1041,12 +1051,14 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   summaryValue: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1060,6 +1072,7 @@ const styles = StyleSheet.create({
   studentCard: {
     borderRadius: radius.lg,
     gap: spacing.md,
+    backgroundColor: colors.surface,
   },
   cardActions: {
     gap: spacing.sm,
@@ -1076,6 +1089,7 @@ const styles = StyleSheet.create({
   },
   studentName: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 17,
     fontWeight: "700",
   },
@@ -1088,16 +1102,19 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   studentMeta: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
   },
   studentMetaStrong: {
     color: colors.text,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1108,16 +1125,20 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
   },
   emptyDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
+    lineHeight: 20,
     textAlign: "center",
   },
   modalError: {
     color: colors.danger,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
   },
   formStepper: {
@@ -1128,12 +1149,14 @@ const styles = StyleSheet.create({
   },
   formStepLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   formStepTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -1154,8 +1177,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   formStepDotCompleted: {
-    backgroundColor: "#D1D5DB",
-    borderColor: "#D1D5DB",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
   },
   formGrid: {
     gap: spacing.md,
@@ -1177,6 +1200,7 @@ const styles = StyleSheet.create({
   },
   confirmTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 17,
     fontWeight: "800",
   },

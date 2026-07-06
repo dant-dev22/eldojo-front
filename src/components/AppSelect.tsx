@@ -1,7 +1,7 @@
 import { Picker } from "@react-native-picker/picker";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 
 interface SelectItem {
   label: string;
@@ -50,15 +50,18 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    minHeight: 48,
+    minHeight: 54,
     overflow: "hidden",
   },
   containerError: {
@@ -69,6 +72,7 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
+    fontFamily: typography.bodyFamily,
     fontSize: 12,
   },
 });

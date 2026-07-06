@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 interface AppButtonProps {
   label: string;
@@ -59,33 +59,37 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    ...shadows.focus,
   },
   primary: {
     backgroundColor: colors.primary,
   },
   secondary: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
   },
   danger: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: colors.dangerSoft,
+    borderColor: "#F0B6B6",
   },
   disabled: {
-    opacity: 0.65,
+    opacity: 0.55,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.9,
+    transform: [{ translateY: 1 }],
   },
   label: {
     color: colors.surface,
-    fontSize: 15,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   secondaryLabel: {
-    color: colors.primary,
+    color: colors.accent,
   },
   dangerLabel: {
     color: colors.danger,

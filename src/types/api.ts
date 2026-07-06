@@ -8,6 +8,7 @@ export type PaymentStatus =
   | "due_soon"
   | "overdue";
 export type StudentStatus = "active" | "frozen" | "inactive";
+export type AttendanceMethod = "qr" | "manual";
 export type PaymentMethod = "cash" | "transfer" | "card" | "other";
 export type PaymentRecordStatus = "paid" | "pending" | "void";
 
@@ -153,6 +154,21 @@ export interface StudentUpdatePayload {
   notes?: string | null;
 }
 
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationUpdatePayload {
+  name?: string;
+  slug?: string;
+  is_active?: boolean;
+}
+
 export interface Branch {
   id: number;
   organization_id: number;
@@ -168,11 +184,43 @@ export interface Branch {
   updated_at: string;
 }
 
+export interface BranchCreatePayload {
+  organization_id: number;
+  name: string;
+  country: string;
+  state: string;
+  city: string;
+  address: string;
+  timezone: string;
+  qr_secret: string;
+  is_active?: boolean;
+}
+
+export interface BranchUpdatePayload {
+  name?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  address?: string;
+  timezone?: string;
+  qr_secret?: string;
+  is_active?: boolean;
+}
+
+export interface Discipline {
+  id: number;
+  organization_id: number;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface MartialClass {
   id: number;
   organization_id: number;
   branch_id: number;
   discipline_id: number;
+  discipline_name: string | null;
   name: string;
   description: string | null;
   instructor_name: string | null;
@@ -180,6 +228,28 @@ export interface MartialClass {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface MartialClassCreatePayload {
+  organization_id: number;
+  branch_id: number;
+  discipline_id: number;
+  name: string;
+  description?: string | null;
+  instructor_name?: string | null;
+  capacity?: number | null;
+  is_active?: boolean;
+}
+
+export interface MartialClassUpdatePayload {
+  organization_id?: number;
+  branch_id?: number;
+  discipline_id?: number;
+  name?: string;
+  description?: string | null;
+  instructor_name?: string | null;
+  capacity?: number | null;
+  is_active?: boolean;
 }
 
 export interface Payment {
@@ -197,6 +267,65 @@ export interface Payment {
   recorded_by: number;
   notes: string | null;
   created_at: string;
+}
+
+export interface PaymentCreatePayload {
+  student_id: number;
+  organization_id: number;
+  branch_id: number;
+  amount: string;
+  currency: string;
+  period_start: string;
+  period_end: string;
+  paid_at: string;
+  method: PaymentMethod;
+  status: PaymentRecordStatus;
+  recorded_by: number;
+  notes?: string | null;
+}
+
+export interface PaymentUpdatePayload {
+  student_id?: number;
+  organization_id?: number;
+  branch_id?: number;
+  amount?: string;
+  currency?: string;
+  period_start?: string;
+  period_end?: string;
+  paid_at?: string;
+  method?: PaymentMethod;
+  status?: PaymentRecordStatus;
+  recorded_by?: number;
+  notes?: string | null;
+}
+
+export interface Attendance {
+  id: number;
+  student_id: number;
+  class_id: number | null;
+  branch_id: number;
+  check_in_at: string;
+  method: AttendanceMethod;
+  registered_by: number | null;
+  created_at: string;
+}
+
+export interface AttendanceCreatePayload {
+  student_id: number;
+  class_id?: number | null;
+  branch_id: number;
+  check_in_at: string;
+  method: AttendanceMethod;
+  registered_by?: number | null;
+}
+
+export interface AttendanceUpdatePayload {
+  student_id?: number;
+  class_id?: number | null;
+  branch_id?: number;
+  check_in_at?: string;
+  method?: AttendanceMethod;
+  registered_by?: number | null;
 }
 
 export interface ApiErrorResponse {

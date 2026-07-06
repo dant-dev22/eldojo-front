@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -170,24 +170,28 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sidebarCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceStrong,
+    borderColor: "#2E241D",
     borderRadius: radius.lg,
     borderWidth: 1,
     flex: 1,
     gap: spacing.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
+    ...shadows.card,
   },
   brandBlock: {
     gap: spacing.xs,
   },
   brandTitle: {
-    color: colors.text,
-    fontSize: 24,
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
     fontWeight: "800",
+    letterSpacing: 0.3,
   },
   brandDescription: {
-    color: colors.textMuted,
+    color: "#C8B8A9",
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -195,30 +199,33 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   navItem: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
+    backgroundColor: "#211812",
+    borderColor: "#30251D",
     borderRadius: radius.md,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
   },
   navItemPressed: {
     opacity: 0.85,
   },
   navItemLabel: {
-    color: colors.text,
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
+    letterSpacing: 0.4,
   },
   navItemLabelActive: {
     color: colors.primary,
   },
   navItemDescription: {
-    color: colors.textMuted,
+    color: "#BCAEA2",
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -227,18 +234,22 @@ const styles = StyleSheet.create({
     marginTop: "auto",
   },
   profileCard: {
-    backgroundColor: colors.background,
+    backgroundColor: "#211812",
     borderRadius: radius.md,
+    borderColor: "#30251D",
+    borderWidth: 1,
     gap: 4,
     padding: spacing.sm,
   },
   profileName: {
-    color: colors.text,
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
   },
   profileMeta: {
-    color: colors.textMuted,
+    color: "#BCAEA2",
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -251,11 +262,14 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     color: colors.text,
-    fontSize: 28,
+    fontFamily: typography.headingFamily,
+    fontSize: 34,
     fontWeight: "800",
+    letterSpacing: 0.3,
   },
   pageSubtitle: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -274,7 +288,12 @@ const mobileStyles = StyleSheet.create({
     flexDirection: "column",
   },
   header: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     flexDirection: "column",
+    padding: spacing.lg,
   },
   headerActions: {
     alignItems: "stretch",
@@ -295,8 +314,13 @@ const desktopStyles = StyleSheet.create({
   },
   header: {
     alignItems: "flex-start",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
+    padding: spacing.lg,
   },
   headerActions: {
     alignItems: "center",

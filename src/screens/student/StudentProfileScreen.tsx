@@ -18,7 +18,7 @@ import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate, formatPaymentStatus } from "@/utils/format";
 
@@ -214,6 +214,8 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: "#2E241D",
     gap: spacing.md,
   },
   avatar: {
@@ -233,17 +235,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   name: {
-    color: colors.text,
-    fontSize: 24,
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
     fontWeight: "800",
+    letterSpacing: 0.3,
     textAlign: "center",
   },
   meta: {
-    color: colors.textMuted,
+    color: "#D1C2B5",
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
   },
   sectionTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -252,17 +258,20 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   infoValue: {
     color: colors.text,
+    fontFamily: typography.bodyFamily,
     fontSize: 15,
     lineHeight: 22,
   },
   helperText: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -274,6 +283,7 @@ const styles = StyleSheet.create({
   },
   classDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -282,11 +292,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
   },
   emptyDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },

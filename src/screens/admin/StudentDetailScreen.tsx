@@ -13,7 +13,7 @@ import { AppCard } from "@/components/AppCard";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, spacing } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
 
@@ -385,11 +385,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontFamily: typography.headingFamily,
+    fontSize: 30,
     fontWeight: "800",
+    letterSpacing: 0.3,
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -410,6 +413,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -426,12 +430,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: colors.textMuted,
+    fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   detailValue: {
     color: colors.text,
+    fontFamily: typography.bodyFamily,
     fontSize: 15,
     fontWeight: "600",
     lineHeight: 21,
@@ -448,6 +454,7 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -458,8 +465,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   paymentRow: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
     borderRadius: 16,
     borderWidth: 1,
     gap: spacing.sm,
@@ -477,11 +484,13 @@ const styles = StyleSheet.create({
   },
   paymentAmount: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 20,
     fontWeight: "800",
   },
   paymentMeta: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 13,
   },
   paymentMetaGrid: {
@@ -489,6 +498,7 @@ const styles = StyleSheet.create({
   },
   paymentNotes: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -499,17 +509,20 @@ const styles = StyleSheet.create({
   },
   inlineStatusSpinner: {
     color: colors.accent,
+    fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",
   },
   inlineStatusTitle: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
     textAlign: "center",
   },
   inlineStatusDescription: {
     color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",

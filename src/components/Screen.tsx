@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flexGrow: 1,
     gap: spacing.md,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
 });

@@ -1,5 +1,5 @@
 import { http } from "@/api/http";
-import type { Branch } from "@/types/api";
+import type { Branch, BranchCreatePayload, BranchUpdatePayload, MessageResponse } from "@/types/api";
 
 export const branchesApi = {
   async list(params?: { organizationId?: number; isActive?: boolean }): Promise<Branch[]> {
@@ -17,6 +17,18 @@ export const branchesApi = {
       params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
     });
 
+    return data;
+  },
+  async create(payload: BranchCreatePayload): Promise<Branch> {
+    const { data } = await http.post<Branch>("/branches", payload);
+    return data;
+  },
+  async update(branchId: number, payload: BranchUpdatePayload): Promise<Branch> {
+    const { data } = await http.patch<Branch>(`/branches/${branchId}`, payload);
+    return data;
+  },
+  async remove(branchId: number): Promise<MessageResponse> {
+    const { data } = await http.delete<MessageResponse>(`/branches/${branchId}`);
     return data;
   },
 };
