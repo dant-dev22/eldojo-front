@@ -7,7 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { StudentDetailScreen } from "@/screens/admin/StudentDetailScreen";
 import { LoginScreen } from "@/screens/auth/LoginScreen";
+import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
 import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
+import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser } from "@/utils/roles";
 
 import type { AdminStackParamList, AuthStackParamList } from "./types";
@@ -59,10 +61,13 @@ function AdminFlow() {
 
 export function AppNavigator() {
   const { status, user } = useAuth();
+  const publicAttendanceRoute = getPublicAttendanceRoute();
 
   return (
     <NavigationContainer theme={navigationTheme}>
-      {status === "loading" ? (
+      {publicAttendanceRoute ? (
+        <PublicAttendanceScreen routeParams={publicAttendanceRoute} />
+      ) : status === "loading" ? (
         <StatusView
           title="Cargando sesión"
           description="Validando tu acceso y restaurando la información local."
