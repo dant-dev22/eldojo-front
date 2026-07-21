@@ -8,6 +8,9 @@ interface AppButtonProps {
   disabled?: boolean;
   loading?: boolean;
   variant?: "primary" | "secondary" | "danger";
+  nativeID?: string;
+  testID?: string;
+  accessibilityLabel?: string;
 }
 
 export function AppButton({
@@ -16,14 +19,20 @@ export function AppButton({
   disabled = false,
   loading = false,
   variant = "primary",
+  nativeID,
+  testID,
+  accessibilityLabel,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
       disabled={isDisabled}
+      nativeID={nativeID}
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.base,
         variant === "secondary" ? styles.secondary : variant === "danger" ? styles.danger : styles.primary,

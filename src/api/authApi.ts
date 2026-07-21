@@ -1,5 +1,11 @@
 import { http } from "@/api/http";
-import type { LoginPayload, LoginResponse, StudentRegisterPayload, User } from "@/types/api";
+import type {
+  AcademyRegisterPayload,
+  LoginPayload,
+  LoginResponse,
+  StudentRegisterPayload,
+  User,
+} from "@/types/api";
 import { getAccessToken } from "@/utils/storage";
 
 function resolveApiUrl(): string {
@@ -95,6 +101,21 @@ export const authApi = {
     }
 
     const { data } = await http.post<LoginResponse>("/auth/student/register", payload);
+    return data;
+  },
+
+  async registerAcademy(payload: AcademyRegisterPayload): Promise<LoginResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/academy/register", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/academy/register", payload);
     return data;
   },
 

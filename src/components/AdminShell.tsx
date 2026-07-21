@@ -1,9 +1,10 @@
-import { PropsWithChildren, ReactNode, useMemo } from "react";
+import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
+import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
@@ -41,6 +42,15 @@ function formatDisplayName(email: string | undefined): string {
   return normalized || "Administrador";
 }
 
+function formatAdminDisplayName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  email: string | undefined
+): string {
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return fullName || formatDisplayName(email);
+}
+
 export function AdminShell({
   title,
   subtitle,
@@ -52,6 +62,7 @@ export function AdminShell({
 }: AdminShellProps) {
   const { user, signOut } = useAuth();
   const { contentMaxWidth, isDesktop } = useResponsiveLayout();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const navItems = useMemo<NavItem[]>(
     () => [
@@ -71,15 +82,35 @@ export function AdminShell({
     [onGoDashboard, onGoStudents],
   );
 
-  const displayName = useMemo(() => formatDisplayName(user?.email), [user?.email]);
+  const displayName = useMemo(
+    () => formatAdminDisplayName(user?.first_name, user?.last_name, user?.email),
+    [user?.email, user?.first_name, user?.last_name]
+  );
   const assignmentCount = user?.admin_assignments.length ?? 0;
 
+  const requestSignOut = () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const cancelSignOut = () => {
+    setShowSignOutConfirm(false);
+  };
+
+  const confirmSignOut = () => {
+    setShowSignOutConfirm(false);
+    void signOut();
+  };
+
   return (
-    <View style={[styles.shell, isDesktop ? desktopStyles.shell : mobileStyles.shell]}>
+    <View
+      nativeID="components-admin-shell-shell"
+      style={[styles.shell, isDesktop ? desktopStyles.shell : mobileStyles.shell]}
+      testID="components-admin-shell-shell"
+    >
       {isDesktop ? (
-        <View style={desktopStyles.sidebar}>
-          <View style={styles.sidebarCard}>
-            <View style={styles.brandBlock}>
+        <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
+          <View nativeID="components-admin-shell-sidebar-card" style={styles.sidebarCard} testID="components-admin-shell-sidebar-card">
+            <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
               <AppBadge label="Portal web" tone="info" />
               <Text style={styles.brandTitle}>ElDojo Admin</Text>
               <Text style={styles.brandDescription}>
@@ -87,12 +118,14 @@ export function AdminShell({
               </Text>
             </View>
 
-            <View style={styles.navBlock}>
+            <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
               {navItems.map((item) => (
                 <Pressable
                   key={item.key}
                   accessibilityRole="button"
+                  nativeID={`components-admin-shell-nav-item-${item.key}`}
                   onPress={item.onPress}
+                  testID={`components-admin-shell-nav-item-${item.key}`}
                   style={({ pressed }) => [
                     styles.navItem,
                     item.key === activeSection ? styles.navItemActive : null,
@@ -112,33 +145,47 @@ export function AdminShell({
               ))}
             </View>
 
-            <View style={styles.sidebarFooter}>
-              <View style={styles.profileCard}>
+            <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
+              <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
                 <Text style={styles.profileName}>{displayName}</Text>
                 <Text style={styles.profileMeta}>{user?.email ?? "Sin correo disponible"}</Text>
                 <Text style={styles.profileMeta}>
                   {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
                 </Text>
               </View>
-              <AppButton label="Cerrar sesion" onPress={() => void signOut()} variant="secondary" />
+              <AppButton
+                label="Cerrar sesion"
+                nativeID="components-admin-shell-logout-button"
+                onPress={requestSignOut}
+                testID="components-admin-shell-logout-button"
+                variant="secondary"
+              />
             </View>
           </View>
         </View>
       ) : null}
 
-      <View style={styles.mainColumn}>
-        <View style={[styles.header, isDesktop ? desktopStyles.header : mobileStyles.header]}>
-          <View style={styles.headerCopy}>
+      <View nativeID="components-admin-shell-main-column" style={styles.mainColumn} testID="components-admin-shell-main-column">
+        <View
+          nativeID="components-admin-shell-header"
+          style={[styles.header, isDesktop ? desktopStyles.header : mobileStyles.header]}
+          testID="components-admin-shell-header"
+        >
+          <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
             <AppBadge label={isDesktop ? "Portal responsive" : "Vista compacta"} tone="info" />
             <Text style={styles.pageTitle}>{title}</Text>
             <Text style={styles.pageSubtitle}>{subtitle}</Text>
           </View>
 
-          <View style={[styles.headerActions, isDesktop ? desktopStyles.headerActions : mobileStyles.headerActions]}>
+          <View
+            nativeID="components-admin-shell-header-actions"
+            style={[styles.headerActions, isDesktop ? desktopStyles.headerActions : mobileStyles.headerActions]}
+            testID="components-admin-shell-header-actions"
+          >
             {headerActions}
             {!isDesktop ? (
               <AdminUserMenu
-                actions={[{ label: "Cerrar sesion", onPress: () => void signOut(), tone: "danger" }]}
+                actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
                 user={user}
               />
             ) : null}
@@ -146,14 +193,25 @@ export function AdminShell({
         </View>
 
         <View
+          nativeID="components-admin-shell-content-wrap"
           style={[
             styles.contentWrap,
             isDesktop ? { maxWidth: contentMaxWidth } : null,
           ]}
+          testID="components-admin-shell-content-wrap"
         >
           {children}
         </View>
       </View>
+      <ConfirmActionModal
+        confirmLabel="Si, cerrar sesion"
+        idPrefix="components-admin-shell-signout-confirm"
+        message="Se cerrará tu sesión actual y tendrás que volver a iniciar sesión para continuar."
+        onCancel={cancelSignOut}
+        onConfirm={confirmSignOut}
+        title="Confirmar cierre de sesión"
+        visible={showSignOutConfirm}
+      />
     </View>
   );
 }

@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/api/http";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
+import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
@@ -39,6 +40,7 @@ export function StudentProfileScreen() {
   const queryClient = useQueryClient();
   const { signOut } = useAuth();
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ["my-profile"],
@@ -90,6 +92,19 @@ export function StudentProfileScreen() {
     });
   };
 
+  const requestSignOut = () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const cancelSignOut = () => {
+    setShowSignOutConfirm(false);
+  };
+
+  const confirmSignOut = () => {
+    setShowSignOutConfirm(false);
+    void signOut();
+  };
+
   if (profileQuery.isLoading) {
     return (
       <StatusView
@@ -123,11 +138,18 @@ export function StudentProfileScreen() {
         <RefreshControl refreshing={profileQuery.isRefetching} onRefresh={profileQuery.refetch} />
       }
     >
-      <View style={styles.topActions}>
-        <AppButton label="Cerrar sesión" onPress={signOut} variant="secondary" />
+      <View nativeID="screens-student-profile-top-actions" style={styles.topActions} testID="screens-student-profile-top-actions">
+        <AppButton
+          label="Cerrar sesión"
+          nativeID="screens-student-profile-logout-button"
+          onPress={requestSignOut}
+          testID="screens-student-profile-logout-button"
+          variant="secondary"
+        />
       </View>
 
       <AppCard style={styles.profileHeader}>
+        <View nativeID="screens-student-profile-header" style={styles.sectionMarker} testID="screens-student-profile-header">
         <Image
           source={{
             uri:
@@ -147,63 +169,81 @@ export function StudentProfileScreen() {
         </View>
         <AppButton
           label="Cambiar foto"
+          nativeID="screens-student-profile-change-photo-button"
           loading={updateProfileMutation.isPending}
           onPress={handlePhotoSelection}
+          testID="screens-student-profile-change-photo-button"
           variant="secondary"
         />
-      </AppCard>
-
-      <AppCard>
-        <Text style={styles.sectionTitle}>Resumen</Text>
-        <View style={styles.infoGroup}>
-          <Text style={styles.infoLabel}>Correo</Text>
-          <Text style={styles.infoValue}>{profile.email}</Text>
-        </View>
-        <View style={styles.infoGroup}>
-          <Text style={styles.infoLabel}>Próximo pago</Text>
-          <Text style={styles.infoValue}>{formatDate(profile.next_payment_date)}</Text>
-        </View>
-        <View style={styles.infoGroup}>
-          <Text style={styles.infoLabel}>Clase actual</Text>
-          <Text style={styles.infoValue}>{currentClass?.name ?? "Sin clase asignada"}</Text>
         </View>
       </AppCard>
 
       <AppCard>
-        <Text style={styles.sectionTitle}>Clase actual</Text>
-        {profile.available_classes.length > 0 ? (
-          <>
-            <Text style={styles.helperText}>
-              Selecciona la clase que quieres marcar como principal en tu perfil.
-            </Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={currentClassId}
-                onValueChange={(value) => setSelectedClassId(value as number)}
-              >
-                {profile.available_classes.map((item) => (
-                  <Picker.Item key={item.id} label={item.name} value={item.id} />
-                ))}
-              </Picker>
-            </View>
-            {currentClass?.description ? (
-              <Text style={styles.classDescription}>{currentClass.description}</Text>
-            ) : null}
-            <AppButton
-              label="Guardar clase actual"
-              loading={updateProfileMutation.isPending}
-              onPress={handleClassUpdate}
-            />
-          </>
-        ) : (
-          <View style={styles.emptyBlock}>
-            <Text style={styles.emptyTitle}>Aún no hay clases disponibles</Text>
-            <Text style={styles.emptyDescription}>
-              Cuando el dojo publique clases activas para tu sucursal, podrás seleccionarlas aquí.
-            </Text>
+        <View nativeID="screens-student-profile-summary-section" style={styles.sectionMarker} testID="screens-student-profile-summary-section">
+          <Text style={styles.sectionTitle}>Resumen</Text>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Correo</Text>
+            <Text style={styles.infoValue}>{profile.email}</Text>
           </View>
-        )}
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Próximo pago</Text>
+            <Text style={styles.infoValue}>{formatDate(profile.next_payment_date)}</Text>
+          </View>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Clase actual</Text>
+            <Text style={styles.infoValue}>{currentClass?.name ?? "Sin clase asignada"}</Text>
+          </View>
+        </View>
       </AppCard>
+
+      <AppCard>
+        <View nativeID="screens-student-profile-current-class-section" style={styles.sectionMarker} testID="screens-student-profile-current-class-section">
+          <Text style={styles.sectionTitle}>Clase actual</Text>
+          {profile.available_classes.length > 0 ? (
+            <>
+              <Text style={styles.helperText}>
+                Selecciona la clase que quieres marcar como principal en tu perfil.
+              </Text>
+              <View style={styles.pickerWrapper}>
+                <Picker
+                  selectedValue={currentClassId}
+                  onValueChange={(value) => setSelectedClassId(value as number)}
+                >
+                  {profile.available_classes.map((item) => (
+                    <Picker.Item key={item.id} label={item.name} value={item.id} />
+                  ))}
+                </Picker>
+              </View>
+              {currentClass?.description ? (
+                <Text style={styles.classDescription}>{currentClass.description}</Text>
+              ) : null}
+              <AppButton
+                label="Guardar clase actual"
+                nativeID="screens-student-profile-save-current-class-button"
+                loading={updateProfileMutation.isPending}
+                onPress={handleClassUpdate}
+                testID="screens-student-profile-save-current-class-button"
+              />
+            </>
+          ) : (
+            <View style={styles.emptyBlock}>
+              <Text style={styles.emptyTitle}>Aún no hay clases disponibles</Text>
+              <Text style={styles.emptyDescription}>
+                Cuando el dojo publique clases activas para tu sucursal, podrás seleccionarlas aquí.
+              </Text>
+            </View>
+          )}
+        </View>
+      </AppCard>
+      <ConfirmActionModal
+        confirmLabel="Si, cerrar sesión"
+        idPrefix="screens-student-profile-signout-confirm"
+        message="Se cerrará tu sesión actual y volverás a la pantalla de acceso."
+        onCancel={cancelSignOut}
+        onConfirm={confirmSignOut}
+        title="Confirmar cierre de sesión"
+        visible={showSignOutConfirm}
+      />
     </Screen>
   );
 }
@@ -211,6 +251,9 @@ export function StudentProfileScreen() {
 const styles = StyleSheet.create({
   topActions: {
     alignItems: "flex-end",
+  },
+  sectionMarker: {
+    gap: spacing.md,
   },
   profileHeader: {
     alignItems: "center",

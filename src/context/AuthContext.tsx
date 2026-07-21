@@ -2,7 +2,7 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useSt
 
 import { authApi } from "@/api/authApi";
 import { handleUnauthorized, registerUnauthorizedHandler } from "@/api/sessionManager";
-import type { AuthTokens, LoginPayload, User } from "@/types/api";
+import type { AcademyRegisterPayload, AuthTokens, LoginPayload, User } from "@/types/api";
 import { clearSession, getAccessToken, getRefreshToken, getStoredUser, saveSession } from "@/utils/storage";
 import { getGymAdminAccessMessage, isGymAdminUser } from "@/utils/roles";
 
@@ -12,6 +12,7 @@ interface AuthContextValue {
   status: AuthStatus;
   user: User | null;
   signIn: (payload: LoginPayload) => Promise<void>;
+  registerAcademy: (payload: AcademyRegisterPayload) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -91,6 +92,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       signIn: async (payload) => {
         const response = await authApi.login(payload);
+        if (!isGymAdminUser(response.user)) {
+          await clearSession();
+          throw new Error(getGymAdminAccessMessage());
+        }
+        await saveSession(mapTokens(response), response.user);
+        setUser(response.user);
+        setStatus("authenticated");
+      },
+      registerAcademy: async (payload) => {
+        const response = await authApi.registerAcademy(payload);
         if (!isGymAdminUser(response.user)) {
           await clearSession();
           throw new Error(getGymAdminAccessMessage());

@@ -21,6 +21,8 @@ export interface AdminAssignment {
 
 export interface User {
   id: number;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   role: UserRole;
   is_active: boolean;
@@ -48,6 +50,14 @@ export interface LoginResponse {
 
 export interface StudentRegisterPayload {
   unique_code: string;
+  email: string;
+  password: string;
+}
+
+export interface AcademyRegisterPayload {
+  academy_name: string;
+  admin_first_name: string;
+  admin_last_name: string;
   email: string;
   password: string;
 }

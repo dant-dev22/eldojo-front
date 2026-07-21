@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
-import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
@@ -13,20 +12,71 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
+type AuthMode = "login" | "academy";
+
+function countAcademyLetters(value: string): number {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/gi, "").length;
+}
+
+function formatAuthError(error: unknown): string {
+  const message = getErrorMessage(error).trim();
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("ese usuario ya existe") || normalized.includes("already exists")) {
+    return "Ese usuario ya existe.";
+  }
+
+  if (normalized.includes("esa academia ya existe")) {
+    return "Esa academia ya existe.";
+  }
+
+  if (normalized.includes("al menos 3 letras")) {
+    return "El nombre de la academia debe tener al menos 3 letras útiles.";
+  }
+
+  if (normalized.includes("no existe una cuenta con ese correo")) {
+    return "No existe una cuenta con ese correo.";
+  }
+
+  if (normalized.includes("la contraseña no es correcta")) {
+    return "La contraseña no es correcta.";
+  }
+
+  return message.endsWith(".") ? message : `${message}.`;
+}
+
 export function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop } = useResponsiveLayout();
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [academyName, setAcademyName] = useState("");
+  const [adminFirstName, setAdminFirstName] = useState("");
+  const [adminLastName, setAdminLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
-    onError: (error) => setFormError(getErrorMessage(error)),
+    onError: (error) => setFormError(formatAuthError(error)),
   });
 
-  const handleSubmit = () => {
+  const registerMutation = useMutation({
+    mutationFn: registerAcademy,
+    onError: (error) => setFormError(formatAuthError(error)),
+  });
+
+  const handleModeChange = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setFormError(null);
+  };
+
+  const handleLoginSubmit = () => {
     if (!email.trim() || !password.trim()) {
       setFormError("Completa correo y contraseña.");
       return;
@@ -39,83 +89,197 @@ export function LoginScreen() {
     });
   };
 
+  const handleAcademySubmit = () => {
+    if (
+      !academyName.trim() ||
+      !adminFirstName.trim() ||
+      !adminLastName.trim() ||
+      !email.trim() ||
+      !password.trim()
+    ) {
+      setFormError("Completa academia, nombre, apellidos, correo y contraseña.");
+      return;
+    }
+
+    if (countAcademyLetters(academyName) < 3) {
+      setFormError("El nombre de la academia debe tener al menos 3 letras útiles.");
+      return;
+    }
+
+    if (password.trim().length < 8) {
+      setFormError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+
+    setFormError(null);
+    registerMutation.mutate({
+      academy_name: academyName.trim(),
+      admin_first_name: adminFirstName.trim(),
+      admin_last_name: adminLastName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    });
+  };
+
   return (
     <Screen scrollable contentStyle={[styles.screenContent, { alignItems: "center" }]}>
       <View
         style={[
           styles.layout,
-          { maxWidth: contentMaxWidth },
+          { maxWidth: Math.min(contentMaxWidth, 560) },
           isDesktop ? desktopStyles.layout : mobileStyles.layout,
         ]}
       >
-        <AppCard style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}>
-          <AppBadge label={isDesktop ? "Portal web" : "Portal responsive"} tone="info" />
-          <View style={styles.hero}>
-            <Text style={[styles.title, isDesktop ? desktopStyles.title : mobileStyles.title]}>
-              ElDojo Admin
-            </Text>
-            <Text style={[styles.subtitle, isDesktop ? desktopStyles.subtitle : mobileStyles.subtitle]}>
-              Accede al panel del gimnasio para consultar alumnos, seguir clases y operar el dia a dia desde navegador, tablet o escritorio.
-            </Text>
+        <View style={styles.brandBlock}>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoMarkText}>EL</Text>
           </View>
-          <View style={styles.heroHighlights}>
-            <View style={styles.highlightPill}>
-              <Text style={styles.highlight}>Control diario de alumnos, pagos y clases</Text>
-            </View>
-            <View style={styles.highlightPill}>
-              <Text style={styles.highlight}>Experiencia clara para dueños y staff operativo</Text>
-            </View>
-            <View style={styles.highlightPill}>
-              <Text style={styles.highlight}>Lenguaje visual moderno para academias de combate</Text>
-            </View>
-          </View>
-        </AppCard>
+          <Text style={[styles.title, isDesktop ? desktopStyles.title : mobileStyles.title]}>ElDojo</Text>
+          <Text style={[styles.subtitle, isDesktop ? desktopStyles.subtitle : mobileStyles.subtitle]}>
+            El administrador de gimnasios de mma-bjj-judo
+          </Text>
+        </View>
 
         <AppCard style={[styles.formCard, isDesktop ? desktopStyles.formCard : mobileStyles.formCard]}>
-          <Text style={styles.formTitle}>Entrar al portal</Text>
-          <Text style={styles.formSubtitle}>
-            Usa tus credenciales de administrador de gimnasio. Los accesos de alumnos y super admins se publicarán en interfaces distintas.
-          </Text>
-          <AppInput
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            label="Correo"
-            onChangeText={setEmail}
-            placeholder="admin@gimnasio.com"
-            value={email}
-          />
-          <AppInput
-            autoComplete="password"
-            label="Contraseña"
-            onChangeText={setPassword}
-            placeholder="Tu contraseña"
-            rightAdornment={
-              <Pressable
-                accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                accessibilityRole="button"
-                onPress={() => setShowPassword((current) => !current)}
-                style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
-              >
-                <Feather
-                  color={colors.textMuted}
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={18}
-                />
-              </Pressable>
-            }
-            secureTextEntry={!showPassword}
-            value={password}
-          />
-          {formError ? <Text style={styles.error}>{formError}</Text> : null}
-          <AppButton
-            label="Entrar al panel"
-            loading={loginMutation.isPending}
-            onPress={handleSubmit}
-          />
-          <Text style={styles.helper}>
-            Si tu sesión expira, la app intentará renovarla automáticamente mientras mantengas acceso válido.
-          </Text>
+          <View style={styles.tabs}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => handleModeChange("academy")}
+              style={({ pressed }) => [
+                styles.tabButton,
+                mode === "academy" ? styles.tabButtonActive : null,
+                pressed ? styles.tabButtonPressed : null,
+              ]}
+            >
+              <Text style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}>
+                Crea tu academia
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => handleModeChange("login")}
+              style={({ pressed }) => [
+                styles.tabButton,
+                mode === "login" ? styles.tabButtonActive : null,
+                pressed ? styles.tabButtonPressed : null,
+              ]}
+            >
+              <Text style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}>
+                Inicia sesión
+              </Text>
+            </Pressable>
+          </View>
+
+          {mode === "academy" ? (
+            <>
+              <Text style={styles.formTitle}>Crea tu academia</Text>
+              <Text style={styles.formSubtitle}>
+                Registra tu academia y crea la cuenta administradora inicial. Si todo sale bien, entrarás al panel automáticamente.
+              </Text>
+              <AppInput
+                label="Academia"
+                onChangeText={setAcademyName}
+                placeholder="Union MMA"
+                value={academyName}
+              />
+              <AppInput
+                label="Nombre"
+                onChangeText={setAdminFirstName}
+                placeholder="Tu nombre"
+                value={adminFirstName}
+              />
+              <AppInput
+                label="Apellidos"
+                onChangeText={setAdminLastName}
+                placeholder="Tus apellidos"
+                value={adminLastName}
+              />
+              <AppInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                label="Correo"
+                onChangeText={setEmail}
+                placeholder="admin@tuacademia.com"
+                value={email}
+              />
+              <AppInput
+                autoComplete="new-password"
+                label="Contraseña"
+                onChangeText={setPassword}
+                placeholder="Crea una contraseña"
+                rightAdornment={
+                  <Pressable
+                    accessibilityLabel={showRegisterPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    accessibilityRole="button"
+                    onPress={() => setShowRegisterPassword((current) => !current)}
+                    style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                  >
+                    <Feather
+                      color={colors.textMuted}
+                      name={showRegisterPassword ? "eye-off" : "eye"}
+                      size={18}
+                    />
+                  </Pressable>
+                }
+                secureTextEntry={!showRegisterPassword}
+                value={password}
+              />
+              <Text style={styles.helper}>
+                El código interno de la academia se genera con las primeras 3 letras útiles del nombre, ignorando espacios.
+              </Text>
+              {formError ? <Text style={styles.error}>{formError}</Text> : null}
+              <AppButton
+                label="Crear academia"
+                loading={registerMutation.isPending}
+                onPress={handleAcademySubmit}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.formTitle}>Inicia sesión</Text>
+              <Text style={styles.formSubtitle}>
+                Usa el correo y la contraseña de la cuenta administradora que ya creaste para tu academia.
+              </Text>
+              <AppInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                label="Correo"
+                onChangeText={setEmail}
+                placeholder="admin@tuacademia.com"
+                value={email}
+              />
+              <AppInput
+                autoComplete="password"
+                label="Contraseña"
+                onChangeText={setPassword}
+                placeholder="Tu contraseña"
+                rightAdornment={
+                  <Pressable
+                    accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    accessibilityRole="button"
+                    onPress={() => setShowPassword((current) => !current)}
+                    style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                  >
+                    <Feather
+                      color={colors.textMuted}
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={18}
+                    />
+                  </Pressable>
+                }
+                secureTextEntry={!showPassword}
+                value={password}
+              />
+              {formError ? <Text style={styles.error}>{formError}</Text> : null}
+              <AppButton
+                label="Entrar"
+                loading={loginMutation.isPending}
+                onPress={handleLoginSubmit}
+              />
+            </>
+          )}
         </AppCard>
       </View>
     </Screen>
@@ -127,54 +291,83 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   layout: {
-    gap: spacing.lg,
+    gap: spacing.xl,
     width: "100%",
   },
-  heroCard: {
-    gap: spacing.md,
-    backgroundColor: colors.surfaceStrong,
-    borderColor: "#2E241D",
+  brandBlock: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  hero: {
-    gap: spacing.xs,
-  },
-  heroHighlights: {
-    gap: spacing.xs,
-  },
-  highlightPill: {
-    alignSelf: "flex-start",
-    backgroundColor: "#241A13",
-    borderColor: "#413127",
+  logoMark: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
     borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    height: 72,
+    justifyContent: "center",
+    width: 72,
+  },
+  logoMarkText: {
+    color: colors.accent,
+    fontFamily: typography.displayFamily,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   title: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.displayFamily,
     fontWeight: "800",
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
   },
   subtitle: {
-    color: "#D1C2B5",
+    color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     lineHeight: 22,
-  },
-  highlight: {
-    color: "#F7D2B4",
-    fontFamily: typography.headingFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.4,
+    textAlign: "center",
   },
   formCard: {
     gap: spacing.md,
   },
+  tabs: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    padding: 6,
+  },
+  tabButton: {
+    alignItems: "center",
+    borderRadius: radius.pill,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  tabButtonPressed: {
+    opacity: 0.85,
+  },
+  tabLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  tabLabelActive: {
+    color: colors.accent,
+  },
   formTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.2,
   },
@@ -182,7 +375,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   error: {
     color: colors.danger,
@@ -208,16 +401,13 @@ const styles = StyleSheet.create({
 
 const mobileStyles = StyleSheet.create({
   layout: {
-    flexDirection: "column",
-  },
-  heroCard: {
-    minHeight: 0,
+    paddingVertical: spacing.xl,
   },
   formCard: {
-    minHeight: 0,
+    width: "100%",
   },
   title: {
-    fontSize: 34,
+    fontSize: 42,
   },
   subtitle: {
     fontSize: 15,
@@ -226,23 +416,15 @@ const mobileStyles = StyleSheet.create({
 
 const desktopStyles = StyleSheet.create({
   layout: {
-    alignItems: "stretch",
-    flexDirection: "row",
-  },
-  heroCard: {
-    flex: 1.15,
-    minHeight: 520,
-    justifyContent: "space-between",
-    padding: 32,
+    paddingVertical: spacing["2xl"],
   },
   formCard: {
     alignSelf: "center",
-    flex: 0.85,
-    maxWidth: 440,
+    width: "100%",
     padding: 32,
   },
   title: {
-    fontSize: 52,
+    fontSize: 56,
   },
   subtitle: {
     fontSize: 16,

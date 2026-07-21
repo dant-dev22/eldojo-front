@@ -46,9 +46,21 @@ function formatDisplayName(email: string | undefined): string {
   return normalized || "Administrador";
 }
 
+function formatAdminDisplayName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  email: string | undefined
+): string {
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return fullName || formatDisplayName(email);
+}
+
 export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
   const [open, setOpen] = useState(false);
-  const displayName = useMemo(() => formatDisplayName(user?.email), [user?.email]);
+  const displayName = useMemo(
+    () => formatAdminDisplayName(user?.first_name, user?.last_name, user?.email),
+    [user?.email, user?.first_name, user?.last_name]
+  );
   const displayInitial = useMemo(() => displayName.charAt(0).toUpperCase() || "A", [displayName]);
   const assignmentCount = user?.admin_assignments.length ?? 0;
 
@@ -62,7 +74,9 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
       <Pressable
         accessibilityLabel="Abrir menú del administrador"
         accessibilityRole="button"
+        nativeID="components-admin-user-menu-trigger"
         onPress={() => setOpen(true)}
+        testID="components-admin-user-menu-trigger"
         style={({ pressed }) => [styles.trigger, pressed ? styles.triggerPressed : null]}
       >
         <View style={styles.avatar}>
@@ -76,16 +90,21 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
       </Pressable>
 
       <Modal animationType="fade" onRequestClose={() => setOpen(false)} transparent visible={open}>
-        <View style={styles.overlay}>
-          <Pressable onPress={() => setOpen(false)} style={styles.backdrop} />
-          <View style={styles.sheetWrapper}>
-            <View style={styles.sheet}>
-              <View style={styles.profileBlock}>
-                <View style={styles.profileRow}>
-                  <View style={styles.profileAvatar}>
+        <View nativeID="components-admin-user-menu-overlay" style={styles.overlay} testID="components-admin-user-menu-overlay">
+          <Pressable
+            nativeID="components-admin-user-menu-backdrop"
+            onPress={() => setOpen(false)}
+            style={styles.backdrop}
+            testID="components-admin-user-menu-backdrop"
+          />
+          <View nativeID="components-admin-user-menu-sheet-wrapper" style={styles.sheetWrapper} testID="components-admin-user-menu-sheet-wrapper">
+            <View nativeID="components-admin-user-menu-sheet" style={styles.sheet} testID="components-admin-user-menu-sheet">
+              <View nativeID="components-admin-user-menu-profile-block" style={styles.profileBlock} testID="components-admin-user-menu-profile-block">
+                <View nativeID="components-admin-user-menu-profile-row" style={styles.profileRow} testID="components-admin-user-menu-profile-row">
+                  <View nativeID="components-admin-user-menu-profile-avatar" style={styles.profileAvatar} testID="components-admin-user-menu-profile-avatar">
                     <Text style={styles.profileAvatarLabel}>{displayInitial}</Text>
                   </View>
-                  <View style={styles.profileCopy}>
+                  <View nativeID="components-admin-user-menu-profile-copy" style={styles.profileCopy} testID="components-admin-user-menu-profile-copy">
                     <Text style={styles.profileName}>{displayName}</Text>
                     <Text style={styles.profileRole}>{formatAdminRole(user?.role)}</Text>
                   </View>
@@ -93,23 +112,25 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
                 <Text style={styles.profileEmail}>{user?.email ?? "Sin correo disponible"}</Text>
               </View>
 
-              <View style={styles.metaBlock}>
-                <View style={styles.metaRow}>
+              <View nativeID="components-admin-user-menu-meta-block" style={styles.metaBlock} testID="components-admin-user-menu-meta-block">
+                <View nativeID="components-admin-user-menu-meta-row-role" style={styles.metaRow} testID="components-admin-user-menu-meta-row-role">
                   <Text style={styles.metaLabel}>Rol</Text>
                   <Text style={styles.metaValue}>{formatAdminRole(user?.role)}</Text>
                 </View>
-                <View style={styles.metaRow}>
+                <View nativeID="components-admin-user-menu-meta-row-assignments" style={styles.metaRow} testID="components-admin-user-menu-meta-row-assignments">
                   <Text style={styles.metaLabel}>Asignaciones</Text>
                   <Text style={styles.metaValue}>{assignmentCount}</Text>
                 </View>
               </View>
 
-              <View style={styles.actionsBlock}>
+              <View nativeID="components-admin-user-menu-actions-block" style={styles.actionsBlock} testID="components-admin-user-menu-actions-block">
                 {actions.map((action) => (
                   <Pressable
                     key={action.label}
                     accessibilityRole="button"
+                    nativeID={`components-admin-user-menu-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                     onPress={() => handleActionPress(action)}
+                    testID={`components-admin-user-menu-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                     style={({ pressed }) => [
                       styles.actionButton,
                       pressed ? styles.actionPressed : null,
