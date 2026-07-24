@@ -122,16 +122,23 @@ export function LoginScreen() {
   };
 
   return (
-    <Screen scrollable contentStyle={[styles.screenContent, { alignItems: "center" }]}>
+    <Screen
+      scrollable
+      contentStyle={[styles.screenContent, { alignItems: "center" }]}
+      nativeID="screens-auth-login-screen"
+      testID="screens-auth-login-screen"
+    >
       <View
+        nativeID="screens-auth-login-layout"
         style={[
           styles.layout,
           { maxWidth: Math.min(contentMaxWidth, 560) },
           isDesktop ? desktopStyles.layout : mobileStyles.layout,
         ]}
+        testID="screens-auth-login-layout"
       >
-        <View style={styles.brandBlock}>
-          <View style={styles.logoMark}>
+        <View nativeID="screens-auth-login-brand-section" style={styles.brandBlock} testID="screens-auth-login-brand-section">
+          <View nativeID="screens-auth-login-logo-mark" style={styles.logoMark} testID="screens-auth-login-logo-mark">
             <Text style={styles.logoMarkText}>EL</Text>
           </View>
           <Text style={[styles.title, isDesktop ? desktopStyles.title : mobileStyles.title]}>ElDojo</Text>
@@ -140,16 +147,22 @@ export function LoginScreen() {
           </Text>
         </View>
 
-        <AppCard style={[styles.formCard, isDesktop ? desktopStyles.formCard : mobileStyles.formCard]}>
-          <View style={styles.tabs}>
+        <AppCard
+          nativeID="screens-auth-login-form-card"
+          style={[styles.formCard, isDesktop ? desktopStyles.formCard : mobileStyles.formCard]}
+          testID="screens-auth-login-form-card"
+        >
+          <View nativeID="screens-auth-login-mode-tabs" style={styles.tabs} testID="screens-auth-login-mode-tabs">
             <Pressable
               accessibilityRole="button"
+              nativeID="screens-auth-login-mode-academy-button"
               onPress={() => handleModeChange("academy")}
               style={({ pressed }) => [
                 styles.tabButton,
                 mode === "academy" ? styles.tabButtonActive : null,
                 pressed ? styles.tabButtonPressed : null,
               ]}
+              testID="screens-auth-login-mode-academy-button"
             >
               <Text style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}>
                 Crea tu academia
@@ -157,12 +170,14 @@ export function LoginScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              nativeID="screens-auth-login-mode-signin-button"
               onPress={() => handleModeChange("login")}
               style={({ pressed }) => [
                 styles.tabButton,
                 mode === "login" ? styles.tabButtonActive : null,
                 pressed ? styles.tabButtonPressed : null,
               ]}
+              testID="screens-auth-login-mode-signin-button"
             >
               <Text style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}>
                 Inicia sesión
@@ -178,20 +193,26 @@ export function LoginScreen() {
               </Text>
               <AppInput
                 label="Academia"
+                nativeID="screens-auth-login-academy-name-input"
                 onChangeText={setAcademyName}
                 placeholder="Union MMA"
+                testID="screens-auth-login-academy-name-input"
                 value={academyName}
               />
               <AppInput
                 label="Nombre"
+                nativeID="screens-auth-login-admin-first-name-input"
                 onChangeText={setAdminFirstName}
                 placeholder="Tu nombre"
+                testID="screens-auth-login-admin-first-name-input"
                 value={adminFirstName}
               />
               <AppInput
                 label="Apellidos"
+                nativeID="screens-auth-login-admin-last-name-input"
                 onChangeText={setAdminLastName}
                 placeholder="Tus apellidos"
+                testID="screens-auth-login-admin-last-name-input"
                 value={adminLastName}
               />
               <AppInput
@@ -199,21 +220,26 @@ export function LoginScreen() {
                 autoComplete="email"
                 keyboardType="email-address"
                 label="Correo"
+                nativeID="screens-auth-login-register-email-input"
                 onChangeText={setEmail}
                 placeholder="admin@tuacademia.com"
+                testID="screens-auth-login-register-email-input"
                 value={email}
               />
               <AppInput
                 autoComplete="new-password"
                 label="Contraseña"
+                nativeID="screens-auth-login-register-password-input"
                 onChangeText={setPassword}
                 placeholder="Crea una contraseña"
                 rightAdornment={
                   <Pressable
                     accessibilityLabel={showRegisterPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                     accessibilityRole="button"
+                    nativeID="screens-auth-login-register-password-toggle"
                     onPress={() => setShowRegisterPassword((current) => !current)}
                     style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                    testID="screens-auth-login-register-password-toggle"
                   >
                     <Feather
                       color={colors.textMuted}
@@ -232,7 +258,9 @@ export function LoginScreen() {
               <AppButton
                 label="Crear academia"
                 loading={registerMutation.isPending}
+                nativeID="screens-auth-login-register-submit-button"
                 onPress={handleAcademySubmit}
+                testID="screens-auth-login-register-submit-button"
               />
             </>
           ) : (
@@ -246,21 +274,26 @@ export function LoginScreen() {
                 autoComplete="email"
                 keyboardType="email-address"
                 label="Correo"
+                nativeID="screens-auth-login-email-input"
                 onChangeText={setEmail}
                 placeholder="admin@tuacademia.com"
+                testID="screens-auth-login-email-input"
                 value={email}
               />
               <AppInput
                 autoComplete="password"
                 label="Contraseña"
+                nativeID="screens-auth-login-password-input"
                 onChangeText={setPassword}
                 placeholder="Tu contraseña"
                 rightAdornment={
                   <Pressable
                     accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                     accessibilityRole="button"
+                    nativeID="screens-auth-login-password-toggle"
                     onPress={() => setShowPassword((current) => !current)}
                     style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                    testID="screens-auth-login-password-toggle"
                   >
                     <Feather
                       color={colors.textMuted}
@@ -276,7 +309,9 @@ export function LoginScreen() {
               <AppButton
                 label="Entrar"
                 loading={loginMutation.isPending}
+                nativeID="screens-auth-login-submit-button"
                 onPress={handleLoginSubmit}
+                testID="screens-auth-login-submit-button"
               />
             </>
           )}

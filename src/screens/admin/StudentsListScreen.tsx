@@ -527,19 +527,30 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const selectedClass = classes.find((classItem) => String(classItem.id) === form.primaryClassId) ?? null;
 
   return (
-    <Screen contentStyle={styles.screenContent}>
+    <Screen contentStyle={styles.screenContent} nativeID="screens-admin-students-list-screen" testID="screens-admin-students-list-screen">
       <AdminShell
         activeSection="students"
-        headerActions={<AppButton label="Nuevo alumno" onPress={handleOpenCreate} />}
+        headerActions={
+          <AppButton
+            label="Nuevo alumno"
+            nativeID="screens-admin-students-list-new-button"
+            onPress={handleOpenCreate}
+            testID="screens-admin-students-list-new-button"
+          />
+        }
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         subtitle="Consulta el padron del gimnasio, filtra por nombre y opera altas, ediciones y bajas sin salir del navegador."
         title="Panel de alumnos"
       >
-      <View style={styles.container}>
+      <View nativeID="screens-admin-students-list-content" style={styles.container} testID="screens-admin-students-list-content">
 
         {feedbackMessage ? (
-          <AppCard style={[styles.feedbackCard, feedbackTone === "success" ? styles.feedbackSuccess : styles.feedbackDanger]}>
+          <AppCard
+            nativeID="screens-admin-students-list-feedback-card"
+            style={[styles.feedbackCard, feedbackTone === "success" ? styles.feedbackSuccess : styles.feedbackDanger]}
+            testID="screens-admin-students-list-feedback-card"
+          >
             <View style={styles.feedbackCopy}>
               <Text style={styles.feedbackTitle}>
                 {feedbackTone === "success" ? "Acción completada" : "Necesita revisión"}
@@ -550,22 +561,28 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </AppCard>
         ) : null}
 
-        <View style={[styles.topGrid, isDesktop ? desktopStyles.topGrid : mobileStyles.topGrid]}>
-          <AppCard style={styles.searchCard}>
+        <View nativeID="screens-admin-students-list-top-grid" style={[styles.topGrid, isDesktop ? desktopStyles.topGrid : mobileStyles.topGrid]} testID="screens-admin-students-list-top-grid">
+          <AppCard nativeID="screens-admin-students-list-search-card" style={styles.searchCard} testID="screens-admin-students-list-search-card">
             <Text style={styles.sectionTitle}>Búsqueda operativa</Text>
             <Text style={styles.sectionDescription}>
               Filtra por nombre para encontrar rápido al alumno que necesitas o abre el alta desde este panel.
             </Text>
             <AppInput
               label="Buscar por nombre"
+              nativeID="screens-admin-students-list-search-input"
               onChangeText={setSearch}
               placeholder="Ej. Juan"
+              testID="screens-admin-students-list-search-input"
               value={search}
             />
           </AppCard>
 
           {!studentsQuery.isLoading && !studentsQuery.isError ? (
-            <AppCard style={[styles.summaryCard, isDesktop ? desktopStyles.summaryCard : mobileStyles.summaryCard]}>
+            <AppCard
+              nativeID="screens-admin-students-list-summary-card"
+              style={[styles.summaryCard, isDesktop ? desktopStyles.summaryCard : mobileStyles.summaryCard]}
+              testID="screens-admin-students-list-summary-card"
+            >
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Total visibles</Text>
                 <Text style={styles.summaryValue}>{students.length}</Text>
@@ -597,6 +614,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
             contentContainerStyle={styles.listContent}
             data={students}
             keyExtractor={(item) => String(item.id)}
+            nativeID="screens-admin-students-list-results"
             refreshControl={
               <RefreshControl
                 refreshing={studentsQuery.isRefetching}
@@ -604,7 +622,11 @@ export function StudentsListScreen({ navigation, route }: Props) {
               />
             }
             renderItem={({ item }) => (
-              <AppCard style={styles.studentCard}>
+              <AppCard
+                nativeID={`screens-admin-students-list-card-${item.id}`}
+                style={styles.studentCard}
+                testID={`screens-admin-students-list-card-${item.id}`}
+              >
                 <View style={styles.studentTopRow}>
                   <View style={styles.studentTitleBlock}>
                     <Text style={styles.studentName}>
@@ -630,16 +652,26 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <View style={[styles.cardActions, isDesktop ? desktopStyles.cardActions : mobileStyles.cardActions]}>
                   <AppButton
                     label="Ver detalle"
+                    nativeID={`screens-admin-students-list-detail-button-${item.id}`}
                     onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                    testID={`screens-admin-students-list-detail-button-${item.id}`}
                     variant="secondary"
                   />
-                  <AppButton label="Editar" onPress={() => handleOpenEdit(item)} variant="secondary" />
+                  <AppButton
+                    label="Editar"
+                    nativeID={`screens-admin-students-list-edit-button-${item.id}`}
+                    onPress={() => handleOpenEdit(item)}
+                    testID={`screens-admin-students-list-edit-button-${item.id}`}
+                    variant="secondary"
+                  />
                   <AppButton
                     label="Dar de baja"
+                    nativeID={`screens-admin-students-list-delete-button-${item.id}`}
                     onPress={() => {
                       setFeedbackMessage(null);
                       setStudentToDelete(item);
                     }}
+                    testID={`screens-admin-students-list-delete-button-${item.id}`}
                     variant="danger"
                   />
                 </View>
@@ -660,6 +692,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
       </AdminShell>
 
       <AppModal
+        nativeID="screens-admin-students-list-form-modal"
         visible={isFormDialogVisible}
         title={dialogMode === "create" ? "Nuevo alumno" : "Editar alumno"}
         description={
@@ -670,6 +703,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
               : "Confirma si deseas guardar estos cambios en el alumno."
         }
         onClose={handleCloseFormDialog}
+        testID="screens-admin-students-list-form-modal"
       >
         {dialogStep === "form" ? (
           <>
@@ -701,17 +735,21 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     error={formErrors.branchId}
                     items={branchOptions}
                     label="Sucursal"
+                    nativeID="screens-admin-students-list-form-branch-select"
                     onValueChange={(value) => handleUpdateField("branchId", value)}
                     placeholder={
                       branchesQuery.isLoading ? "Cargando sucursales..." : "Selecciona una sucursal"
                     }
+                    testID="screens-admin-students-list-form-branch-select"
                     value={form.branchId}
                   />
                   <AppDateInput
                     error={formErrors.birthDate}
                     label="Fecha de nacimiento"
+                    nativeID="screens-admin-students-list-form-birth-date-input"
                     onChangeText={(value) => handleUpdateField("birthDate", value)}
                     placeholder="2008-05-10"
+                    testID="screens-admin-students-list-form-birth-date-input"
                     value={form.birthDate}
                   />
                 </View>
@@ -720,15 +758,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   <AppInput
                     error={formErrors.firstName}
                     label="Nombre"
+                    nativeID="screens-admin-students-list-form-first-name-input"
                     onChangeText={(value) => handleUpdateField("firstName", value)}
                     placeholder="Juan"
+                    testID="screens-admin-students-list-form-first-name-input"
                     value={form.firstName}
                   />
                   <AppInput
                     error={formErrors.lastName}
                     label="Apellido"
+                    nativeID="screens-admin-students-list-form-last-name-input"
                     onChangeText={(value) => handleUpdateField("lastName", value)}
                     placeholder="Pérez"
+                    testID="screens-admin-students-list-form-last-name-input"
                     value={form.lastName}
                   />
                 </View>
@@ -859,7 +901,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
             <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
               <AppButton
                 label={currentFormPage === 0 ? "Cancelar" : "Anterior"}
+                nativeID="screens-admin-students-list-form-back-button"
                 onPress={currentFormPage === 0 ? handleCloseFormDialog : handleGoToPreviousPage}
+                testID="screens-admin-students-list-form-back-button"
                 variant="secondary"
               />
               <AppButton
@@ -870,7 +914,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
                       : "Revisar cambios"
                     : "Siguiente"
                 }
+                nativeID="screens-admin-students-list-form-next-button"
                 onPress={handleAdvanceForm}
+                testID="screens-admin-students-list-form-next-button"
               />
             </View>
           </>
@@ -895,7 +941,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
               <AppButton
                 label="Confirmar alta"
                 loading={createStudentMutation.isPending}
+                nativeID="screens-admin-students-list-confirm-create-button"
                 onPress={handleConfirmCreate}
+                testID="screens-admin-students-list-confirm-create-button"
               />
             </View>
           </>
@@ -913,7 +961,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
               <AppButton
                 label="Sí, guardar cambios"
                 loading={updateStudentMutation.isPending}
+                nativeID="screens-admin-students-list-confirm-update-button"
                 onPress={handleConfirmUpdate}
+                testID="screens-admin-students-list-confirm-update-button"
               />
             </View>
           </>
@@ -921,10 +971,12 @@ export function StudentsListScreen({ navigation, route }: Props) {
       </AppModal>
 
       <AppModal
+        nativeID="screens-admin-students-list-delete-modal"
         visible={Boolean(studentToDelete)}
         title="Confirmar baja"
         description="Esta acción hará una baja lógica y dejará al alumno como inactivo."
         onClose={() => setStudentToDelete(null)}
+        testID="screens-admin-students-list-delete-modal"
       >
         <AppCard style={styles.confirmCard}>
           <Text style={styles.confirmTitle}>¿Estás seguro?</Text>
@@ -939,7 +991,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
           <AppButton
             label="Sí, dar de baja"
             loading={deleteStudentMutation.isPending}
+            nativeID="screens-admin-students-list-confirm-delete-button"
             onPress={handleConfirmDelete}
+            testID="screens-admin-students-list-confirm-delete-button"
             variant="danger"
           />
         </View>

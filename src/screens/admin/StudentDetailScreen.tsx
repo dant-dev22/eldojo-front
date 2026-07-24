@@ -185,25 +185,35 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     <Screen
       scrollable
       contentStyle={styles.screenContent}
+      nativeID="screens-admin-student-detail-screen"
       refreshControl={
         <RefreshControl
           refreshing={studentQuery.isRefetching || paymentsQuery.isRefetching}
           onRefresh={handleRefresh}
         />
       }
+      testID="screens-admin-student-detail-screen"
     >
       <AdminShell
         activeSection="students"
-        headerActions={<AppButton label="Volver al listado" onPress={() => navigation.goBack()} variant="secondary" />}
+        headerActions={
+          <AppButton
+            label="Volver al listado"
+            nativeID="screens-admin-student-detail-back-button"
+            onPress={() => navigation.goBack()}
+            testID="screens-admin-student-detail-back-button"
+            variant="secondary"
+          />
+        }
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}
         title={`${student.first_name} ${student.last_name}`}
       >
-      <View style={styles.container}>
+      <View nativeID="screens-admin-student-detail-content" style={styles.container} testID="screens-admin-student-detail-content">
 
-        <View style={[styles.summaryGrid, isDesktop ? desktopStyles.summaryGrid : mobileStyles.summaryGrid]}>
-          <AppCard style={styles.summaryCard}>
+        <View nativeID="screens-admin-student-detail-summary-grid" style={[styles.summaryGrid, isDesktop ? desktopStyles.summaryGrid : mobileStyles.summaryGrid]} testID="screens-admin-student-detail-summary-grid">
+          <AppCard nativeID="screens-admin-student-detail-status-card" style={styles.summaryCard} testID="screens-admin-student-detail-status-card">
             <Text style={styles.cardTitle}>Estado actual</Text>
             <View style={styles.badgesRow}>
               <AppBadge
@@ -223,7 +233,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
             <DetailRow label="Moneda" value={student.currency} />
           </AppCard>
 
-          <AppCard style={styles.summaryCard}>
+          <AppCard nativeID="screens-admin-student-detail-profile-card" style={styles.summaryCard} testID="screens-admin-student-detail-profile-card">
             <Text style={styles.cardTitle}>Ficha general</Text>
             <DetailRow
               label="Nacimiento"
@@ -245,15 +255,15 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           </AppCard>
         </View>
 
-        <View style={[styles.detailGrid, isDesktop ? desktopStyles.detailGrid : mobileStyles.detailGrid]}>
-          <AppCard style={styles.infoCard}>
+        <View nativeID="screens-admin-student-detail-detail-grid" style={[styles.detailGrid, isDesktop ? desktopStyles.detailGrid : mobileStyles.detailGrid]} testID="screens-admin-student-detail-detail-grid">
+          <AppCard nativeID="screens-admin-student-detail-guardian-card" style={styles.infoCard} testID="screens-admin-student-detail-guardian-card">
             <Text style={styles.cardTitle}>Tutor y observaciones</Text>
             <DetailRow label="Tutor" value={student.guardian_name ?? "No registrado"} />
             <DetailRow label="Teléfono" value={student.guardian_phone ?? "No registrado"} />
             <DetailRow label="Notas" value={student.notes ?? "Sin notas"} />
           </AppCard>
 
-          <AppCard style={styles.infoCard}>
+          <AppCard nativeID="screens-admin-student-detail-payments-summary-card" style={styles.infoCard} testID="screens-admin-student-detail-payments-summary-card">
             <Text style={styles.cardTitle}>Resumen de pagos</Text>
             <DetailRow label="Pagos registrados" value={String(payments.length)} />
             <DetailRow
@@ -271,8 +281,8 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           </AppCard>
         </View>
 
-        <AppCard style={styles.historyCard}>
-          <View style={[styles.historyHeader, isDesktop ? desktopStyles.historyHeader : mobileStyles.historyHeader]}>
+        <AppCard nativeID="screens-admin-student-detail-history-card" style={styles.historyCard} testID="screens-admin-student-detail-history-card">
+          <View nativeID="screens-admin-student-detail-history-header" style={[styles.historyHeader, isDesktop ? desktopStyles.historyHeader : mobileStyles.historyHeader]} testID="screens-admin-student-detail-history-header">
             <View style={styles.historyHeaderCopy}>
               <Text style={styles.cardTitle}>Historial de pagos</Text>
               <Text style={styles.sectionDescription}>

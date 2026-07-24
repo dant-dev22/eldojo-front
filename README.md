@@ -86,6 +86,7 @@ Atajos útiles:
 npm run android
 npm run ios
 npm run web
+npm run build:web
 ```
 
 ## Validación rápida
@@ -104,15 +105,14 @@ la version web generada por Expo para que los administradores entren desde el na
 1. Primero sube `eldojo-backend-api` al VPS y dejalo respondiendo por una URL publica
    como `https://api.tudominio.com`
 2. Luego compila este proyecto en modo web
-3. Sirve la carpeta generada con `pm2`
-4. Coloca `nginx` delante para exponer el sitio por dominio o IP
+3. Publica la carpeta `dist/` con `nginx`
+4. Apunta el dominio o IP publica a ese sitio
 
 ### Requisitos recomendados en el VPS
 
 - Ubuntu/Debian con acceso por SSH
 - Node.js 20+
 - npm
-- `pm2`
 - `nginx`
 - La API ya corriendo y accesible desde internet o desde la red privada del VPS
 
@@ -123,7 +123,6 @@ sudo apt update
 sudo apt install -y nginx curl git
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
-sudo npm install -g pm2
 ```
 
 Verifica versiones:
@@ -131,7 +130,6 @@ Verifica versiones:
 ```bash
 node -v
 npm -v
-pm2 -v
 ```
 
 ### Paso 2. Subir el proyecto al servidor
@@ -190,53 +188,11 @@ npx expo export --platform web
 
 Al terminar, Expo genera una carpeta `dist/`. Esa es la que se publica en el VPS.
 
-### Paso 6. Levantar el frontend con `pm2`
+### Paso 6. Publicar el frontend con `nginx`
 
 ```bash
 cd /var/www/eldojo-mobile
-pm2 serve dist 3000 --name eldojo-mobile --spa
-pm2 save
-pm2 startup
-```
-
-Que hace esto:
-
-- `pm2 serve dist 3000` publica la carpeta compilada en el puerto `3000`
-- `--spa` ayuda a que la navegacion web siga funcionando como aplicacion de una sola pagina
-- `pm2 save` guarda el proceso para que vuelva a subir despues de reiniciar el VPS
-
-Para revisar que quedo corriendo:
-
-```bash
-pm2 list
-pm2 logs eldojo-mobile
-curl http://127.0.0.1:3000
-```
-
-### Paso 7. Publicar el frontend con `nginx`
-
-Crea el archivo:
-
-```bash
-sudo nano /etc/nginx/sites-available/eldojo-mobile
-```
-
-Contenido sugerido:
-
-```nginx
-server {
-    listen 80;
-    server_name app.tudominio.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+sudo cp /var/www/eldojo-mobile/deploy/nginx/eldojo-mobile.conf /etc/nginx/sites-available/eldojo-mobile
 ```
 
 Activa el sitio y recarga `nginx`:
@@ -247,7 +203,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### Paso 8. Activar HTTPS
+### Paso 7. Activar HTTPS
 
 Si ya tienes el dominio apuntando al VPS:
 
@@ -256,7 +212,7 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d app.tudominio.com
 ```
 
-### Paso 9. Validar que todo quedo bien
+### Paso 8. Validar que todo quedo bien
 
 1. Abre `https://app.tudominio.com`
 2. Intenta iniciar sesion
@@ -264,7 +220,7 @@ sudo certbot --nginx -d app.tudominio.com
    `https://api.tudominio.com/api/v1`
 4. Si aparece un error de CORS, revisa `BACKEND_CORS_ORIGINS` en la API
 
-### Paso 10. Actualizar el frontend en futuras versiones
+### Paso 9. Actualizar el frontend en futuras versiones
 
 Cada vez que subas cambios:
 
@@ -272,8 +228,8 @@ Cada vez que subas cambios:
 cd /var/www/eldojo-mobile
 git pull origin main
 npm install
-npx expo export --platform web
-pm2 restart eldojo-mobile
+npm run build:web
+sudo systemctl reload nginx
 ```
 
 ### Orden recomendado de despliegue
@@ -281,7 +237,7 @@ pm2 restart eldojo-mobile
 1. Sube y valida `eldojo-backend-api`
 2. Configura en este proyecto `EXPO_PUBLIC_API_URL` con la URL real de la API
 3. Genera el build web
-4. Levanta `pm2`
+4. Publica `dist/` con `nginx`
 5. Prueba login, alumnos y pagos para confirmar que frontend y backend se ven entre si
 
 ## Decisiones y notas

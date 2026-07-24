@@ -16,9 +16,11 @@ interface AppModalProps extends PropsWithChildren {
   title: string;
   description?: string;
   onClose: () => void;
+  nativeID?: string;
+  testID?: string;
 }
 
-export function AppModal({ visible, title, description, onClose, children }: AppModalProps) {
+export function AppModal({ visible, title, description, onClose, children, nativeID, testID }: AppModalProps) {
   const { height, width } = useWindowDimensions();
   const dialogWidth = width >= 1280 ? 900 : width >= 1024 ? 820 : width >= 768 ? 700 : width - spacing.md * 2;
 
@@ -28,6 +30,7 @@ export function AppModal({ visible, title, description, onClose, children }: App
         <Pressable onPress={onClose} style={styles.backdrop} />
         <View style={styles.dialogWrapper}>
           <View
+            nativeID={nativeID}
             style={[
               styles.dialog,
               {
@@ -35,6 +38,7 @@ export function AppModal({ visible, title, description, onClose, children }: App
                 maxWidth: Math.max(320, dialogWidth),
               },
             ]}
+            testID={testID}
           >
             <View style={styles.header}>
               <View style={styles.headerCopy}>

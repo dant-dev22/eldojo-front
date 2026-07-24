@@ -1,8 +1,23 @@
+export interface PublicAttendanceClassSchedule {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
 export interface PublicAttendanceClassOption {
   id: number;
   name: string;
   description: string | null;
   instructor_name: string | null;
+  schedules: PublicAttendanceClassSchedule[];
+}
+
+export interface PublicAttendanceStudentPreview {
+  id: number;
+  unique_code: string;
+  first_name: string;
+  last_name: string;
+  student_name: string;
 }
 
 export interface PublicAttendanceContext {
@@ -11,14 +26,14 @@ export interface PublicAttendanceContext {
   branch_name: string;
   branch_slug: string;
   branch_id: number;
+  branch_timezone: string;
   image_url: string | null;
   classes: PublicAttendanceClassOption[];
 }
 
 export interface PublicAttendanceCreatePayload {
-  student_code: string;
+  student_id: number;
   class_id?: number | null;
-  qr_token: string;
 }
 
 export interface PublicAttendanceResult {

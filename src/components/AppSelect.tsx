@@ -16,6 +16,8 @@ interface AppSelectProps {
   placeholder?: string;
   enabled?: boolean;
   error?: string | null;
+  nativeID?: string;
+  testID?: string;
 }
 
 export function AppSelect({
@@ -26,12 +28,20 @@ export function AppSelect({
   placeholder = "Selecciona una opción",
   enabled = true,
   error,
+  nativeID,
+  testID,
 }: AppSelectProps) {
   return (
-    <View style={styles.wrapper}>
+    <View nativeID={nativeID} style={styles.wrapper} testID={testID}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.container, error ? styles.containerError : null, !enabled ? styles.disabled : null]}>
-        <Picker enabled={enabled} onValueChange={(itemValue) => onValueChange(String(itemValue))} selectedValue={value}>
+        <Picker
+          enabled={enabled}
+          nativeID={nativeID}
+          onValueChange={(itemValue) => onValueChange(String(itemValue))}
+          selectedValue={value}
+          testID={testID}
+        >
           <Picker.Item color={colors.textMuted} label={placeholder} value="" />
           {items.map((item) => (
             <Picker.Item key={item.value} label={item.label} value={item.value} />

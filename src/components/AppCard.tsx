@@ -5,10 +5,16 @@ import { colors, radius, shadows, spacing } from "@/constants/theme";
 
 interface AppCardProps extends PropsWithChildren {
   style?: StyleProp<ViewStyle>;
+  nativeID?: string;
+  testID?: string;
 }
 
-export function AppCard({ children, style }: AppCardProps) {
-  return <View style={[styles.card, style]}>{children}</View>;
+export function AppCard({ children, style, nativeID, testID }: AppCardProps) {
+  return (
+    <View nativeID={nativeID} style={[styles.card, style]} testID={testID}>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -8,17 +8,21 @@ interface ScreenProps extends PropsWithChildren {
   scrollable?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
   refreshControl?: ReactElement<RefreshControlProps>;
+  nativeID?: string;
+  testID?: string;
 }
 
-export function Screen({ children, scrollable = false, contentStyle, refreshControl }: ScreenProps) {
+export function Screen({ children, scrollable = false, contentStyle, refreshControl, nativeID, testID }: ScreenProps) {
   if (scrollable) {
     return (
       <SafeAreaView edges={["top"]} style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
+          nativeID={nativeID}
           refreshControl={refreshControl}
           showsVerticalScrollIndicator={false}
+          testID={testID}
         >
           {children}
         </ScrollView>
@@ -28,7 +32,9 @@ export function Screen({ children, scrollable = false, contentStyle, refreshCont
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View style={[styles.content, contentStyle]}>{children}</View>
+      <View nativeID={nativeID} style={[styles.content, contentStyle]} testID={testID}>
+        {children}
+      </View>
     </SafeAreaView>
   );
 }

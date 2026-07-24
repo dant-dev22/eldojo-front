@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -25,6 +25,7 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus } from "@/utils/format";
+import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
 
 import type { AdminStackParamList } from "@/navigation/types";
 import type {
@@ -520,6 +521,18 @@ function buildAttendanceUpdatePayload(
   };
 }
 
+async function openPublicAttendancePage(organizationSlug: string, branchName: string): Promise<void> {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://eldojo.tech";
+  const path = buildPublicAttendanceUrl(origin, organizationSlug, branchName);
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.open(path, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  await Linking.openURL(path);
+}
+
 function getPaymentRecordTone(status: PaymentRecordStatus): "success" | "warning" | "danger" {
   switch (status) {
     case "paid":
@@ -548,6 +561,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const { isDesktop } = useResponsiveLayout();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const publicAttendanceOrigin = typeof window !== "undefined" ? window.location.origin : "https://eldojo.tech";
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
   const scopedBranchId = currentAssignment?.branch_id ?? null;
@@ -1372,15 +1386,31 @@ export function AdminDashboardScreen({ navigation }: Props) {
     deleteAttendanceMutation.isPending;
 
   return (
-    <Screen scrollable contentStyle={styles.screenContent}>
+    <Screen
+      scrollable
+      contentStyle={styles.screenContent}
+      nativeID="screens-admin-dashboard-screen"
+      testID="screens-admin-dashboard-screen"
+    >
       <AdminShell
         activeSection="dashboard"
         headerActions={
-          <View style={styles.headerActionGroup}>
+          <View nativeID="screens-admin-dashboard-header-actions" style={styles.headerActionGroup} testID="screens-admin-dashboard-header-actions">
             {canCreateBranches ? (
-              <AppButton label="Nueva sucursal" onPress={openCreateBranchModal} variant="secondary" />
+              <AppButton
+                label="Nueva sucursal"
+                nativeID="screens-admin-dashboard-new-branch-button"
+                onPress={openCreateBranchModal}
+                testID="screens-admin-dashboard-new-branch-button"
+                variant="secondary"
+              />
             ) : null}
-            <AppButton label="Ver alumnos" onPress={() => navigation.navigate("StudentsList")} />
+            <AppButton
+              label="Ver alumnos"
+              nativeID="screens-admin-dashboard-view-students-button"
+              onPress={() => navigation.navigate("StudentsList")}
+              testID="screens-admin-dashboard-view-students-button"
+            />
           </View>
         }
         onGoDashboard={() => navigation.navigate("AdminHome")}
@@ -1388,10 +1418,14 @@ export function AdminDashboardScreen({ navigation }: Props) {
         subtitle="Gestiona alumnos, sucursales y datos operativos del gimnasio desde un panel pensado para la operacion diaria."
         title="Resumen del gimnasio"
       >
-        <View style={styles.container}>
-          <AppCard style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}>
-            <View style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]}>
-              <View style={styles.heroCopy}>
+        <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
+          <AppCard
+            nativeID="screens-admin-dashboard-hero-card"
+            style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
+            testID="screens-admin-dashboard-hero-card"
+          >
+            <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
+              <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
                 <AppBadge label="Resumen operativo" tone="info" />
                 <Text style={styles.title}>{organization?.name ?? "Visibilidad rapida del gimnasio"}</Text>
                 <Text style={styles.subtitle}>
@@ -1399,10 +1433,21 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   administrar sucursales y disparar el CRUD de alumnos sin salir del panel.
                 </Text>
               </View>
-              <View style={styles.heroActions}>
-                <AppButton label="Nuevo alumno" onPress={() => navigation.navigate("StudentsList", { openCreate: true })} />
+              <View nativeID="screens-admin-dashboard-hero-actions" style={styles.heroActions} testID="screens-admin-dashboard-hero-actions">
+                <AppButton
+                  label="Nuevo alumno"
+                  nativeID="screens-admin-dashboard-new-student-button"
+                  onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
+                  testID="screens-admin-dashboard-new-student-button"
+                />
                 {canManageOrganization && organization ? (
-                  <AppButton label="Editar gimnasio" onPress={openOrganizationModal} variant="secondary" />
+                  <AppButton
+                    label="Editar gimnasio"
+                    nativeID="screens-admin-dashboard-edit-organization-button"
+                    onPress={openOrganizationModal}
+                    testID="screens-admin-dashboard-edit-organization-button"
+                    variant="secondary"
+                  />
                 ) : null}
               </View>
             </View>
@@ -1426,7 +1471,11 @@ export function AdminDashboardScreen({ navigation }: Props) {
           </AppCard>
 
           {feedback ? (
-            <View style={[styles.feedbackBanner, feedback.tone === "danger" ? styles.feedbackDanger : styles.feedbackSuccess]}>
+            <View
+              nativeID="screens-admin-dashboard-feedback-banner"
+              style={[styles.feedbackBanner, feedback.tone === "danger" ? styles.feedbackDanger : styles.feedbackSuccess]}
+              testID="screens-admin-dashboard-feedback-banner"
+            >
               <Text style={[styles.feedbackText, feedback.tone === "danger" ? styles.feedbackTextDanger : null]}>
                 {feedback.message}
               </Text>
@@ -1457,7 +1506,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
             </AppCard>
           ) : (
             <>
-              <View style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]}>
+              <View nativeID="screens-admin-dashboard-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-dashboard-metrics-grid">
                 <MetricCard label="Alumnos activos" value={String(activeStudents)} tone="success" />
                 <MetricCard label="Sucursales activas" value={String(activeBranches)} tone="info" />
                 <MetricCard label="Clases activas" value={String(activeClasses)} tone="neutral" />
@@ -1465,16 +1514,18 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 <MetricCard label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
               </View>
 
-              <View style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]}>
-                <AppCard style={styles.panelCard}>
+              <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
+                <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
                   <Text style={styles.sectionTitle}>Centro CRUD</Text>
                   <QuickAction
                     description="Abre el padron para buscar, crear, editar o eliminar alumnos del gimnasio."
+                    idPrefix="screens-admin-dashboard-manage-students-action"
                     label="Administrar alumnos"
                     onPress={() => navigation.navigate("StudentsList")}
                   />
                   <QuickAction
                     description="Inicia el alta de un alumno nuevo y confirma sus datos antes de guardarlo."
+                    idPrefix="screens-admin-dashboard-new-student-action"
                     label="Nuevo alumno"
                     onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
                   />
@@ -1484,6 +1535,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         ? "Edita nombre comercial, slug y estado operativo de la organizacion."
                         : "Disponible solo para org admin. Tu rol si puede operar la sucursal asignada."
                     }
+                    idPrefix="screens-admin-dashboard-edit-organization-action"
                     label="Editar gimnasio"
                     onPress={openOrganizationModal}
                     disabled={!canManageOrganization || !organization}
@@ -1494,12 +1546,14 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         ? "Da de alta una sucursal nueva ligada a esta organizacion."
                         : "La creacion de sucursales esta disponible solo para org admin."
                     }
+                    idPrefix="screens-admin-dashboard-new-branch-action"
                     label="Nueva sucursal"
                     onPress={openCreateBranchModal}
                     disabled={!canCreateBranches || !organizationId}
                   />
                   <QuickAction
                     description="Abre la ficha operativa de tu sucursal para actualizar ubicacion, zona horaria o estado."
+                    idPrefix="screens-admin-dashboard-edit-branch-action"
                     label="Editar mi sucursal"
                     onPress={() => {
                       if (currentBranch) {
@@ -1510,26 +1564,29 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   />
                   <QuickAction
                     description="Crea, edita o desactiva clases usando las disciplinas MMA, BJJ y JUDO."
+                    idPrefix="screens-admin-dashboard-new-class-action"
                     label="Nueva clase"
                     onPress={openCreateClassModal}
                     disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
                   />
                   <QuickAction
                     description="Registra, corrige o anula pagos de alumnos dentro del alcance actual."
+                    idPrefix="screens-admin-dashboard-new-payment-action"
                     label="Registrar pago"
                     onPress={openCreatePaymentModal}
                     disabled={visibleStudents.length === 0}
                   />
                   <QuickAction
                     description="Registra, corrige o elimina asistencias manuales por alumno y clase."
+                    idPrefix="screens-admin-dashboard-new-attendance-action"
                     label="Registrar asistencia"
                     onPress={openCreateAttendanceModal}
                     disabled={visibleStudents.length === 0}
                   />
                 </AppCard>
 
-                <AppCard style={styles.panelCard}>
-                  <View style={styles.cardHeaderRow}>
+                <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
+                  <View nativeID="screens-admin-dashboard-organization-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-organization-header">
                     <Text style={styles.sectionTitle}>Gimnasio-academia</Text>
                     <AppBadge label={organization?.is_active ? "Activa" : "Inactiva"} tone={organization?.is_active ? "success" : "warning"} />
                   </View>
@@ -1556,8 +1613,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                 </AppCard>
 
-                <AppCard style={styles.panelCard}>
-                  <View style={styles.cardHeaderRow}>
+                <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
+                  <View nativeID="screens-admin-dashboard-branches-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-branches-header">
                     <Text style={styles.sectionTitle}>Sucursales</Text>
                     {canCreateBranches ? (
                       <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} variant="secondary" />
@@ -1576,11 +1633,24 @@ export function AdminDashboardScreen({ navigation }: Props) {
                           <Text style={styles.branchMeta}>Zona horaria: {branch.timezone}</Text>
                         </View>
                         <View style={styles.branchActions}>
+                          {organization ? (
+                            <AppButton
+                              label="Abrir asistencia"
+                              onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                              variant="secondary"
+                              disabled={!branch.is_active}
+                            />
+                          ) : null}
                           <AppButton label="Editar" onPress={() => openEditBranchModal(branch)} variant="secondary" />
                           {canDeactivateBranches && branch.is_active ? (
                             <AppButton label="Desactivar" onPress={() => openEditBranchModal(branch)} variant="danger" />
                           ) : null}
                         </View>
+                        {organization && branch.is_active ? (
+                          <Text style={styles.helperText}>
+                            Ruta publica: {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
+                          </Text>
+                        ) : null}
                       </View>
                     ))
                   ) : (
@@ -1593,8 +1663,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                 </AppCard>
 
-                <AppCard style={styles.panelCard}>
-                  <View style={styles.cardHeaderRow}>
+                <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
+                  <View nativeID="screens-admin-dashboard-attendance-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-attendance-header">
                     <Text style={styles.sectionTitle}>Asistencias</Text>
                     <AppButton
                       label="Agregar asistencia"
@@ -1656,8 +1726,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                 </AppCard>
 
-                <AppCard style={styles.panelCard}>
-                  <View style={styles.cardHeaderRow}>
+                <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
+                  <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
                     <Text style={styles.sectionTitle}>Pagos</Text>
                     <AppButton
                       label="Agregar pago"
@@ -1728,8 +1798,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                 </AppCard>
 
-                <AppCard style={styles.panelCard}>
-                  <View style={styles.cardHeaderRow}>
+                <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
+                  <View nativeID="screens-admin-dashboard-classes-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-classes-header">
                     <Text style={styles.sectionTitle}>Clases</Text>
                     <AppButton
                       label="Agregar clase"
@@ -2320,22 +2390,26 @@ function QuickAction({
   description,
   onPress,
   disabled = false,
+  idPrefix,
 }: {
   label: string;
   description: string;
   onPress: () => void;
   disabled?: boolean;
+  idPrefix?: string;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
+      nativeID={idPrefix ? `${idPrefix}-button` : undefined}
       onPress={onPress}
       style={({ pressed }) => [
         styles.quickAction,
         disabled ? styles.quickActionDisabled : null,
         pressed && !disabled ? styles.quickActionPressed : null,
       ]}
+      testID={idPrefix ? `${idPrefix}-button` : undefined}
     >
       <Text style={styles.quickActionTitle}>{label}</Text>
       <Text style={styles.quickActionDescription}>{description}</Text>
