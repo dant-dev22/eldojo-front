@@ -306,6 +306,48 @@ export function LoginScreen() {
                 </Pressable>
               ))}
             </View>
+
+            <View nativeID="screens-auth-login-navbar-auth-actions" style={styles.navbarAuthActions} testID="screens-auth-login-navbar-auth-actions">
+              <Pressable
+                accessibilityRole="button"
+                nativeID="screens-auth-login-navbar-register-button"
+                onPress={() => handleModeChange("academy")}
+                style={({ pressed }) => [
+                  styles.navbarAuthButton,
+                  styles.navbarAuthButtonPrimary,
+                  pressed ? styles.navbarLinkPressed : null,
+                ]}
+                testID="screens-auth-login-navbar-register-button"
+              >
+                <Text
+                  nativeID="screens-auth-login-navbar-register-label"
+                  style={[styles.navbarAuthButtonLabel, styles.navbarAuthButtonLabelPrimary]}
+                  testID="screens-auth-login-navbar-register-label"
+                >
+                  Crear cuenta
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                nativeID="screens-auth-login-navbar-login-button"
+                onPress={() => handleModeChange("login")}
+                style={({ pressed }) => [
+                  styles.navbarAuthButton,
+                  styles.navbarAuthButtonSecondary,
+                  pressed ? styles.navbarLinkPressed : null,
+                ]}
+                testID="screens-auth-login-navbar-login-button"
+              >
+                <Text
+                  nativeID="screens-auth-login-navbar-login-label"
+                  style={styles.navbarAuthButtonLabel}
+                  testID="screens-auth-login-navbar-login-label"
+                >
+                  Iniciar sesion
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -330,46 +372,49 @@ export function LoginScreen() {
               nativeID="screens-auth-login-hero-content"
               style={[
                 styles.heroContent,
-                { maxWidth: layoutWidth },
-                isDesktop ? styles.heroContentDesktop : null,
+                { maxWidth: isAuthVisible ? 560 : layoutWidth },
+                isDesktop && !isAuthVisible ? styles.heroContentDesktop : null,
+                isAuthVisible ? styles.heroContentAuth : null,
               ]}
               testID="screens-auth-login-hero-content"
             >
-              <View nativeID="screens-auth-login-hero-copy" style={styles.heroCopy} testID="screens-auth-login-hero-copy">
-                <Text nativeID="screens-auth-login-hero-eyebrow" style={styles.heroEyebrow} testID="screens-auth-login-hero-eyebrow">
-                  Software operativo para dojos
-                </Text>
-                <Text
-                  nativeID="screens-auth-login-hero-title"
-                  style={styles.heroTitle}
-                  testID="screens-auth-login-hero-title"
-                >
-                  La administracion de un club de pelea nunca fue tan sencilla.
-                </Text>
-                <Text
-                  nativeID="screens-auth-login-hero-description"
-                  style={styles.heroDescription}
-                  testID="screens-auth-login-hero-description"
-                >
-                  Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.
-                </Text>
+              {!isAuthVisible ? (
+                <View nativeID="screens-auth-login-hero-copy" style={styles.heroCopy} testID="screens-auth-login-hero-copy">
+                  <Text nativeID="screens-auth-login-hero-eyebrow" style={styles.heroEyebrow} testID="screens-auth-login-hero-eyebrow">
+                    Software operativo para dojos
+                  </Text>
+                  <Text
+                    nativeID="screens-auth-login-hero-title"
+                    style={styles.heroTitle}
+                    testID="screens-auth-login-hero-title"
+                  >
+                    La administracion de un club de pelea nunca fue tan sencilla.
+                  </Text>
+                  <Text
+                    nativeID="screens-auth-login-hero-description"
+                    style={styles.heroDescription}
+                    testID="screens-auth-login-hero-description"
+                  >
+                    Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.
+                  </Text>
 
-                <View nativeID="screens-auth-login-hero-actions" style={styles.heroActions} testID="screens-auth-login-hero-actions">
-                  <AppButton
-                    label="Crear una cuenta"
-                    nativeID="screens-auth-login-open-register-button"
-                    onPress={() => handleModeChange("academy")}
-                    testID="screens-auth-login-open-register-button"
-                  />
-                  <AppButton
-                    label="Iniciar sesion"
-                    nativeID="screens-auth-login-open-login-button"
-                    onPress={() => handleModeChange("login")}
-                    testID="screens-auth-login-open-login-button"
-                    variant="secondary"
-                  />
+                  <View nativeID="screens-auth-login-hero-actions" style={styles.heroActions} testID="screens-auth-login-hero-actions">
+                    <AppButton
+                      label="Crear una cuenta"
+                      nativeID="screens-auth-login-open-register-button"
+                      onPress={() => handleModeChange("academy")}
+                      testID="screens-auth-login-open-register-button"
+                    />
+                    <AppButton
+                      label="Iniciar sesion"
+                      nativeID="screens-auth-login-open-login-button"
+                      onPress={() => handleModeChange("login")}
+                      testID="screens-auth-login-open-login-button"
+                      variant="secondary"
+                    />
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
               {isAuthVisible ? (
                 <AppCard
@@ -838,6 +883,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "center",
     flexDirection: "row",
+    gap: spacing.md,
     justifyContent: "space-between",
     paddingVertical: spacing.md,
     width: "100%",
@@ -855,9 +901,44 @@ const styles = StyleSheet.create({
     width: 56,
   },
   navbarLinks: {
+    flex: 1,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.md,
+    justifyContent: "center",
+  },
+  navbarAuthActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "flex-end",
+  },
+  navbarAuthButton: {
+    alignItems: "center",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+  },
+  navbarAuthButtonPrimary: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primarySoft,
+  },
+  navbarAuthButtonSecondary: {
+    backgroundColor: "transparent",
+    borderColor: "rgba(255, 255, 255, 0.28)",
+  },
+  navbarAuthButtonLabel: {
+    color: colors.onPrimary,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  navbarAuthButtonLabelPrimary: {
+    color: colors.text,
   },
   navbarLinkButton: {
     alignItems: "center",
@@ -896,6 +977,11 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     zIndex: 1,
     width: "100%",
+  },
+  heroContentAuth: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing["2xl"],
   },
   heroContentDesktop: {
     maxWidth: 860,
