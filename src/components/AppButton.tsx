@@ -44,7 +44,7 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === "secondary" ? colors.primary : variant === "danger" ? colors.danger : colors.text
+            variant === "secondary" ? colors.primary : variant === "danger" ? colors.danger : colors.onPrimary
           }
           nativeID={`${baseId}-spinner`}
           testID={`${baseId}-spinner`}
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   },
   danger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#E7A4A4",
+    borderColor: colors.danger,
   },
   disabled: {
     opacity: 0.55,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: 1 }],
   },
   label: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",

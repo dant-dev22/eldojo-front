@@ -19,8 +19,8 @@ export function AppCard({ children, style, nativeID, testID }: AppCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.panel,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.md,
