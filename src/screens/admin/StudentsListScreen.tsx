@@ -318,6 +318,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const branches = branchesQuery.data ?? [];
   const classes = classesQuery.data ?? [];
+  const sidebarBranch = branches.find((branch) => branch.id === fixedBranchId) ?? branches[0] ?? null;
+  const sidebarSummary = useMemo(
+    () => ({
+      organizationName: null,
+      suffix: null,
+      branchName: sidebarBranch?.name ?? null,
+      location: sidebarBranch
+        ? [sidebarBranch.city, sidebarBranch.state, sidebarBranch.country].filter(Boolean).join(", ") || sidebarBranch.address
+        : null,
+      mainSchedule: null,
+    }),
+    [sidebarBranch]
+  );
   const currentPage = FORM_PAGES[currentFormPage];
   const isLastFormPage = currentFormPage === FORM_PAGES.length - 1;
 
@@ -512,9 +525,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
   if (!organizationId) {
     return (
-      <Screen contentStyle={[styles.screenContent, { alignItems: "center" }]}>
-        <View style={[styles.container, { maxWidth: contentMaxWidth }]}>
+      <Screen contentStyle={[styles.screenContent, { alignItems: "center" }]} nativeID="screens-admin-students-list-missing-scope-screen" testID="screens-admin-students-list-missing-scope-screen">
+        <View nativeID="screens-admin-students-list-missing-scope-container" style={[styles.container, { maxWidth: contentMaxWidth }]} testID="screens-admin-students-list-missing-scope-container">
           <StatusView
+            nativeID="screens-admin-students-list-missing-scope-status"
             title="No encontramos el alcance admin"
             description="El usuario autenticado no tiene una asignación válida para operar alumnos."
           />
@@ -540,6 +554,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         }
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
+        sidebarSummary={sidebarSummary}
         subtitle="Consulta el padron del gimnasio, filtra por nombre y opera altas, ediciones y bajas sin salir del navegador."
         title="Panel de alumnos"
       >
@@ -551,20 +566,20 @@ export function StudentsListScreen({ navigation, route }: Props) {
             style={[styles.feedbackCard, feedbackTone === "success" ? styles.feedbackSuccess : styles.feedbackDanger]}
             testID="screens-admin-students-list-feedback-card"
           >
-            <View style={styles.feedbackCopy}>
-              <Text style={styles.feedbackTitle}>
+            <View nativeID="screens-admin-students-list-feedback-copy" style={styles.feedbackCopy} testID="screens-admin-students-list-feedback-copy">
+              <Text nativeID="screens-admin-students-list-feedback-title" style={styles.feedbackTitle} testID="screens-admin-students-list-feedback-title">
                 {feedbackTone === "success" ? "Acción completada" : "Necesita revisión"}
               </Text>
-              <Text style={styles.feedbackDescription}>{feedbackMessage}</Text>
+              <Text nativeID="screens-admin-students-list-feedback-description" style={styles.feedbackDescription} testID="screens-admin-students-list-feedback-description">{feedbackMessage}</Text>
             </View>
-            <AppButton label="Cerrar aviso" onPress={() => setFeedbackMessage(null)} variant="secondary" />
+            <AppButton label="Cerrar aviso" nativeID="screens-admin-students-list-feedback-close-button" onPress={() => setFeedbackMessage(null)} testID="screens-admin-students-list-feedback-close-button" variant="secondary" />
           </AppCard>
         ) : null}
 
         <View nativeID="screens-admin-students-list-top-grid" style={[styles.topGrid, isDesktop ? desktopStyles.topGrid : mobileStyles.topGrid]} testID="screens-admin-students-list-top-grid">
           <AppCard nativeID="screens-admin-students-list-search-card" style={styles.searchCard} testID="screens-admin-students-list-search-card">
-            <Text style={styles.sectionTitle}>Búsqueda operativa</Text>
-            <Text style={styles.sectionDescription}>
+            <Text nativeID="screens-admin-students-list-search-title" style={styles.sectionTitle} testID="screens-admin-students-list-search-title">Búsqueda operativa</Text>
+            <Text nativeID="screens-admin-students-list-search-description" style={styles.sectionDescription} testID="screens-admin-students-list-search-description">
               Filtra por nombre para encontrar rápido al alumno que necesitas o abre el alta desde este panel.
             </Text>
             <AppInput
@@ -583,13 +598,13 @@ export function StudentsListScreen({ navigation, route }: Props) {
               style={[styles.summaryCard, isDesktop ? desktopStyles.summaryCard : mobileStyles.summaryCard]}
               testID="screens-admin-students-list-summary-card"
             >
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Total visibles</Text>
-                <Text style={styles.summaryValue}>{students.length}</Text>
+              <View nativeID="screens-admin-students-list-summary-total" style={styles.summaryItem} testID="screens-admin-students-list-summary-total">
+                <Text nativeID="screens-admin-students-list-summary-total-label" style={styles.summaryLabel} testID="screens-admin-students-list-summary-total-label">Total visibles</Text>
+                <Text nativeID="screens-admin-students-list-summary-total-value" style={styles.summaryValue} testID="screens-admin-students-list-summary-total-value">{students.length}</Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Filtro actual</Text>
-                <Text style={styles.summaryValue}>{debouncedSearch.trim() || "Sin filtro"}</Text>
+              <View nativeID="screens-admin-students-list-summary-filter" style={styles.summaryItem} testID="screens-admin-students-list-summary-filter">
+                <Text nativeID="screens-admin-students-list-summary-filter-label" style={styles.summaryLabel} testID="screens-admin-students-list-summary-filter-label">Filtro actual</Text>
+                <Text nativeID="screens-admin-students-list-summary-filter-value" style={styles.summaryValue} testID="screens-admin-students-list-summary-filter-value">{debouncedSearch.trim() || "Sin filtro"}</Text>
               </View>
             </AppCard>
           ) : null}
@@ -597,17 +612,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
         {studentsQuery.isLoading ? (
           <StatusView
+            nativeID="screens-admin-students-list-loading-status"
             title="Cargando alumnos"
             description="Obteniendo el listado inicial desde el backend."
             loading
           />
         ) : studentsQuery.isError ? (
-          <View style={styles.errorBlock}>
+          <View nativeID="screens-admin-students-list-error-block" style={styles.errorBlock} testID="screens-admin-students-list-error-block">
             <StatusView
+              nativeID="screens-admin-students-list-error-status"
               title="No pudimos cargar el listado"
               description={getErrorMessage(studentsQuery.error)}
             />
-            <AppButton label="Reintentar" onPress={() => studentsQuery.refetch()} />
+            <AppButton label="Reintentar" nativeID="screens-admin-students-list-retry-button" onPress={() => studentsQuery.refetch()} testID="screens-admin-students-list-retry-button" />
           </View>
         ) : (
           <FlatList
@@ -627,29 +644,31 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 style={styles.studentCard}
                 testID={`screens-admin-students-list-card-${item.id}`}
               >
-                <View style={styles.studentTopRow}>
-                  <View style={styles.studentTitleBlock}>
-                    <Text style={styles.studentName}>
+                <View nativeID={`screens-admin-students-list-card-top-${item.id}`} style={styles.studentTopRow} testID={`screens-admin-students-list-card-top-${item.id}`}>
+                  <View nativeID={`screens-admin-students-list-card-title-block-${item.id}`} style={styles.studentTitleBlock} testID={`screens-admin-students-list-card-title-block-${item.id}`}>
+                    <Text nativeID={`screens-admin-students-list-card-name-${item.id}`} style={styles.studentName} testID={`screens-admin-students-list-card-name-${item.id}`}>
                       {item.first_name} {item.last_name}
                     </Text>
-                    <Text style={styles.studentMeta}>Código: {item.unique_code}</Text>
+                    <Text nativeID={`screens-admin-students-list-card-code-${item.id}`} style={styles.studentMeta} testID={`screens-admin-students-list-card-code-${item.id}`}>Código: {item.unique_code}</Text>
                   </View>
                   <AppBadge
                     label={formatPaymentStatus(item.payment_status)}
+                    nativeID={`screens-admin-students-list-card-payment-badge-${item.id}`}
+                    testID={`screens-admin-students-list-card-payment-badge-${item.id}`}
                     tone={getPaymentTone(item.payment_status)}
                   />
                 </View>
-                <View style={[styles.metaGrid, isDesktop ? desktopStyles.metaGrid : mobileStyles.metaGrid]}>
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Próximo pago</Text>
-                    <Text style={styles.studentMetaStrong}>{formatDate(item.next_payment_date)}</Text>
+                <View nativeID={`screens-admin-students-list-card-meta-grid-${item.id}`} style={[styles.metaGrid, isDesktop ? desktopStyles.metaGrid : mobileStyles.metaGrid]} testID={`screens-admin-students-list-card-meta-grid-${item.id}`}>
+                  <View nativeID={`screens-admin-students-list-card-next-payment-${item.id}`} style={styles.metaItem} testID={`screens-admin-students-list-card-next-payment-${item.id}`}>
+                    <Text nativeID={`screens-admin-students-list-card-next-payment-label-${item.id}`} style={styles.metaLabel} testID={`screens-admin-students-list-card-next-payment-label-${item.id}`}>Próximo pago</Text>
+                    <Text nativeID={`screens-admin-students-list-card-next-payment-value-${item.id}`} style={styles.studentMetaStrong} testID={`screens-admin-students-list-card-next-payment-value-${item.id}`}>{formatDate(item.next_payment_date)}</Text>
                   </View>
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Estado</Text>
-                    <Text style={styles.studentMetaStrong}>{getStudentStatusLabel(item.status)}</Text>
+                  <View nativeID={`screens-admin-students-list-card-status-${item.id}`} style={styles.metaItem} testID={`screens-admin-students-list-card-status-${item.id}`}>
+                    <Text nativeID={`screens-admin-students-list-card-status-label-${item.id}`} style={styles.metaLabel} testID={`screens-admin-students-list-card-status-label-${item.id}`}>Estado</Text>
+                    <Text nativeID={`screens-admin-students-list-card-status-value-${item.id}`} style={styles.studentMetaStrong} testID={`screens-admin-students-list-card-status-value-${item.id}`}>{getStudentStatusLabel(item.status)}</Text>
                   </View>
                 </View>
-                <View style={[styles.cardActions, isDesktop ? desktopStyles.cardActions : mobileStyles.cardActions]}>
+                <View nativeID={`screens-admin-students-list-card-actions-${item.id}`} style={[styles.cardActions, isDesktop ? desktopStyles.cardActions : mobileStyles.cardActions]} testID={`screens-admin-students-list-card-actions-${item.id}`}>
                   <AppButton
                     label="Ver detalle"
                     nativeID={`screens-admin-students-list-detail-button-${item.id}`}
@@ -678,9 +697,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
               </AppCard>
             )}
             ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No hay alumnos para mostrar</Text>
-                <Text style={styles.emptyDescription}>
+              <View nativeID="screens-admin-students-list-empty-state" style={styles.emptyState} testID="screens-admin-students-list-empty-state">
+                <Text nativeID="screens-admin-students-list-empty-title" style={styles.emptyTitle} testID="screens-admin-students-list-empty-title">No hay alumnos para mostrar</Text>
+                <Text nativeID="screens-admin-students-list-empty-description" style={styles.emptyDescription} testID="screens-admin-students-list-empty-description">
                   Ajusta la búsqueda o verifica que existan alumnos en tu organización o sucursal.
                 </Text>
               </View>
@@ -707,21 +726,23 @@ export function StudentsListScreen({ navigation, route }: Props) {
       >
         {dialogStep === "form" ? (
           <>
-            {modalError ? <Text style={styles.modalError}>{modalError}</Text> : null}
-            <View style={styles.formStepper}>
-              <View style={styles.formStepperCopy}>
-                <Text style={styles.formStepLabel}>Paso {currentFormPage + 1}</Text>
-                <Text style={styles.formStepTitle}>{currentPage.title}</Text>
+            {modalError ? <Text nativeID="screens-admin-students-list-modal-error" style={styles.modalError} testID="screens-admin-students-list-modal-error">{modalError}</Text> : null}
+            <View nativeID="screens-admin-students-list-form-stepper" style={styles.formStepper} testID="screens-admin-students-list-form-stepper">
+              <View nativeID="screens-admin-students-list-form-stepper-copy" style={styles.formStepperCopy} testID="screens-admin-students-list-form-stepper-copy">
+                <Text nativeID="screens-admin-students-list-form-step-label" style={styles.formStepLabel} testID="screens-admin-students-list-form-step-label">Paso {currentFormPage + 1}</Text>
+                <Text nativeID="screens-admin-students-list-form-step-title" style={styles.formStepTitle} testID="screens-admin-students-list-form-step-title">{currentPage.title}</Text>
               </View>
-              <View style={styles.formStepperTrack}>
+              <View nativeID="screens-admin-students-list-form-stepper-track" style={styles.formStepperTrack} testID="screens-admin-students-list-form-stepper-track">
                 {FORM_PAGES.map((page, index) => (
                   <View
                     key={page.id}
+                    nativeID={`screens-admin-students-list-form-step-dot-${page.id}`}
                     style={[
                       styles.formStepDot,
                       index === currentFormPage ? styles.formStepDotActive : null,
                       index < currentFormPage ? styles.formStepDotCompleted : null,
                     ]}
+                    testID={`screens-admin-students-list-form-step-dot-${page.id}`}
                   />
                 ))}
               </View>
@@ -783,15 +804,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   <AppInput
                     error={formErrors.birthPlace}
                     label="Lugar de nacimiento"
+                    nativeID="screens-admin-students-list-form-birth-place-input"
                     onChangeText={(value) => handleUpdateField("birthPlace", value)}
                     placeholder="Monterrey"
+                    testID="screens-admin-students-list-form-birth-place-input"
                     value={form.birthPlace}
                   />
                   <AppDateInput
                     error={formErrors.enrollmentDate}
                     label="Fecha de inscripción"
+                    nativeID="screens-admin-students-list-form-enrollment-date-input"
                     onChangeText={(value) => handleUpdateField("enrollmentDate", value)}
                     placeholder="2026-07-01"
+                    testID="screens-admin-students-list-form-enrollment-date-input"
                     value={form.enrollmentDate}
                   />
                 </View>
@@ -801,13 +826,16 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     error={formErrors.heightCm}
                     keyboardType="numeric"
                     label="Altura (cm)"
+                    nativeID="screens-admin-students-list-form-height-input"
                     onChangeText={(value) => handleUpdateField("heightCm", value)}
                     placeholder="168"
+                    testID="screens-admin-students-list-form-height-input"
                     value={form.heightCm}
                   />
                   <AppSelect
                     items={classOptions}
                     label="Clase principal"
+                    nativeID="screens-admin-students-list-form-primary-class-select"
                     onValueChange={(value) => handleUpdateField("primaryClassId", value)}
                     placeholder={
                       selectedBranchId
@@ -816,6 +844,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                           : "Selecciona una clase"
                         : "Elige una sucursal primero"
                     }
+                    testID="screens-admin-students-list-form-primary-class-select"
                     value={form.primaryClassId}
                   />
                 </View>
@@ -828,13 +857,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   <AppSelect
                     items={STUDENT_STATUS_OPTIONS}
                     label="Estado del alumno"
+                    nativeID="screens-admin-students-list-form-status-select"
                     onValueChange={(value) => handleUpdateField("status", value as StudentStatus)}
+                    testID="screens-admin-students-list-form-status-select"
                     value={form.status}
                   />
                   <AppSelect
                     items={PAYMENT_STATUS_OPTIONS}
                     label="Estatus de pago"
+                    nativeID="screens-admin-students-list-form-payment-status-select"
                     onValueChange={(value) => handleUpdateField("paymentStatus", value as PaymentStatus)}
+                    testID="screens-admin-students-list-form-payment-status-select"
                     value={form.paymentStatus}
                   />
                 </View>
@@ -844,14 +877,18 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     error={formErrors.monthlyFee}
                     keyboardType="decimal-pad"
                     label="Mensualidad"
+                    nativeID="screens-admin-students-list-form-monthly-fee-input"
                     onChangeText={(value) => handleUpdateField("monthlyFee", value)}
                     placeholder="1200.00"
+                    testID="screens-admin-students-list-form-monthly-fee-input"
                     value={form.monthlyFee}
                   />
                   <AppInput
                     label="Moneda"
+                    nativeID="screens-admin-students-list-form-currency-input"
                     onChangeText={(value) => handleUpdateField("currency", value.toUpperCase())}
                     placeholder="MXN"
+                    testID="screens-admin-students-list-form-currency-input"
                     value={form.currency}
                   />
                 </View>
@@ -864,14 +901,18 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   <AppDateInput
                     error={formErrors.nextPaymentDate}
                     label="Próximo pago"
+                    nativeID="screens-admin-students-list-form-next-payment-date-input"
                     onChangeText={(value) => handleUpdateField("nextPaymentDate", value)}
                     placeholder="2026-08-01"
+                    testID="screens-admin-students-list-form-next-payment-date-input"
                     value={form.nextPaymentDate}
                   />
                   <AppInput
                     label="Tutor o responsable"
+                    nativeID="screens-admin-students-list-form-guardian-name-input"
                     onChangeText={(value) => handleUpdateField("guardianName", value)}
                     placeholder="María Pérez"
+                    testID="screens-admin-students-list-form-guardian-name-input"
                     value={form.guardianName}
                   />
                 </View>
@@ -879,18 +920,22 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
                   <AppInput
                     label="Teléfono del tutor"
+                    nativeID="screens-admin-students-list-form-guardian-phone-input"
                     onChangeText={(value) => handleUpdateField("guardianPhone", value)}
                     placeholder="8112345678"
+                    testID="screens-admin-students-list-form-guardian-phone-input"
                     value={form.guardianPhone}
                   />
-                  <View style={styles.notesBlock}>
+                  <View nativeID="screens-admin-students-list-form-notes-block" style={styles.notesBlock} testID="screens-admin-students-list-form-notes-block">
                     <AppInput
                       label="Notas"
                       multiline
+                      nativeID="screens-admin-students-list-form-notes-input"
                       numberOfLines={4}
                       onChangeText={(value) => handleUpdateField("notes", value)}
                       placeholder="Observaciones relevantes para el gimnasio"
                       style={styles.notesInput}
+                      testID="screens-admin-students-list-form-notes-input"
                       value={form.notes}
                     />
                   </View>
@@ -922,22 +967,22 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </>
         ) : dialogMode === "create" ? (
           <>
-            {modalError ? <Text style={styles.modalError}>{modalError}</Text> : null}
-            <AppCard style={styles.confirmCard}>
-              <Text style={styles.confirmTitle}>Confirma el nuevo alumno</Text>
-              <SummaryRow label="Sucursal" value={selectedBranch?.name ?? "Sin sucursal"} />
-              <SummaryRow label="Nombre completo" value={`${form.firstName} ${form.lastName}`.trim()} />
-              <SummaryRow label="Nacimiento" value={`${form.birthDate} · ${form.birthPlace}`} />
-              <SummaryRow label="Inscripción" value={form.enrollmentDate} />
-              <SummaryRow label="Clase principal" value={selectedClass?.name ?? "Sin clase"} />
-              <SummaryRow label="Mensualidad" value={form.monthlyFee.trim() ? `${form.monthlyFee} ${form.currency}` : "Sin mensualidad"} />
-              <SummaryRow label="Pago" value={getPaymentLabel(form.paymentStatus)} />
-              <SummaryRow label="Estado" value={getStudentStatusLabel(form.status)} />
-              <SummaryRow label="Tutor" value={form.guardianName || "Sin tutor"} />
-              <SummaryRow label="Notas" value={form.notes || "Sin notas"} />
+            {modalError ? <Text nativeID="screens-admin-students-list-confirm-create-error" style={styles.modalError} testID="screens-admin-students-list-confirm-create-error">{modalError}</Text> : null}
+            <AppCard nativeID="screens-admin-students-list-confirm-create-card" style={styles.confirmCard} testID="screens-admin-students-list-confirm-create-card">
+              <Text nativeID="screens-admin-students-list-confirm-create-title" style={styles.confirmTitle} testID="screens-admin-students-list-confirm-create-title">Confirma el nuevo alumno</Text>
+              <SummaryRow idPrefix="screens-admin-students-list-summary-branch" label="Sucursal" value={selectedBranch?.name ?? "Sin sucursal"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-full-name" label="Nombre completo" value={`${form.firstName} ${form.lastName}`.trim()} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-birth" label="Nacimiento" value={`${form.birthDate} · ${form.birthPlace}`} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-enrollment" label="Inscripción" value={form.enrollmentDate} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-class" label="Clase principal" value={selectedClass?.name ?? "Sin clase"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-monthly-fee" label="Mensualidad" value={form.monthlyFee.trim() ? `${form.monthlyFee} ${form.currency}` : "Sin mensualidad"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-payment" label="Pago" value={getPaymentLabel(form.paymentStatus)} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-status" label="Estado" value={getStudentStatusLabel(form.status)} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-guardian" label="Tutor" value={form.guardianName || "Sin tutor"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-notes" label="Notas" value={form.notes || "Sin notas"} />
             </AppCard>
             <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
-              <AppButton label="Volver a editar" onPress={() => setDialogStep("form")} variant="secondary" />
+              <AppButton label="Volver a editar" nativeID="screens-admin-students-list-confirm-create-back-button" onPress={() => setDialogStep("form")} testID="screens-admin-students-list-confirm-create-back-button" variant="secondary" />
               <AppButton
                 label="Confirmar alta"
                 loading={createStudentMutation.isPending}
@@ -949,15 +994,15 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </>
         ) : (
           <>
-            {modalError ? <Text style={styles.modalError}>{modalError}</Text> : null}
-            <AppCard style={styles.confirmCard}>
-              <Text style={styles.confirmTitle}>¿Guardar cambios del alumno?</Text>
-              <Text style={styles.confirmText}>
+            {modalError ? <Text nativeID="screens-admin-students-list-confirm-update-error" style={styles.modalError} testID="screens-admin-students-list-confirm-update-error">{modalError}</Text> : null}
+            <AppCard nativeID="screens-admin-students-list-confirm-update-card" style={styles.confirmCard} testID="screens-admin-students-list-confirm-update-card">
+              <Text nativeID="screens-admin-students-list-confirm-update-title" style={styles.confirmTitle} testID="screens-admin-students-list-confirm-update-title">¿Guardar cambios del alumno?</Text>
+              <Text nativeID="screens-admin-students-list-confirm-update-text" style={styles.confirmText} testID="screens-admin-students-list-confirm-update-text">
                 Confirma si deseas actualizar a {selectedStudent?.first_name} {selectedStudent?.last_name} con los datos capturados.
               </Text>
             </AppCard>
             <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
-              <AppButton label="Volver a editar" onPress={() => setDialogStep("form")} variant="secondary" />
+              <AppButton label="Volver a editar" nativeID="screens-admin-students-list-confirm-update-back-button" onPress={() => setDialogStep("form")} testID="screens-admin-students-list-confirm-update-back-button" variant="secondary" />
               <AppButton
                 label="Sí, guardar cambios"
                 loading={updateStudentMutation.isPending}
@@ -978,16 +1023,16 @@ export function StudentsListScreen({ navigation, route }: Props) {
         onClose={() => setStudentToDelete(null)}
         testID="screens-admin-students-list-delete-modal"
       >
-        <AppCard style={styles.confirmCard}>
-          <Text style={styles.confirmTitle}>¿Estás seguro?</Text>
-          <Text style={styles.confirmText}>
+        <AppCard nativeID="screens-admin-students-list-delete-card" style={styles.confirmCard} testID="screens-admin-students-list-delete-card">
+          <Text nativeID="screens-admin-students-list-delete-title" style={styles.confirmTitle} testID="screens-admin-students-list-delete-title">¿Estás seguro?</Text>
+          <Text nativeID="screens-admin-students-list-delete-text" style={styles.confirmText} testID="screens-admin-students-list-delete-text">
             {studentToDelete
               ? `Vas a dar de baja a ${studentToDelete.first_name} ${studentToDelete.last_name}.`
               : "Selecciona un alumno para continuar."}
           </Text>
         </AppCard>
         <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
-          <AppButton label="Cancelar" onPress={() => setStudentToDelete(null)} variant="secondary" />
+          <AppButton label="Cancelar" nativeID="screens-admin-students-list-cancel-delete-button" onPress={() => setStudentToDelete(null)} testID="screens-admin-students-list-cancel-delete-button" variant="secondary" />
           <AppButton
             label="Sí, dar de baja"
             loading={deleteStudentMutation.isPending}
@@ -1002,11 +1047,13 @@ export function StudentsListScreen({ navigation, route }: Props) {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
+  const baseId = idPrefix ?? `screens-admin-students-list-summary-row-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.summaryRowLabel}>{label}</Text>
-      <Text style={styles.summaryRowValue}>{value}</Text>
+    <View nativeID={baseId} style={styles.summaryRow} testID={baseId}>
+      <Text nativeID={`${baseId}-label`} style={styles.summaryRowLabel} testID={`${baseId}-label`}>{label}</Text>
+      <Text nativeID={`${baseId}-value`} style={styles.summaryRowValue} testID={`${baseId}-value`}>{value}</Text>
     </View>
   );
 }

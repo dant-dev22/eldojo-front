@@ -79,13 +79,13 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
         testID="components-admin-user-menu-trigger"
         style={({ pressed }) => [styles.trigger, pressed ? styles.triggerPressed : null]}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLabel}>{displayInitial}</Text>
+        <View nativeID="components-admin-user-menu-trigger-avatar" style={styles.avatar} testID="components-admin-user-menu-trigger-avatar">
+          <Text nativeID="components-admin-user-menu-trigger-avatar-label" style={styles.avatarLabel} testID="components-admin-user-menu-trigger-avatar-label">{displayInitial}</Text>
         </View>
-        <View style={styles.triggerGlyph}>
-          <View style={styles.triggerLine} />
-          <View style={styles.triggerLine} />
-          <View style={styles.triggerLine} />
+        <View nativeID="components-admin-user-menu-trigger-glyph" style={styles.triggerGlyph} testID="components-admin-user-menu-trigger-glyph">
+          <View nativeID="components-admin-user-menu-trigger-line-1" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-1" />
+          <View nativeID="components-admin-user-menu-trigger-line-2" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-2" />
+          <View nativeID="components-admin-user-menu-trigger-line-3" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-3" />
         </View>
       </Pressable>
 
@@ -102,24 +102,24 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
               <View nativeID="components-admin-user-menu-profile-block" style={styles.profileBlock} testID="components-admin-user-menu-profile-block">
                 <View nativeID="components-admin-user-menu-profile-row" style={styles.profileRow} testID="components-admin-user-menu-profile-row">
                   <View nativeID="components-admin-user-menu-profile-avatar" style={styles.profileAvatar} testID="components-admin-user-menu-profile-avatar">
-                    <Text style={styles.profileAvatarLabel}>{displayInitial}</Text>
+                    <Text nativeID="components-admin-user-menu-profile-avatar-label" style={styles.profileAvatarLabel} testID="components-admin-user-menu-profile-avatar-label">{displayInitial}</Text>
                   </View>
                   <View nativeID="components-admin-user-menu-profile-copy" style={styles.profileCopy} testID="components-admin-user-menu-profile-copy">
-                    <Text style={styles.profileName}>{displayName}</Text>
-                    <Text style={styles.profileRole}>{formatAdminRole(user?.role)}</Text>
+                    <Text nativeID="components-admin-user-menu-profile-name" style={styles.profileName} testID="components-admin-user-menu-profile-name">{displayName}</Text>
+                    <Text nativeID="components-admin-user-menu-profile-role" style={styles.profileRole} testID="components-admin-user-menu-profile-role">{formatAdminRole(user?.role)}</Text>
                   </View>
                 </View>
-                <Text style={styles.profileEmail}>{user?.email ?? "Sin correo disponible"}</Text>
+                <Text nativeID="components-admin-user-menu-profile-email" style={styles.profileEmail} testID="components-admin-user-menu-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
               </View>
 
               <View nativeID="components-admin-user-menu-meta-block" style={styles.metaBlock} testID="components-admin-user-menu-meta-block">
                 <View nativeID="components-admin-user-menu-meta-row-role" style={styles.metaRow} testID="components-admin-user-menu-meta-row-role">
-                  <Text style={styles.metaLabel}>Rol</Text>
-                  <Text style={styles.metaValue}>{formatAdminRole(user?.role)}</Text>
+                  <Text nativeID="components-admin-user-menu-meta-role-label" style={styles.metaLabel} testID="components-admin-user-menu-meta-role-label">Rol</Text>
+                  <Text nativeID="components-admin-user-menu-meta-role-value" style={styles.metaValue} testID="components-admin-user-menu-meta-role-value">{formatAdminRole(user?.role)}</Text>
                 </View>
                 <View nativeID="components-admin-user-menu-meta-row-assignments" style={styles.metaRow} testID="components-admin-user-menu-meta-row-assignments">
-                  <Text style={styles.metaLabel}>Asignaciones</Text>
-                  <Text style={styles.metaValue}>{assignmentCount}</Text>
+                  <Text nativeID="components-admin-user-menu-meta-assignments-label" style={styles.metaLabel} testID="components-admin-user-menu-meta-assignments-label">Asignaciones</Text>
+                  <Text nativeID="components-admin-user-menu-meta-assignments-value" style={styles.metaValue} testID="components-admin-user-menu-meta-assignments-value">{assignmentCount}</Text>
                 </View>
               </View>
 
@@ -137,10 +137,12 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
                     ]}
                   >
                     <Text
+                      nativeID={`components-admin-user-menu-action-label-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                       style={[
                         styles.actionLabel,
                         action.tone === "danger" ? styles.actionLabelDanger : null,
                       ]}
+                      testID={`components-admin-user-menu-action-label-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                     >
                       {action.label}
                     </Text>

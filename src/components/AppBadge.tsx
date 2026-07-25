@@ -5,12 +5,19 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 interface AppBadgeProps {
   label: string;
   tone?: "neutral" | "success" | "warning" | "danger" | "info";
+  nativeID?: string;
+  testID?: string;
 }
 
-export function AppBadge({ label, tone = "neutral" }: AppBadgeProps) {
+export function AppBadge({ label, tone = "neutral", nativeID, testID }: AppBadgeProps) {
+  const baseId =
+    nativeID ?? testID ?? `components-app-badge-${tone}-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View style={[styles.base, styles[`${tone}Container`]]}>
-      <Text style={[styles.label, styles[`${tone}Label`]]}>{label}</Text>
+    <View nativeID={baseId} style={[styles.base, styles[`${tone}Container`]]} testID={baseId}>
+      <Text nativeID={`${baseId}-label`} style={[styles.label, styles[`${tone}Label`]]} testID={`${baseId}-label`}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -34,36 +41,36 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   neutralContainer: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.goldSoft,
+    borderColor: colors.gold,
   },
   neutralLabel: {
-    color: colors.accent,
+    color: colors.primary,
   },
   successContainer: {
     backgroundColor: colors.successSoft,
-    borderColor: "#B7E4C7",
+    borderColor: "#AFC675",
   },
   successLabel: {
     color: colors.success,
   },
   warningContainer: {
     backgroundColor: colors.warningSoft,
-    borderColor: "#F3C58C",
+    borderColor: colors.action,
   },
   warningLabel: {
     color: colors.warning,
   },
   dangerContainer: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F0B6B6",
+    borderColor: "#E7A4A4",
   },
   dangerLabel: {
     color: colors.danger,
   },
   infoContainer: {
     backgroundColor: colors.primarySoft,
-    borderColor: "#F7B37D",
+    borderColor: colors.primary,
   },
   infoLabel: {
     color: colors.primary,

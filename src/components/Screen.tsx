@@ -13,16 +13,18 @@ interface ScreenProps extends PropsWithChildren {
 }
 
 export function Screen({ children, scrollable = false, contentStyle, refreshControl, nativeID, testID }: ScreenProps) {
+  const baseId = nativeID ?? testID ?? "components-screen";
+
   if (scrollable) {
     return (
-      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+      <SafeAreaView edges={["top"]} nativeID={`${baseId}-safe-area`} style={styles.safeArea} testID={`${baseId}-safe-area`}>
         <ScrollView
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
-          nativeID={nativeID}
+          nativeID={baseId}
           refreshControl={refreshControl}
           showsVerticalScrollIndicator={false}
-          testID={testID}
+          testID={baseId}
         >
           {children}
         </ScrollView>
@@ -31,8 +33,8 @@ export function Screen({ children, scrollable = false, contentStyle, refreshCont
   }
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View nativeID={nativeID} style={[styles.content, contentStyle]} testID={testID}>
+    <SafeAreaView edges={["top"]} nativeID={`${baseId}-safe-area`} style={styles.safeArea} testID={`${baseId}-safe-area`}>
+      <View nativeID={baseId} style={[styles.content, contentStyle]} testID={baseId}>
         {children}
       </View>
     </SafeAreaView>

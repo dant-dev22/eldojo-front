@@ -19,12 +19,12 @@ export function AppCard({ children, style, nativeID, testID }: AppCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.panel,
+    borderColor: colors.borderStrong,
     borderRadius: radius.lg,
     borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: spacing.md,
+    padding: spacing.lg,
     ...shadows.card,
   },
 });

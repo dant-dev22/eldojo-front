@@ -6,14 +6,32 @@ interface StatusViewProps {
   title: string;
   description?: string;
   loading?: boolean;
+  nativeID?: string;
+  testID?: string;
 }
 
-export function StatusView({ title, description, loading = false }: StatusViewProps) {
+export function StatusView({ title, description, loading = false, nativeID, testID }: StatusViewProps) {
+  const baseId =
+    nativeID ?? testID ?? `components-status-view-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View style={styles.container}>
-      {loading ? <ActivityIndicator color={colors.accent} size="large" /> : null}
-      <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+    <View nativeID={baseId} style={styles.container} testID={baseId}>
+      {loading ? (
+        <ActivityIndicator
+          color={colors.accent}
+          nativeID={`${baseId}-spinner`}
+          size="large"
+          testID={`${baseId}-spinner`}
+        />
+      ) : null}
+      <Text nativeID={`${baseId}-title`} style={styles.title} testID={`${baseId}-title`}>
+        {title}
+      </Text>
+      {description ? (
+        <Text nativeID={`${baseId}-description`} style={styles.description} testID={`${baseId}-description`}>
+          {description}
+        </Text>
+      ) : null}
     </View>
   );
 }

@@ -24,15 +24,16 @@ export function AppButton({
   accessibilityLabel,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
+  const baseId = nativeID ?? testID ?? `components-app-button-${label.toLowerCase().replace(/\s+/g, "-")}`;
 
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
       disabled={isDisabled}
-      nativeID={nativeID}
+      nativeID={baseId}
       onPress={onPress}
-      testID={testID}
+      testID={baseId}
       style={({ pressed }) => [
         styles.base,
         variant === "secondary" ? styles.secondary : variant === "danger" ? styles.danger : styles.primary,
@@ -43,16 +44,20 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === "secondary" ? colors.primary : variant === "danger" ? colors.danger : colors.surface
+            variant === "secondary" ? colors.primary : variant === "danger" ? colors.danger : colors.text
           }
+          nativeID={`${baseId}-spinner`}
+          testID={`${baseId}-spinner`}
         />
       ) : (
         <Text
+          nativeID={`${baseId}-label`}
           style={[
             styles.label,
             variant === "secondary" ? styles.secondaryLabel : null,
             variant === "danger" ? styles.dangerLabel : null,
           ]}
+          testID={`${baseId}-label`}
         >
           {label}
         </Text>
@@ -64,24 +69,25 @@ export function AppButton({
 const styles = StyleSheet.create({
   base: {
     alignItems: "center",
-    borderColor: colors.primary,
+    borderColor: colors.action,
     borderRadius: radius.md,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 52,
-    paddingHorizontal: spacing.lg,
+    minHeight: 56,
+    paddingHorizontal: spacing.xl,
     ...shadows.focus,
   },
   primary: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.action,
+    borderColor: colors.action,
   },
   secondary: {
     backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
+    borderColor: colors.primary,
   },
   danger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F0B6B6",
+    borderColor: "#E7A4A4",
   },
   disabled: {
     opacity: 0.55,
@@ -91,14 +97,14 @@ const styles = StyleSheet.create({
     transform: [{ translateY: 1 }],
   },
   label: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   secondaryLabel: {
-    color: colors.accent,
+    color: colors.primary,
   },
   dangerLabel: {
     color: colors.danger,

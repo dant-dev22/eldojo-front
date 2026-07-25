@@ -31,10 +31,19 @@ export function AppSelect({
   nativeID,
   testID,
 }: AppSelectProps) {
+  const baseId =
+    nativeID ?? testID ?? `components-app-select-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View nativeID={nativeID} style={styles.wrapper} testID={testID}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[styles.container, error ? styles.containerError : null, !enabled ? styles.disabled : null]}>
+    <View nativeID={`${baseId}-wrapper`} style={styles.wrapper} testID={`${baseId}-wrapper`}>
+      <Text nativeID={`${baseId}-label`} style={styles.label} testID={`${baseId}-label`}>
+        {label}
+      </Text>
+      <View
+        nativeID={`${baseId}-container`}
+        style={[styles.container, error ? styles.containerError : null, !enabled ? styles.disabled : null]}
+        testID={`${baseId}-container`}
+      >
         <Picker
           enabled={enabled}
           nativeID={nativeID}
@@ -48,7 +57,11 @@ export function AppSelect({
           ))}
         </Picker>
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text nativeID={`${baseId}-error`} style={styles.error} testID={`${baseId}-error`}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -59,19 +72,19 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   label: {
-    color: colors.textMuted,
+    color: colors.primary,
     fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   container: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     borderWidth: 1,
-    minHeight: 54,
+    minHeight: 56,
     overflow: "hidden",
   },
   containerError: {

@@ -522,7 +522,7 @@ function buildAttendanceUpdatePayload(
 }
 
 async function openPublicAttendancePage(organizationSlug: string, branchName: string): Promise<void> {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://eldojo.tech";
+  const origin = "https://eldojo.tech";
   const path = buildPublicAttendanceUrl(origin, organizationSlug, branchName);
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -561,7 +561,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const { isDesktop } = useResponsiveLayout();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const publicAttendanceOrigin = typeof window !== "undefined" ? window.location.origin : "https://eldojo.tech";
+  const publicAttendanceOrigin = "https://eldojo.tech";
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
   const scopedBranchId = currentAssignment?.branch_id ?? null;
@@ -891,6 +891,20 @@ export function AdminDashboardScreen({ navigation }: Props) {
     () => visibleBranches.find((item) => item.id === scopedBranchId) ?? visibleBranches[0] ?? null,
     [visibleBranches, scopedBranchId]
   );
+  const sidebarSummary = useMemo(
+    () => ({
+      organizationName: organization?.name ?? null,
+      suffix: organization?.slug ?? null,
+      branchName: currentBranch?.name ?? visibleBranches[0]?.name ?? null,
+      location: currentBranch
+        ? [currentBranch.city, currentBranch.state, currentBranch.country].filter(Boolean).join(", ") || currentBranch.address
+        : visibleBranches[0]
+          ? [visibleBranches[0].city, visibleBranches[0].state, visibleBranches[0].country].filter(Boolean).join(", ") || visibleBranches[0].address
+          : null,
+      mainSchedule: null,
+    }),
+    [currentBranch, organization?.name, organization?.slug, visibleBranches]
+  );
   const visibleClasses = useMemo(
     () => (scopedBranchId ? classes.filter((item) => item.branch_id === scopedBranchId) : classes),
     [classes, scopedBranchId]
@@ -972,6 +986,17 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const activeClasses = visibleClasses.filter((item) => item.is_active).length;
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu gimnasio";
+
+  const copyPublicAttendanceUrl = async (url: string) => {
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      setFeedback({ tone: "success", message: "La liga publica se copio al portapapeles." });
+      return;
+    }
+
+    setFeedback({ tone: "danger", message: "No fue posible copiar la liga desde este dispositivo." });
+  };
   const isLoading =
     studentsQuery.isLoading ||
     classesQuery.isLoading ||
@@ -1415,7 +1440,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
         }
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
-        subtitle="Gestiona alumnos, sucursales y datos operativos del gimnasio desde un panel pensado para la operacion diaria."
+        sidebarSummary={sidebarSummary}
+        subtitle="Gestiona tu gimnasio, con sus clases y alumnos."
         title="Resumen del gimnasio"
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
@@ -1426,11 +1452,10 @@ export function AdminDashboardScreen({ navigation }: Props) {
           >
             <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
               <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
-                <AppBadge label="Resumen operativo" tone="info" />
-                <Text style={styles.title}>{organization?.name ?? "Visibilidad rapida del gimnasio"}</Text>
-                <Text style={styles.subtitle}>
-                  El dashboard ya funciona como centro operativo: desde aqui puedes editar la informacion del gimnasio,
-                  administrar sucursales y disparar el CRUD de alumnos sin salir del panel.
+                <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
+                <Text nativeID="screens-admin-dashboard-hero-title" style={styles.title} testID="screens-admin-dashboard-hero-title">{heroTitle}</Text>
+                <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
+                  Visualiza lo esencial y opera tu gimnasio desde un solo lugar.
                 </Text>
               </View>
               <View nativeID="screens-admin-dashboard-hero-actions" style={styles.heroActions} testID="screens-admin-dashboard-hero-actions">
@@ -1453,18 +1478,18 @@ export function AdminDashboardScreen({ navigation }: Props) {
             </View>
 
             {isDesktop ? (
-              <View style={[styles.scopeRow, desktopStyles.scopeRow]}>
-                <View style={styles.scopeItem}>
-                  <Text style={styles.scopeLabel}>Canal actual</Text>
-                  <Text style={styles.scopeValue}>Web responsive</Text>
+              <View nativeID="screens-admin-dashboard-scope-row" style={[styles.scopeRow, desktopStyles.scopeRow]} testID="screens-admin-dashboard-scope-row">
+                <View nativeID="screens-admin-dashboard-scope-channel" style={styles.scopeItem} testID="screens-admin-dashboard-scope-channel">
+                  <Text nativeID="screens-admin-dashboard-scope-channel-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-channel-label">Canal actual</Text>
+                  <Text nativeID="screens-admin-dashboard-scope-channel-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-channel-value">Web responsive</Text>
                 </View>
-                <View style={styles.scopeItem}>
-                  <Text style={styles.scopeLabel}>Rol activo</Text>
-                  <Text style={styles.scopeValue}>{user?.role === "org_admin" ? "Org admin" : "Branch admin"}</Text>
+                <View nativeID="screens-admin-dashboard-scope-role" style={styles.scopeItem} testID="screens-admin-dashboard-scope-role">
+                  <Text nativeID="screens-admin-dashboard-scope-role-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-role-label">Rol activo</Text>
+                  <Text nativeID="screens-admin-dashboard-scope-role-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-role-value">{user?.role === "org_admin" ? "Org admin" : "Branch admin"}</Text>
                 </View>
-                <View style={styles.scopeItem}>
-                  <Text style={styles.scopeLabel}>Alcance</Text>
-                  <Text style={styles.scopeValue}>{scopedBranchId ? "Sucursal" : "Organizacion"}</Text>
+                <View nativeID="screens-admin-dashboard-scope-scope" style={styles.scopeItem} testID="screens-admin-dashboard-scope-scope">
+                  <Text nativeID="screens-admin-dashboard-scope-scope-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-scope-label">Alcance</Text>
+                  <Text nativeID="screens-admin-dashboard-scope-scope-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-scope-value">{scopedBranchId ? "Sucursal" : "Organizacion"}</Text>
                 </View>
               </View>
             ) : null}
@@ -1476,7 +1501,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               style={[styles.feedbackBanner, feedback.tone === "danger" ? styles.feedbackDanger : styles.feedbackSuccess]}
               testID="screens-admin-dashboard-feedback-banner"
             >
-              <Text style={[styles.feedbackText, feedback.tone === "danger" ? styles.feedbackTextDanger : null]}>
+              <Text nativeID="screens-admin-dashboard-feedback-text" style={[styles.feedbackText, feedback.tone === "danger" ? styles.feedbackTextDanger : null]} testID="screens-admin-dashboard-feedback-text">
                 {feedback.message}
               </Text>
             </View>
@@ -1490,9 +1515,10 @@ export function AdminDashboardScreen({ navigation }: Props) {
             />
           ) : hasError ? (
             <AppCard>
-              <StatusView title="No pudimos cargar el panel" description={getErrorMessage(dashboardError)} />
+              <StatusView nativeID="screens-admin-dashboard-error-status" title="No pudimos cargar el panel" description={getErrorMessage(dashboardError)} />
               <AppButton
                 label="Reintentar"
+                nativeID="screens-admin-dashboard-retry-button"
                 onPress={() => {
                   void studentsQuery.refetch();
                   void classesQuery.refetch();
@@ -1502,6 +1528,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   void paymentsQuery.refetch();
                   void attendanceQuery.refetch();
                 }}
+                testID="screens-admin-dashboard-retry-button"
               />
             </AppCard>
           ) : (
@@ -1518,13 +1545,13 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
                   <Text style={styles.sectionTitle}>Centro CRUD</Text>
                   <QuickAction
-                    description="Abre el padron para buscar, crear, editar o eliminar alumnos del gimnasio."
+                    description="Administra alumnos. Crea, edita, agrega."
                     idPrefix="screens-admin-dashboard-manage-students-action"
                     label="Administrar alumnos"
                     onPress={() => navigation.navigate("StudentsList")}
                   />
                   <QuickAction
-                    description="Inicia el alta de un alumno nuevo y confirma sus datos antes de guardarlo."
+                    description="Inicia el alta de un alumno nuevo."
                     idPrefix="screens-admin-dashboard-new-student-action"
                     label="Nuevo alumno"
                     onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
@@ -1532,7 +1559,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   <QuickAction
                     description={
                       canManageOrganization
-                        ? "Edita nombre comercial, slug y estado operativo de la organizacion."
+                        ? "Edita datos de tu gimnasio."
                         : "Disponible solo para org admin. Tu rol si puede operar la sucursal asignada."
                     }
                     idPrefix="screens-admin-dashboard-edit-organization-action"
@@ -1552,7 +1579,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     disabled={!canCreateBranches || !organizationId}
                   />
                   <QuickAction
-                    description="Abre la ficha operativa de tu sucursal para actualizar ubicacion, zona horaria o estado."
+                    description="Edita tu sucursal."
                     idPrefix="screens-admin-dashboard-edit-branch-action"
                     label="Editar mi sucursal"
                     onPress={() => {
@@ -1563,21 +1590,21 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     disabled={!currentBranch || !canEditVisibleBranches}
                   />
                   <QuickAction
-                    description="Crea, edita o desactiva clases usando las disciplinas MMA, BJJ y JUDO."
+                    description="Administra tus clases."
                     idPrefix="screens-admin-dashboard-new-class-action"
                     label="Nueva clase"
                     onPress={openCreateClassModal}
                     disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
                   />
                   <QuickAction
-                    description="Registra, corrige o anula pagos de alumnos dentro del alcance actual."
+                    description="Administra los pagos de tus alumnos."
                     idPrefix="screens-admin-dashboard-new-payment-action"
                     label="Registrar pago"
                     onPress={openCreatePaymentModal}
                     disabled={visibleStudents.length === 0}
                   />
                   <QuickAction
-                    description="Registra, corrige o elimina asistencias manuales por alumno y clase."
+                    description="Administra la asistencia de tus alumnos."
                     idPrefix="screens-admin-dashboard-new-attendance-action"
                     label="Registrar asistencia"
                     onPress={openCreateAttendanceModal}
@@ -1593,8 +1620,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   {organization ? (
                     <>
                       <EntityField label="Nombre" value={organization.name} />
-                      <EntityField label="Slug" value={organization.slug} />
-                      <EntityField label="Alcance actual" value={scopedBranchId ? "Administracion por sucursal" : "Administracion de organizacion"} />
+                      <EntityField label="Sufijo" value={organization.slug} />
                       {canManageOrganization ? (
                         <AppButton label="Editar datos del gimnasio" onPress={openOrganizationModal} variant="secondary" />
                       ) : (
@@ -1614,42 +1640,54 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 </AppCard>
 
                 <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
-                  <View nativeID="screens-admin-dashboard-branches-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-branches-header">
+                  <View nativeID="screens-admin-dashboard-branches-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-branches-header">
                     <Text style={styles.sectionTitle}>Sucursales</Text>
                     {canCreateBranches ? (
-                      <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} variant="secondary" />
+                      <View style={isDesktop ? styles.headerButtonStack : null}>
+                        <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} variant="secondary" />
+                      </View>
                     ) : null}
                   </View>
                   {visibleBranches.length > 0 ? (
                     visibleBranches.map((branch) => (
-                      <View key={branch.id} style={styles.branchRow}>
-                        <View style={styles.branchCopy}>
-                          <View style={styles.branchTitleRow}>
-                            <Text style={styles.branchName}>{branch.name}</Text>
-                            <AppBadge label={branch.is_active ? "Activa" : "Inactiva"} tone={branch.is_active ? "success" : "warning"} />
+                      <View key={branch.id} nativeID={`screens-admin-dashboard-branch-row-${branch.id}`} style={styles.branchRow} testID={`screens-admin-dashboard-branch-row-${branch.id}`}>
+                        <View nativeID={`screens-admin-dashboard-branch-copy-${branch.id}`} style={styles.branchCopy} testID={`screens-admin-dashboard-branch-copy-${branch.id}`}>
+                          <View nativeID={`screens-admin-dashboard-branch-title-row-${branch.id}`} style={styles.branchTitleRow} testID={`screens-admin-dashboard-branch-title-row-${branch.id}`}>
+                            <Text nativeID={`screens-admin-dashboard-branch-name-${branch.id}`} style={styles.branchName} testID={`screens-admin-dashboard-branch-name-${branch.id}`}>{branch.name}</Text>
+                            <AppBadge label={branch.is_active ? "Activa" : "Inactiva"} nativeID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} testID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} tone={branch.is_active ? "success" : "warning"} />
                           </View>
-                          <Text style={styles.branchMeta}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
-                          <Text style={styles.branchMeta}>{branch.address}</Text>
-                          <Text style={styles.branchMeta}>Zona horaria: {branch.timezone}</Text>
+                          <Text nativeID={`screens-admin-dashboard-branch-location-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-location-${branch.id}`}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
+                          <Text nativeID={`screens-admin-dashboard-branch-address-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-address-${branch.id}`}>{branch.address}</Text>
                         </View>
-                        <View style={styles.branchActions}>
+                        <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
                           {organization ? (
                             <AppButton
                               label="Abrir asistencia"
+                              nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
                               onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                              testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
                               variant="secondary"
                               disabled={!branch.is_active}
                             />
                           ) : null}
-                          <AppButton label="Editar" onPress={() => openEditBranchModal(branch)} variant="secondary" />
+                          <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
                           {canDeactivateBranches && branch.is_active ? (
-                            <AppButton label="Desactivar" onPress={() => openEditBranchModal(branch)} variant="danger" />
+                            <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
                           ) : null}
                         </View>
                         {organization && branch.is_active ? (
-                          <Text style={styles.helperText}>
-                            Ruta publica: {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
-                          </Text>
+                          <View nativeID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`} style={styles.publicRouteBlock} testID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`}>
+                            <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
+                              {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
+                            </Text>
+                            <AppButton
+                              label="Copiar liga"
+                              nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                              onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
+                              testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                              variant="secondary"
+                            />
+                          </View>
                         ) : null}
                       </View>
                     ))
@@ -1664,14 +1702,16 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 </AppCard>
 
                 <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
-                  <View nativeID="screens-admin-dashboard-attendance-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-attendance-header">
+                  <View nativeID="screens-admin-dashboard-attendance-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-attendance-header">
                     <Text style={styles.sectionTitle}>Asistencias</Text>
-                    <AppButton
-                      label="Agregar asistencia"
-                      onPress={openCreateAttendanceModal}
-                      variant="secondary"
-                      disabled={visibleStudents.length === 0}
-                    />
+                    <View style={isDesktop ? styles.headerButtonStack : null}>
+                      <AppButton
+                        label="Agregar asistencia"
+                        onPress={openCreateAttendanceModal}
+                        variant="secondary"
+                        disabled={visibleStudents.length === 0}
+                      />
+                    </View>
                   </View>
                   <View style={styles.paymentSummaryRow}>
                     <AppBadge label={`${visibleAttendanceRecords.length} registros`} tone="neutral" />
@@ -1688,30 +1728,32 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         `Sucursal ${attendance.branch_id}`;
 
                       return (
-                        <View key={attendance.id} style={styles.attendanceRow}>
-                          <View style={styles.attendanceHeaderRow}>
-                            <View style={styles.attendanceCopy}>
-                              <Text style={styles.attendanceTitle}>
+                        <View key={attendance.id} nativeID={`screens-admin-dashboard-attendance-row-${attendance.id}`} style={styles.attendanceRow} testID={`screens-admin-dashboard-attendance-row-${attendance.id}`}>
+                          <View nativeID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`} style={styles.attendanceHeaderRow} testID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`}>
+                            <View nativeID={`screens-admin-dashboard-attendance-copy-${attendance.id}`} style={styles.attendanceCopy} testID={`screens-admin-dashboard-attendance-copy-${attendance.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-attendance-title-${attendance.id}`} style={styles.attendanceTitle} testID={`screens-admin-dashboard-attendance-title-${attendance.id}`}>
                                 {student
                                   ? `${student.first_name} ${student.last_name}`
                                   : `Alumno ${attendance.student_id}`}
                               </Text>
-                              <Text style={styles.attendanceMeta}>
+                              <Text nativeID={`screens-admin-dashboard-attendance-meta-${attendance.id}`} style={styles.attendanceMeta} testID={`screens-admin-dashboard-attendance-meta-${attendance.id}`}>
                                 {student ? `${student.unique_code} · ${branchName}` : branchName}
                               </Text>
                             </View>
                             <AppBadge
                               label={formatAttendanceMethod(attendance.method)}
+                              nativeID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
+                              testID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
                               tone={attendance.method === "qr" ? "info" : "neutral"}
                             />
                           </View>
-                          <View style={styles.paymentMetaGrid}>
-                            <EntityField label="Check-in" value={formatDateTime(attendance.check_in_at)} />
-                            <EntityField label="Clase" value={classItem?.name ?? "Sin clase"} />
+                          <View nativeID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`}>
+                            <EntityField idPrefix={`screens-admin-dashboard-attendance-checkin-${attendance.id}`} label="Check-in" value={formatDateTime(attendance.check_in_at)} />
+                            <EntityField idPrefix={`screens-admin-dashboard-attendance-class-${attendance.id}`} label="Clase" value={classItem?.name ?? "Sin clase"} />
                           </View>
-                          <View style={styles.branchActions}>
-                            <AppButton label="Editar" onPress={() => openEditAttendanceModal(attendance)} variant="secondary" />
-                            <AppButton label="Eliminar" onPress={() => openEditAttendanceModal(attendance)} variant="danger" />
+                          <View nativeID={`screens-admin-dashboard-attendance-actions-${attendance.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-attendance-actions-${attendance.id}`}>
+                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
+                            <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
                           </View>
                         </View>
                       );
@@ -1719,9 +1761,6 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   ) : (
                     <View style={styles.emptyBlock}>
                       <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
-                      <Text style={styles.emptyDescription}>
-                        Registra la primera asistencia del dia para empezar a construir el historial operativo.
-                      </Text>
                     </View>
                   )}
                 </AppCard>
@@ -1752,13 +1791,13 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         `Sucursal ${payment.branch_id}`;
 
                       return (
-                        <View key={payment.id} style={styles.paymentRow}>
-                          <View style={styles.paymentHeaderRow}>
-                            <View style={styles.paymentAmountBlock}>
-                              <Text style={styles.paymentAmount}>
+                        <View key={payment.id} nativeID={`screens-admin-dashboard-payment-row-${payment.id}`} style={styles.paymentRow} testID={`screens-admin-dashboard-payment-row-${payment.id}`}>
+                          <View nativeID={`screens-admin-dashboard-payment-header-row-${payment.id}`} style={styles.paymentHeaderRow} testID={`screens-admin-dashboard-payment-header-row-${payment.id}`}>
+                            <View nativeID={`screens-admin-dashboard-payment-amount-block-${payment.id}`} style={styles.paymentAmountBlock} testID={`screens-admin-dashboard-payment-amount-block-${payment.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-payment-amount-${payment.id}`} style={styles.paymentAmount} testID={`screens-admin-dashboard-payment-amount-${payment.id}`}>
                                 {formatCurrency(payment.amount, payment.currency)}
                               </Text>
-                              <Text style={styles.paymentMeta}>
+                              <Text nativeID={`screens-admin-dashboard-payment-meta-${payment.id}`} style={styles.paymentMeta} testID={`screens-admin-dashboard-payment-meta-${payment.id}`}>
                                 {student
                                   ? `${student.first_name} ${student.last_name} · ${student.unique_code}`
                                   : `Alumno ${payment.student_id}`}
@@ -1766,23 +1805,26 @@ export function AdminDashboardScreen({ navigation }: Props) {
                             </View>
                             <AppBadge
                               label={formatPaymentRecordStatus(payment.status)}
+                              nativeID={`screens-admin-dashboard-payment-status-badge-${payment.id}`}
+                              testID={`screens-admin-dashboard-payment-status-badge-${payment.id}`}
                               tone={getPaymentRecordTone(payment.status)}
                             />
                           </View>
-                          <View style={styles.paymentMetaGrid}>
-                            <EntityField label="Fecha" value={formatDateTime(payment.paid_at)} />
-                            <EntityField label="Metodo" value={formatPaymentMethod(payment.method)} />
-                            <EntityField label="Sucursal" value={branchName} />
+                          <View nativeID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`}>
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-date-${payment.id}`} label="Fecha" value={formatDateTime(payment.paid_at)} />
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-method-${payment.id}`} label="Metodo" value={formatPaymentMethod(payment.method)} />
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-branch-${payment.id}`} label="Sucursal" value={branchName} />
                             <EntityField
+                              idPrefix={`screens-admin-dashboard-payment-period-${payment.id}`}
                               label="Periodo"
                               value={`${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`}
                             />
                           </View>
-                          {payment.notes ? <Text style={styles.paymentNote}>Notas: {payment.notes}</Text> : null}
-                          <View style={styles.branchActions}>
-                            <AppButton label="Editar" onPress={() => openEditPaymentModal(payment)} variant="secondary" />
+                          {payment.notes ? <Text nativeID={`screens-admin-dashboard-payment-notes-${payment.id}`} style={styles.paymentNote} testID={`screens-admin-dashboard-payment-notes-${payment.id}`}>Notas: {payment.notes}</Text> : null}
+                          <View nativeID={`screens-admin-dashboard-payment-actions-${payment.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-payment-actions-${payment.id}`}>
+                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} variant="secondary" />
                             {payment.status !== "void" ? (
-                              <AppButton label="Anular" onPress={() => openEditPaymentModal(payment)} variant="danger" />
+                              <AppButton label="Anular" nativeID={`screens-admin-dashboard-payment-void-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-void-button-${payment.id}`} variant="danger" />
                             ) : null}
                           </View>
                         </View>
@@ -1809,7 +1851,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     />
                   </View>
                   {ensureDisciplinesMutation.isPending ? (
-                    <Text style={styles.helperText}>Preparando disciplinas MMA, BJJ y JUDO para esta organizacion.</Text>
+                    <Text style={styles.helperText}>Preparando clases para esta organizacion.</Text>
                   ) : null}
                   {visibleClasses.length > 0 ? (
                     visibleClasses.map((classItem) => {
@@ -1822,29 +1864,31 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         `Disciplina ${classItem.discipline_id}`;
 
                       return (
-                        <View key={classItem.id} style={styles.classPanelRow}>
-                          <View style={styles.classCopy}>
-                            <View style={styles.classTitleRow}>
-                              <Text style={styles.className}>{classItem.name}</Text>
+                        <View key={classItem.id} nativeID={`screens-admin-dashboard-class-row-${classItem.id}`} style={styles.classPanelRow} testID={`screens-admin-dashboard-class-row-${classItem.id}`}>
+                          <View nativeID={`screens-admin-dashboard-class-copy-${classItem.id}`} style={styles.classCopy} testID={`screens-admin-dashboard-class-copy-${classItem.id}`}>
+                            <View nativeID={`screens-admin-dashboard-class-title-row-${classItem.id}`} style={styles.classTitleRow} testID={`screens-admin-dashboard-class-title-row-${classItem.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-class-name-${classItem.id}`} style={styles.className} testID={`screens-admin-dashboard-class-name-${classItem.id}`}>{classItem.name}</Text>
                               <AppBadge
                                 label={classItem.is_active ? "Activa" : "Inactiva"}
+                                nativeID={`screens-admin-dashboard-class-status-badge-${classItem.id}`}
+                                testID={`screens-admin-dashboard-class-status-badge-${classItem.id}`}
                                 tone={classItem.is_active ? "success" : "warning"}
                               />
                             </View>
-                            <Text style={styles.classMeta}>{`Disciplina: ${disciplineName}`}</Text>
-                            <Text style={styles.classMeta}>{`Sucursal: ${branchName}`}</Text>
-                            <Text style={styles.classMeta}>
+                            <Text nativeID={`screens-admin-dashboard-class-discipline-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-discipline-${classItem.id}`}>{`Disciplina: ${disciplineName}`}</Text>
+                            <Text nativeID={`screens-admin-dashboard-class-branch-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-branch-${classItem.id}`}>{`Sucursal: ${branchName}`}</Text>
+                            <Text nativeID={`screens-admin-dashboard-class-instructor-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-instructor-${classItem.id}`}>
                               {classItem.instructor_name ? `Instructor: ${classItem.instructor_name}` : "Instructor pendiente"}
                             </Text>
-                            <Text style={styles.classMeta}>
+                            <Text nativeID={`screens-admin-dashboard-class-capacity-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-capacity-${classItem.id}`}>
                               {classItem.capacity ? `Capacidad: ${classItem.capacity} cupos` : "Capacidad sin definir"}
                             </Text>
-                            {classItem.description ? <Text style={styles.classMeta}>{classItem.description}</Text> : null}
+                            {classItem.description ? <Text nativeID={`screens-admin-dashboard-class-description-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-description-${classItem.id}`}>{classItem.description}</Text> : null}
                           </View>
-                          <View style={styles.branchActions}>
-                            <AppButton label="Editar" onPress={() => openEditClassModal(classItem)} variant="secondary" />
+                          <View nativeID={`screens-admin-dashboard-class-actions-${classItem.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-class-actions-${classItem.id}`}>
+                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} variant="secondary" />
                             {classItem.is_active ? (
-                              <AppButton label="Desactivar" onPress={() => openEditClassModal(classItem)} variant="danger" />
+                              <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} variant="danger" />
                             ) : null}
                           </View>
                         </View>
@@ -1854,7 +1898,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     <View style={styles.emptyBlock}>
                       <Text style={styles.emptyTitle}>Sin clases registradas</Text>
                       <Text style={styles.emptyDescription}>
-                        Crea tu primera clase desde aqui y asignale una disciplina entre MMA, BJJ o JUDO.
+                        Crea tu primera clase desde aqui para empezar a operar.
                       </Text>
                     </View>
                   )}
@@ -1885,7 +1929,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
           />
           <AppInput
             autoCapitalize="characters"
-            label="Slug (3 letras)"
+            label="Sufijo (3 letras)"
             maxLength={3}
             value={organizationForm.slug}
             onChangeText={(value) =>
@@ -2368,19 +2412,23 @@ function MetricCard({
   value: string;
   tone: "neutral" | "success" | "danger" | "info";
 }) {
+  const baseId = `screens-admin-dashboard-metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <AppCard style={styles.metricCard}>
-      <AppBadge label={label} tone={tone} />
-      <Text style={styles.metricValue}>{value}</Text>
+    <AppCard nativeID={baseId} style={styles.metricCard} testID={baseId}>
+      <AppBadge label={label} nativeID={`${baseId}-badge`} testID={`${baseId}-badge`} tone={tone} />
+      <Text nativeID={`${baseId}-value`} style={styles.metricValue} testID={`${baseId}-value`}>{value}</Text>
     </AppCard>
   );
 }
 
-function EntityField({ label, value }: { label: string; value: string }) {
+function EntityField({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
+  const baseId = idPrefix ?? `screens-admin-dashboard-entity-field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View style={styles.entityField}>
-      <Text style={styles.entityFieldLabel}>{label}</Text>
-      <Text style={styles.entityFieldValue}>{value}</Text>
+    <View nativeID={baseId} style={styles.entityField} testID={baseId}>
+      <Text nativeID={`${baseId}-label`} style={styles.entityFieldLabel} testID={`${baseId}-label`}>{label}</Text>
+      <Text nativeID={`${baseId}-value`} style={styles.entityFieldValue} testID={`${baseId}-value`}>{value}</Text>
     </View>
   );
 }
@@ -2411,8 +2459,8 @@ function QuickAction({
       ]}
       testID={idPrefix ? `${idPrefix}-button` : undefined}
     >
-      <Text style={styles.quickActionTitle}>{label}</Text>
-      <Text style={styles.quickActionDescription}>{description}</Text>
+      <Text nativeID={idPrefix ? `${idPrefix}-title` : undefined} style={styles.quickActionTitle} testID={idPrefix ? `${idPrefix}-title` : undefined}>{label}</Text>
+      <Text nativeID={idPrefix ? `${idPrefix}-description` : undefined} style={styles.quickActionDescription} testID={idPrefix ? `${idPrefix}-description` : undefined}>{description}</Text>
     </Pressable>
   );
 }
@@ -2428,7 +2476,7 @@ const styles = StyleSheet.create({
   heroCard: {
     gap: spacing.lg,
     backgroundColor: colors.surfaceStrong,
-    borderColor: "#2E241D",
+    borderColor: colors.gold,
   },
   heroTop: {
     gap: spacing.md,
@@ -2445,14 +2493,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   title: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 30,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   subtitle: {
-    color: "#D1C2B5",
+    color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 15,
     lineHeight: 22,
@@ -2461,23 +2509,23 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   scopeItem: {
-    backgroundColor: "#211812",
+    backgroundColor: "rgba(245, 242, 235, 0.1)",
     borderRadius: radius.md,
-    borderColor: "#30251D",
+    borderColor: "rgba(196, 168, 130, 0.42)",
     borderWidth: 1,
     flex: 1,
     gap: 4,
     padding: spacing.md,
   },
   scopeLabel: {
-    color: "#BCAEA2",
+    color: colors.textMuted,
     fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   scopeValue: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "800",
@@ -2512,6 +2560,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "space-between",
   },
+  cardHeaderColumn: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+  },
   sectionTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
@@ -2524,6 +2576,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
+  },
+  headerButtonStack: {
+    alignSelf: "stretch",
+    minWidth: 180,
   },
   quickAction: {
     backgroundColor: colors.surfaceAlt,
@@ -2623,6 +2679,9 @@ const styles = StyleSheet.create({
   branchActions: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  publicRouteBlock: {
     gap: spacing.sm,
   },
   paymentSummaryRow: {

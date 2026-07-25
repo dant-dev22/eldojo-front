@@ -130,14 +130,15 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       <Screen contentStyle={styles.screenContent}>
         <AdminShell
           activeSection="students"
-          headerActions={<AppButton label="Volver al listado" onPress={() => navigation.goBack()} variant="secondary" />}
+          headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-loading-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-loading-back-button" variant="secondary" />}
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="Preparando la ficha principal y el historial financiero del alumno."
           title="Detalle de alumno"
         >
-        <View style={styles.container}>
+        <View nativeID="screens-admin-student-detail-loading-state" style={styles.container} testID="screens-admin-student-detail-loading-state">
           <StatusView
+            nativeID="screens-admin-student-detail-loading-status"
             title="Cargando detalle del alumno"
             description="Obteniendo la ficha principal y preparando el historial de pagos."
             loading
@@ -153,20 +154,21 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       <Screen contentStyle={styles.screenContent}>
         <AdminShell
           activeSection="students"
-          headerActions={<AppButton label="Volver al listado" onPress={() => navigation.goBack()} variant="secondary" />}
+          headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-error-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-back-button" variant="secondary" />}
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="No fue posible cargar la informacion del alumno."
           title="Detalle de alumno"
         >
-        <View style={styles.container}>
+        <View nativeID="screens-admin-student-detail-error-state" style={styles.container} testID="screens-admin-student-detail-error-state">
           <StatusView
+            nativeID="screens-admin-student-detail-error-status"
             title="No pudimos cargar al alumno"
             description={getErrorMessage(studentQuery.error)}
           />
-          <View style={[styles.inlineActions, isDesktop ? desktopStyles.inlineActions : mobileStyles.inlineActions]}>
-            <AppButton label="Volver" onPress={() => navigation.goBack()} variant="secondary" />
-            <AppButton label="Reintentar" onPress={() => studentQuery.refetch()} />
+          <View nativeID="screens-admin-student-detail-error-actions" style={[styles.inlineActions, isDesktop ? desktopStyles.inlineActions : mobileStyles.inlineActions]} testID="screens-admin-student-detail-error-actions">
+            <AppButton label="Volver" nativeID="screens-admin-student-detail-error-return-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-return-button" variant="secondary" />
+            <AppButton label="Reintentar" nativeID="screens-admin-student-detail-error-retry-button" onPress={() => studentQuery.refetch()} testID="screens-admin-student-detail-error-retry-button" />
           </View>
         </View>
         </AdminShell>
@@ -180,6 +182,13 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const primaryClass =
     (classesQuery.data ?? []).find((item) => item.id === student.primary_class_id) ?? null;
   const lastPayment = payments[0] ?? null;
+  const sidebarSummary = {
+    organizationName: null,
+    suffix: null,
+    branchName: branch?.name ?? null,
+    location: branch ? [branch.city, branch.state, branch.country].filter(Boolean).join(", ") || branch.address : null,
+    mainSchedule: null,
+  };
 
   return (
     <Screen
@@ -207,6 +216,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         }
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
+        sidebarSummary={sidebarSummary}
         subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}
         title={`${student.first_name} ${student.last_name}`}
       >
@@ -214,41 +224,50 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         <View nativeID="screens-admin-student-detail-summary-grid" style={[styles.summaryGrid, isDesktop ? desktopStyles.summaryGrid : mobileStyles.summaryGrid]} testID="screens-admin-student-detail-summary-grid">
           <AppCard nativeID="screens-admin-student-detail-status-card" style={styles.summaryCard} testID="screens-admin-student-detail-status-card">
-            <Text style={styles.cardTitle}>Estado actual</Text>
-            <View style={styles.badgesRow}>
+            <Text nativeID="screens-admin-student-detail-status-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-status-card-title">Estado actual</Text>
+            <View nativeID="screens-admin-student-detail-status-badges" style={styles.badgesRow} testID="screens-admin-student-detail-status-badges">
               <AppBadge
                 label={formatPaymentStatus(student.payment_status)}
+                nativeID="screens-admin-student-detail-payment-status-badge"
+                testID="screens-admin-student-detail-payment-status-badge"
                 tone={getStudentPaymentTone(student.payment_status)}
               />
               <AppBadge
                 label={formatStudentStatus(student.status)}
+                nativeID="screens-admin-student-detail-student-status-badge"
+                testID="screens-admin-student-detail-student-status-badge"
                 tone={getStudentStatusTone(student.status)}
               />
             </View>
-            <DetailRow label="Próximo pago" value={formatDate(student.next_payment_date)} />
+            <DetailRow idPrefix="screens-admin-student-detail-status-next-payment" label="Próximo pago" value={formatDate(student.next_payment_date)} />
             <DetailRow
+              idPrefix="screens-admin-student-detail-status-monthly-fee"
               label="Mensualidad"
               value={formatCurrency(student.monthly_fee, student.currency)}
             />
-            <DetailRow label="Moneda" value={student.currency} />
+            <DetailRow idPrefix="screens-admin-student-detail-status-currency" label="Moneda" value={student.currency} />
           </AppCard>
 
           <AppCard nativeID="screens-admin-student-detail-profile-card" style={styles.summaryCard} testID="screens-admin-student-detail-profile-card">
-            <Text style={styles.cardTitle}>Ficha general</Text>
+            <Text nativeID="screens-admin-student-detail-profile-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-profile-card-title">Ficha general</Text>
             <DetailRow
+              idPrefix="screens-admin-student-detail-profile-birth"
               label="Nacimiento"
               value={`${formatDate(student.birth_date)} · ${student.birth_place}`}
             />
-            <DetailRow label="Inscripción" value={formatDate(student.enrollment_date)} />
+            <DetailRow idPrefix="screens-admin-student-detail-profile-enrollment" label="Inscripción" value={formatDate(student.enrollment_date)} />
             <DetailRow
+              idPrefix="screens-admin-student-detail-profile-height"
               label="Altura"
               value={student.height_cm ? `${student.height_cm} cm` : "No disponible"}
             />
             <DetailRow
+              idPrefix="screens-admin-student-detail-profile-branch"
               label="Sucursal"
               value={branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
             />
             <DetailRow
+              idPrefix="screens-admin-student-detail-profile-class"
               label="Clase principal"
               value={primaryClass?.name ?? "No asignada"}
             />
@@ -257,20 +276,22 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         <View nativeID="screens-admin-student-detail-detail-grid" style={[styles.detailGrid, isDesktop ? desktopStyles.detailGrid : mobileStyles.detailGrid]} testID="screens-admin-student-detail-detail-grid">
           <AppCard nativeID="screens-admin-student-detail-guardian-card" style={styles.infoCard} testID="screens-admin-student-detail-guardian-card">
-            <Text style={styles.cardTitle}>Tutor y observaciones</Text>
-            <DetailRow label="Tutor" value={student.guardian_name ?? "No registrado"} />
-            <DetailRow label="Teléfono" value={student.guardian_phone ?? "No registrado"} />
-            <DetailRow label="Notas" value={student.notes ?? "Sin notas"} />
+            <Text nativeID="screens-admin-student-detail-guardian-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-guardian-card-title">Tutor y observaciones</Text>
+            <DetailRow idPrefix="screens-admin-student-detail-guardian-name" label="Tutor" value={student.guardian_name ?? "No registrado"} />
+            <DetailRow idPrefix="screens-admin-student-detail-guardian-phone" label="Teléfono" value={student.guardian_phone ?? "No registrado"} />
+            <DetailRow idPrefix="screens-admin-student-detail-guardian-notes" label="Notas" value={student.notes ?? "Sin notas"} />
           </AppCard>
 
           <AppCard nativeID="screens-admin-student-detail-payments-summary-card" style={styles.infoCard} testID="screens-admin-student-detail-payments-summary-card">
-            <Text style={styles.cardTitle}>Resumen de pagos</Text>
-            <DetailRow label="Pagos registrados" value={String(payments.length)} />
+            <Text nativeID="screens-admin-student-detail-payments-summary-title" style={styles.cardTitle} testID="screens-admin-student-detail-payments-summary-title">Resumen de pagos</Text>
+            <DetailRow idPrefix="screens-admin-student-detail-payments-count" label="Pagos registrados" value={String(payments.length)} />
             <DetailRow
+              idPrefix="screens-admin-student-detail-payments-last-movement"
               label="Último movimiento"
               value={lastPayment ? formatDateTime(lastPayment.paid_at) : "Sin pagos registrados"}
             />
             <DetailRow
+              idPrefix="screens-admin-student-detail-payments-last-amount"
               label="Último monto"
               value={
                 lastPayment
@@ -283,24 +304,25 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
         <AppCard nativeID="screens-admin-student-detail-history-card" style={styles.historyCard} testID="screens-admin-student-detail-history-card">
           <View nativeID="screens-admin-student-detail-history-header" style={[styles.historyHeader, isDesktop ? desktopStyles.historyHeader : mobileStyles.historyHeader]} testID="screens-admin-student-detail-history-header">
-            <View style={styles.historyHeaderCopy}>
-              <Text style={styles.cardTitle}>Historial de pagos</Text>
-              <Text style={styles.sectionDescription}>
+            <View nativeID="screens-admin-student-detail-history-header-copy" style={styles.historyHeaderCopy} testID="screens-admin-student-detail-history-header-copy">
+              <Text nativeID="screens-admin-student-detail-history-title" style={styles.cardTitle} testID="screens-admin-student-detail-history-title">Historial de pagos</Text>
+              <Text nativeID="screens-admin-student-detail-history-description" style={styles.sectionDescription} testID="screens-admin-student-detail-history-description">
                 El backend entrega los pagos ordenados del más reciente al más antiguo por fecha de pago.
               </Text>
             </View>
-            <AppBadge label={`${payments.length} registros`} tone="neutral" />
+            <AppBadge label={`${payments.length} registros`} nativeID="screens-admin-student-detail-history-badge" testID="screens-admin-student-detail-history-badge" tone="neutral" />
           </View>
 
           {paymentsQuery.isLoading ? (
             <InlineStatus title="Cargando pagos" description="Preparando el historial financiero del alumno." loading />
           ) : paymentsQuery.isError ? (
-            <View style={styles.historyState}>
+            <View nativeID="screens-admin-student-detail-history-error" style={styles.historyState} testID="screens-admin-student-detail-history-error">
               <InlineStatus
+                idPrefix="screens-admin-student-detail-payments-error-status"
                 title="No pudimos cargar los pagos"
                 description={getErrorMessage(paymentsQuery.error)}
               />
-              <AppButton label="Reintentar pagos" onPress={() => paymentsQuery.refetch()} />
+              <AppButton label="Reintentar pagos" nativeID="screens-admin-student-detail-payments-retry-button" onPress={() => paymentsQuery.refetch()} testID="screens-admin-student-detail-payments-retry-button" />
             </View>
           ) : payments.length === 0 ? (
             <InlineStatus
@@ -308,9 +330,9 @@ export function StudentDetailScreen({ navigation, route }: Props) {
               description="Todavía no existen movimientos financieros asociados a este alumno."
             />
           ) : (
-            <View style={styles.paymentsList}>
+            <View nativeID="screens-admin-student-detail-payments-list" style={styles.paymentsList} testID="screens-admin-student-detail-payments-list">
               {payments.map((payment) => (
-                <PaymentRow key={payment.id} payment={payment} />
+                <PaymentRow key={payment.id} payment={payment} idPrefix={`screens-admin-student-detail-payment-${payment.id}`} />
               ))}
             </View>
           )}
@@ -325,56 +347,68 @@ function InlineStatus({
   title,
   description,
   loading = false,
+  idPrefix,
 }: {
   title: string;
   description: string;
   loading?: boolean;
+  idPrefix?: string;
 }) {
+  const baseId = idPrefix ?? "screens-admin-student-detail-inline-status";
+
   return (
-    <View style={styles.inlineStatus}>
-      {loading ? <Text style={styles.inlineStatusSpinner}>Cargando...</Text> : null}
-      <Text style={styles.inlineStatusTitle}>{title}</Text>
-      <Text style={styles.inlineStatusDescription}>{description}</Text>
+    <View nativeID={baseId} style={styles.inlineStatus} testID={baseId}>
+      {loading ? <Text nativeID={`${baseId}-spinner`} style={styles.inlineStatusSpinner} testID={`${baseId}-spinner`}>Cargando...</Text> : null}
+      <Text nativeID={`${baseId}-title`} style={styles.inlineStatusTitle} testID={`${baseId}-title`}>{title}</Text>
+      <Text nativeID={`${baseId}-description`} style={styles.inlineStatusDescription} testID={`${baseId}-description`}>{description}</Text>
     </View>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
+  const baseId =
+    idPrefix ?? `screens-admin-student-detail-detail-row-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
   return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+    <View nativeID={baseId} style={styles.detailRow} testID={baseId}>
+      <Text nativeID={`${baseId}-label`} style={styles.detailLabel} testID={`${baseId}-label`}>{label}</Text>
+      <Text nativeID={`${baseId}-value`} style={styles.detailValue} testID={`${baseId}-value`}>{value}</Text>
     </View>
   );
 }
 
-function PaymentRow({ payment }: { payment: Payment }) {
+function PaymentRow({ payment, idPrefix }: { payment: Payment; idPrefix?: string }) {
+  const baseId = idPrefix ?? `screens-admin-student-detail-payment-${payment.id}`;
+
   return (
-    <View style={styles.paymentRow}>
-      <View style={styles.paymentRowTop}>
-        <View style={styles.paymentAmountBlock}>
-          <Text style={styles.paymentAmount}>
+    <View nativeID={baseId} style={styles.paymentRow} testID={baseId}>
+      <View nativeID={`${baseId}-top`} style={styles.paymentRowTop} testID={`${baseId}-top`}>
+        <View nativeID={`${baseId}-amount-block`} style={styles.paymentAmountBlock} testID={`${baseId}-amount-block`}>
+          <Text nativeID={`${baseId}-amount`} style={styles.paymentAmount} testID={`${baseId}-amount`}>
             {formatCurrency(payment.amount, payment.currency)}
           </Text>
-          <Text style={styles.paymentMeta}>Pago #{payment.id}</Text>
+          <Text nativeID={`${baseId}-meta`} style={styles.paymentMeta} testID={`${baseId}-meta`}>Pago #{payment.id}</Text>
         </View>
         <AppBadge
           label={formatPaymentRecordStatus(payment.status)}
+          nativeID={`${baseId}-status-badge`}
+          testID={`${baseId}-status-badge`}
           tone={getPaymentRecordTone(payment.status)}
         />
       </View>
 
-      <View style={styles.paymentMetaGrid}>
-        <DetailRow label="Fecha de pago" value={formatDateTime(payment.paid_at)} />
-        <DetailRow label="Método" value={formatPaymentMethod(payment.method)} />
+      <View nativeID={`${baseId}-meta-grid`} style={styles.paymentMetaGrid} testID={`${baseId}-meta-grid`}>
+        <DetailRow idPrefix={`${baseId}-paid-at`} label="Fecha de pago" value={formatDateTime(payment.paid_at)} />
+        <DetailRow idPrefix={`${baseId}-method`} label="Método" value={formatPaymentMethod(payment.method)} />
         <DetailRow
+          idPrefix={`${baseId}-period`}
           label="Período"
           value={`${formatDate(payment.period_start)} al ${formatDate(payment.period_end)}`}
         />
-        <DetailRow label="Registrado por" value={`Usuario ${payment.recorded_by}`} />
+        <DetailRow idPrefix={`${baseId}-recorded-by`} label="Registrado por" value={`Usuario ${payment.recorded_by}`} />
       </View>
 
-      {payment.notes ? <Text style={styles.paymentNotes}>Notas: {payment.notes}</Text> : null}
+      {payment.notes ? <Text nativeID={`${baseId}-notes`} style={styles.paymentNotes} testID={`${baseId}-notes`}>Notas: {payment.notes}</Text> : null}
     </View>
   );
 }

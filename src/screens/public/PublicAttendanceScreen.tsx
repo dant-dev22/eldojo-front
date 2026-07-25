@@ -373,14 +373,14 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
         <View nativeID="screens-public-attendance-main-column" style={styles.mainColumn} testID="screens-public-attendance-main-column">
           {result ? (
             <AppCard nativeID="screens-public-attendance-success-card" style={styles.successCard} testID="screens-public-attendance-success-card">
-              <AppBadge label="Asistencia registrada" tone="success" />
-              <Text style={styles.successTitle}>{result.message}</Text>
-              <Text style={styles.successText}>Alumno: {result.student_name}</Text>
-              <Text style={styles.successText}>
+              <AppBadge label="Asistencia registrada" nativeID="screens-public-attendance-success-badge" testID="screens-public-attendance-success-badge" tone="success" />
+              <Text nativeID="screens-public-attendance-success-title" style={styles.successTitle} testID="screens-public-attendance-success-title">{result.message}</Text>
+              <Text nativeID="screens-public-attendance-success-student" style={styles.successText} testID="screens-public-attendance-success-student">Alumno: {result.student_name}</Text>
+              <Text nativeID="screens-public-attendance-success-class" style={styles.successText} testID="screens-public-attendance-success-class">
                 Clase: {result.class_name ?? selectedClassName ?? "Clase general"}
               </Text>
-              <Text style={styles.successText}>Folio: #{result.attendance_id}</Text>
-              <Text style={styles.countdownText}>
+              <Text nativeID="screens-public-attendance-success-attendance-id" style={styles.successText} testID="screens-public-attendance-success-attendance-id">Folio: #{result.attendance_id}</Text>
+              <Text nativeID="screens-public-attendance-success-countdown" style={styles.countdownText} testID="screens-public-attendance-success-countdown">
                 Reiniciando el formulario en {successCountdown ?? 0} segundo{successCountdown === 1 ? "" : "s"}.
               </Text>
             </AppCard>
@@ -388,12 +388,12 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
             <>
               <AppCard nativeID="screens-public-attendance-form-card" style={styles.formCard} testID="screens-public-attendance-form-card">
                 <View nativeID="screens-public-attendance-context" style={styles.contextBlock} testID="screens-public-attendance-context">
-                  <AppBadge label="Registrar asistencia" tone="info" />
-                  <Text style={styles.contextTitle}>{contextQuery.data.organization_name}</Text>
-                  <Text style={styles.contextSubtitle}>{contextQuery.data.branch_name}</Text>
+                  <AppBadge label="Registrar asistencia" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="info" />
+                  <Text nativeID="screens-public-attendance-context-title" style={styles.contextTitle} testID="screens-public-attendance-context-title">{contextQuery.data.organization_name}</Text>
+                  <Text nativeID="screens-public-attendance-context-subtitle" style={styles.contextSubtitle} testID="screens-public-attendance-context-subtitle">{contextQuery.data.branch_name}</Text>
                 </View>
-                <Text style={styles.sectionTitle}>Registrar asistencia</Text>
-                <Text style={styles.sectionDescription}>
+                <Text nativeID="screens-public-attendance-section-title" style={styles.sectionTitle} testID="screens-public-attendance-section-title">Registrar asistencia</Text>
+                <Text nativeID="screens-public-attendance-section-description" style={styles.sectionDescription} testID="screens-public-attendance-section-description">
                   Escribe el ID del alumno o su codigo. Cuando el sistema lo encuentre, podras confirmar la asistencia manualmente.
                 </Text>
                 <AppSelect
@@ -413,9 +413,11 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                   <View nativeID="screens-public-attendance-selection-summary" style={styles.selectionSummary} testID="screens-public-attendance-selection-summary">
                     <AppBadge
                       label={selectedClassId === recommendedClassId ? "Clase sugerida" : "Clase elegida"}
+                      nativeID="screens-public-attendance-selection-summary-badge"
+                      testID="screens-public-attendance-selection-summary-badge"
                       tone="success"
                     />
-                    <Text style={styles.selectionSummaryText}>{selectedClassName}</Text>
+                    <Text nativeID="screens-public-attendance-selection-summary-text" style={styles.selectionSummaryText} testID="screens-public-attendance-selection-summary-text">{selectedClassName}</Text>
                   </View>
                 ) : null}
                 <AppInput
@@ -433,16 +435,16 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                   testID="screens-public-attendance-student-input"
                   value={studentIdentifier}
                 />
-                {lookupHelperText ? <Text style={styles.helper}>{lookupHelperText}</Text> : null}
+                {lookupHelperText ? <Text nativeID="screens-public-attendance-helper" style={styles.helper} testID="screens-public-attendance-helper">{lookupHelperText}</Text> : null}
                 {resolvedStudent ? (
                   <View nativeID="screens-public-attendance-student-summary" style={styles.studentSummary} testID="screens-public-attendance-student-summary">
-                    <AppBadge label="Alumno encontrado" tone="info" />
-                    <Text style={styles.studentSummaryName}>{resolvedStudent.student_name}</Text>
-                    <Text style={styles.studentSummaryMeta}>Codigo: {resolvedStudent.unique_code}</Text>
+                    <AppBadge label="Alumno encontrado" nativeID="screens-public-attendance-student-summary-badge" testID="screens-public-attendance-student-summary-badge" tone="info" />
+                    <Text nativeID="screens-public-attendance-student-summary-name" style={styles.studentSummaryName} testID="screens-public-attendance-student-summary-name">{resolvedStudent.student_name}</Text>
+                    <Text nativeID="screens-public-attendance-student-summary-meta" style={styles.studentSummaryMeta} testID="screens-public-attendance-student-summary-meta">Codigo: {resolvedStudent.unique_code}</Text>
                   </View>
                 ) : null}
-                {studentLookupError ? <Text style={styles.error}>{studentLookupError}</Text> : null}
-                {formError ? <Text style={styles.error}>{formError}</Text> : null}
+                {studentLookupError ? <Text nativeID="screens-public-attendance-student-error" style={styles.error} testID="screens-public-attendance-student-error">{studentLookupError}</Text> : null}
+                {formError ? <Text nativeID="screens-public-attendance-form-error" style={styles.error} testID="screens-public-attendance-form-error">{formError}</Text> : null}
                 <AppButton
                   disabled={!resolvedStudent || !selectedClassId}
                   label="Registrar asistencia"

@@ -23,14 +23,21 @@ interface AppModalProps extends PropsWithChildren {
 export function AppModal({ visible, title, description, onClose, children, nativeID, testID }: AppModalProps) {
   const { height, width } = useWindowDimensions();
   const dialogWidth = width >= 1280 ? 900 : width >= 1024 ? 820 : width >= 768 ? 700 : width - spacing.md * 2;
+  const baseId =
+    nativeID ?? testID ?? `components-app-modal-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={styles.backdrop} />
-        <View style={styles.dialogWrapper}>
+      <View nativeID={`${baseId}-overlay`} style={styles.overlay} testID={`${baseId}-overlay`}>
+        <Pressable
+          nativeID={`${baseId}-backdrop`}
+          onPress={onClose}
+          style={styles.backdrop}
+          testID={`${baseId}-backdrop`}
+        />
+        <View nativeID={`${baseId}-wrapper`} style={styles.dialogWrapper} testID={`${baseId}-wrapper`}>
           <View
-            nativeID={nativeID}
+            nativeID={baseId}
             style={[
               styles.dialog,
               {
@@ -38,21 +45,37 @@ export function AppModal({ visible, title, description, onClose, children, nativ
                 maxWidth: Math.max(320, dialogWidth),
               },
             ]}
-            testID={testID}
+            testID={baseId}
           >
-            <View style={styles.header}>
-              <View style={styles.headerCopy}>
-                <Text style={styles.title}>{title}</Text>
-                {description ? <Text style={styles.description}>{description}</Text> : null}
+            <View nativeID={`${baseId}-header`} style={styles.header} testID={`${baseId}-header`}>
+              <View nativeID={`${baseId}-header-copy`} style={styles.headerCopy} testID={`${baseId}-header-copy`}>
+                <Text nativeID={`${baseId}-title`} style={styles.title} testID={`${baseId}-title`}>
+                  {title}
+                </Text>
+                {description ? (
+                  <Text nativeID={`${baseId}-description`} style={styles.description} testID={`${baseId}-description`}>
+                    {description}
+                  </Text>
+                ) : null}
               </View>
-              <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
-                <Text style={styles.closeLabel}>Cerrar</Text>
+              <Pressable
+                accessibilityRole="button"
+                nativeID={`${baseId}-close-button`}
+                onPress={onClose}
+                style={styles.closeButton}
+                testID={`${baseId}-close-button`}
+              >
+                <Text nativeID={`${baseId}-close-label`} style={styles.closeLabel} testID={`${baseId}-close-label`}>
+                  Cerrar
+                </Text>
               </Pressable>
             </View>
             <ScrollView
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
+              nativeID={`${baseId}-content`}
               showsVerticalScrollIndicator={false}
+              testID={`${baseId}-content`}
             >
               {children}
             </ScrollView>
@@ -110,8 +133,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   closeButton: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.goldSoft,
+    borderColor: colors.gold,
     borderRadius: radius.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,

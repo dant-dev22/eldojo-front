@@ -33,9 +33,13 @@ export function AppDateInput({
   autoFocus,
   onBlur,
   onFocus,
+  nativeID,
+  testID,
 }: AppDateInputProps) {
   const [draftValue, setDraftValue] = useState(typeof value === "string" ? value : "");
   const selectedDate = parseDateText(draftValue) ?? null;
+  const baseId =
+    nativeID ?? testID ?? `components-app-date-input-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   useEffect(() => {
     setDraftValue(typeof value === "string" ? value : "");
@@ -53,11 +57,13 @@ export function AppDateInput({
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View nativeID={`${baseId}-wrapper`} style={styles.wrapper} testID={`${baseId}-wrapper`}>
       <style>{datePickerStyles}</style>
-      <Text style={styles.label}>{label}</Text>
-      <div style={webStyles.fieldWrapper}>
-        <div style={webStyles.icon}>
+      <Text nativeID={`${baseId}-label`} style={styles.label} testID={`${baseId}-label`}>
+        {label}
+      </Text>
+      <div data-testid={`${baseId}-field-wrapper`} id={`${baseId}-field-wrapper`} style={webStyles.fieldWrapper}>
+        <div data-testid={`${baseId}-icon`} id={`${baseId}-icon`} style={webStyles.icon}>
           <Feather color={colors.textMuted} name="calendar" size={18} />
         </div>
         <DatePicker
@@ -70,6 +76,7 @@ export function AppDateInput({
           dateFormat="yyyy-MM-dd"
           disabled={editable === false}
           dropdownMode="select"
+          id={baseId}
           locale="es"
           onBlur={onBlur as never}
           onChange={handleSelect}
@@ -92,8 +99,14 @@ export function AppDateInput({
         />
       </div>
 
-      <Text style={styles.helper}>Escribe la fecha manualmente o elige un dia desde el calendario.</Text>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Text nativeID={`${baseId}-helper`} style={styles.helper} testID={`${baseId}-helper`}>
+        Escribe la fecha manualmente o elige un dia desde el calendario.
+      </Text>
+      {error ? (
+        <Text nativeID={`${baseId}-error`} style={styles.error} testID={`${baseId}-error`}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

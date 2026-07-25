@@ -2,7 +2,6 @@ import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
-import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
@@ -18,6 +17,13 @@ interface AdminShellProps extends PropsWithChildren {
   onGoDashboard: () => void;
   onGoStudents: () => void;
   headerActions?: ReactNode;
+  sidebarSummary?: {
+    organizationName?: string | null;
+    suffix?: string | null;
+    branchName?: string | null;
+    location?: string | null;
+    mainSchedule?: string | null;
+  };
 }
 
 type NavItem = {
@@ -58,6 +64,7 @@ export function AdminShell({
   onGoDashboard,
   onGoStudents,
   headerActions,
+  sidebarSummary,
   children,
 }: AdminShellProps) {
   const { user, signOut } = useAuth();
@@ -87,6 +94,16 @@ export function AdminShell({
     [user?.email, user?.first_name, user?.last_name]
   );
   const assignmentCount = user?.admin_assignments.length ?? 0;
+  const academySummary = useMemo(
+    () => [
+      { key: "name", label: "Academia", value: sidebarSummary?.organizationName ?? "No disponible" },
+      { key: "branch", label: "Sede principal", value: sidebarSummary?.branchName ?? "No disponible" },
+      { key: "location", label: "Ubicacion", value: sidebarSummary?.location ?? "No disponible" },
+      { key: "schedule", label: "Horario principal", value: sidebarSummary?.mainSchedule ?? "No disponible" },
+      { key: "suffix", label: "Sufijo", value: sidebarSummary?.suffix ?? "No disponible" },
+    ],
+    [sidebarSummary]
+  );
 
   const requestSignOut = () => {
     setShowSignOutConfirm(true);
@@ -111,11 +128,36 @@ export function AdminShell({
         <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
           <View nativeID="components-admin-shell-sidebar-card" style={styles.sidebarCard} testID="components-admin-shell-sidebar-card">
             <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
-              <AppBadge label="Portal web" tone="info" />
-              <Text style={styles.brandTitle}>ElDojo Admin</Text>
-              <Text style={styles.brandDescription}>
-                Opera el gimnasio desde una interfaz responsive enfocada en escritorio y tablet.
-              </Text>
+              <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
+                <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
+                  EL
+                </Text>
+              </View>
+              <View nativeID="components-admin-shell-academy-summary" style={styles.summaryBlock} testID="components-admin-shell-academy-summary">
+                {academySummary.map((item) => (
+                  <View
+                    key={item.key}
+                    nativeID={`components-admin-shell-academy-summary-${item.key}`}
+                    style={styles.summaryRow}
+                    testID={`components-admin-shell-academy-summary-${item.key}`}
+                  >
+                    <Text
+                      nativeID={`components-admin-shell-academy-summary-${item.key}-label`}
+                      style={styles.summaryLabel}
+                      testID={`components-admin-shell-academy-summary-${item.key}-label`}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      nativeID={`components-admin-shell-academy-summary-${item.key}-value`}
+                      style={styles.summaryValue}
+                      testID={`components-admin-shell-academy-summary-${item.key}-value`}
+                    >
+                      {item.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
@@ -133,23 +175,25 @@ export function AdminShell({
                   ]}
                 >
                   <Text
+                    nativeID={`components-admin-shell-nav-item-label-${item.key}`}
                     style={[
                       styles.navItemLabel,
                       item.key === activeSection ? styles.navItemLabelActive : null,
                     ]}
+                    testID={`components-admin-shell-nav-item-label-${item.key}`}
                   >
                     {item.label}
                   </Text>
-                  <Text style={styles.navItemDescription}>{item.description}</Text>
+                  <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
                 </Pressable>
               ))}
             </View>
 
             <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
               <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
-                <Text style={styles.profileName}>{displayName}</Text>
-                <Text style={styles.profileMeta}>{user?.email ?? "Sin correo disponible"}</Text>
-                <Text style={styles.profileMeta}>
+                <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
+                <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
+                <Text nativeID="components-admin-shell-profile-assignments" style={styles.profileMeta} testID="components-admin-shell-profile-assignments">
                   {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
                 </Text>
               </View>
@@ -172,9 +216,8 @@ export function AdminShell({
           testID="components-admin-shell-header"
         >
           <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
-            <AppBadge label={isDesktop ? "Portal responsive" : "Vista compacta"} tone="info" />
-            <Text style={styles.pageTitle}>{title}</Text>
-            <Text style={styles.pageSubtitle}>{subtitle}</Text>
+            <Text nativeID="components-admin-shell-page-title" style={styles.pageTitle} testID="components-admin-shell-page-title">{title}</Text>
+            <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
           </View>
 
           <View
@@ -229,50 +272,74 @@ const styles = StyleSheet.create({
   },
   sidebarCard: {
     backgroundColor: colors.surfaceStrong,
-    borderColor: "#2E241D",
+    borderColor: colors.gold,
     borderRadius: radius.lg,
     borderWidth: 1,
     flex: 1,
-    gap: spacing.lg,
-    padding: spacing.lg,
+    gap: spacing.xl,
+    padding: spacing.xl,
     ...shadows.card,
   },
   brandBlock: {
-    gap: spacing.xs,
+    gap: spacing.md,
   },
-  brandTitle: {
-    color: colors.surface,
+  logoMark: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 72,
+    justifyContent: "center",
+    width: 72,
+  },
+  logoMarkText: {
+    color: colors.accent,
     fontFamily: typography.headingFamily,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: 0.3,
+    letterSpacing: 0.6,
   },
-  brandDescription: {
-    color: "#C8B8A9",
+  summaryBlock: {
+    gap: spacing.sm,
+  },
+  summaryRow: {
+    gap: 4,
+  },
+  summaryLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  summaryValue: {
+    color: colors.text,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
+    fontWeight: "600",
     lineHeight: 20,
   },
   navBlock: {
     gap: spacing.xs,
   },
   navItem: {
-    backgroundColor: "#211812",
-    borderColor: "#30251D",
+    backgroundColor: "rgba(245, 242, 235, 0.1)",
+    borderColor: "rgba(196, 168, 130, 0.42)",
     borderRadius: radius.md,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    borderColor: colors.gold,
   },
   navItemPressed: {
     opacity: 0.85,
   },
   navItemLabel: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
@@ -282,7 +349,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   navItemDescription: {
-    color: "#BCAEA2",
+    color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
@@ -292,21 +359,21 @@ const styles = StyleSheet.create({
     marginTop: "auto",
   },
   profileCard: {
-    backgroundColor: "#211812",
+    backgroundColor: "rgba(245, 242, 235, 0.1)",
     borderRadius: radius.md,
-    borderColor: "#30251D",
+    borderColor: "rgba(196, 168, 130, 0.5)",
     borderWidth: 1,
     gap: 4,
     padding: spacing.sm,
   },
   profileName: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
   },
   profileMeta: {
-    color: "#BCAEA2",
+    color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
@@ -346,12 +413,12 @@ const mobileStyles = StyleSheet.create({
     flexDirection: "column",
   },
   header: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.panel,
+    borderColor: colors.borderStrong,
     borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: "column",
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
   headerActions: {
     alignItems: "stretch",
@@ -372,13 +439,13 @@ const desktopStyles = StyleSheet.create({
   },
   header: {
     alignItems: "flex-start",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.panel,
+    borderColor: colors.borderStrong,
     borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
   headerActions: {
     alignItems: "center",

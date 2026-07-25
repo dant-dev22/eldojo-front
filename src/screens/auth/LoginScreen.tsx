@@ -139,10 +139,10 @@ export function LoginScreen() {
       >
         <View nativeID="screens-auth-login-brand-section" style={styles.brandBlock} testID="screens-auth-login-brand-section">
           <View nativeID="screens-auth-login-logo-mark" style={styles.logoMark} testID="screens-auth-login-logo-mark">
-            <Text style={styles.logoMarkText}>EL</Text>
+            <Text nativeID="screens-auth-login-logo-mark-text" style={styles.logoMarkText} testID="screens-auth-login-logo-mark-text">EL</Text>
           </View>
-          <Text style={[styles.title, isDesktop ? desktopStyles.title : mobileStyles.title]}>ElDojo</Text>
-          <Text style={[styles.subtitle, isDesktop ? desktopStyles.subtitle : mobileStyles.subtitle]}>
+          <Text nativeID="screens-auth-login-title" style={[styles.title, isDesktop ? desktopStyles.title : mobileStyles.title]} testID="screens-auth-login-title">ElDojo</Text>
+          <Text nativeID="screens-auth-login-subtitle" style={[styles.subtitle, isDesktop ? desktopStyles.subtitle : mobileStyles.subtitle]} testID="screens-auth-login-subtitle">
             El administrador de gimnasios de mma-bjj-judo
           </Text>
         </View>
@@ -164,7 +164,7 @@ export function LoginScreen() {
               ]}
               testID="screens-auth-login-mode-academy-button"
             >
-              <Text style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}>
+              <Text nativeID="screens-auth-login-mode-academy-label" style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]} testID="screens-auth-login-mode-academy-label">
                 Crea tu academia
               </Text>
             </Pressable>
@@ -179,7 +179,7 @@ export function LoginScreen() {
               ]}
               testID="screens-auth-login-mode-signin-button"
             >
-              <Text style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}>
+              <Text nativeID="screens-auth-login-mode-signin-label" style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]} testID="screens-auth-login-mode-signin-label">
                 Inicia sesión
               </Text>
             </Pressable>
@@ -187,8 +187,8 @@ export function LoginScreen() {
 
           {mode === "academy" ? (
             <>
-              <Text style={styles.formTitle}>Crea tu academia</Text>
-              <Text style={styles.formSubtitle}>
+              <Text nativeID="screens-auth-login-register-form-title" style={styles.formTitle} testID="screens-auth-login-register-form-title">Crea tu academia</Text>
+              <Text nativeID="screens-auth-login-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-login-register-form-subtitle">
                 Registra tu academia y crea la cuenta administradora inicial. Si todo sale bien, entrarás al panel automáticamente.
               </Text>
               <AppInput
@@ -251,10 +251,10 @@ export function LoginScreen() {
                 secureTextEntry={!showRegisterPassword}
                 value={password}
               />
-              <Text style={styles.helper}>
+              <Text nativeID="screens-auth-login-register-helper" style={styles.helper} testID="screens-auth-login-register-helper">
                 El código interno de la academia se genera con las primeras 3 letras útiles del nombre, ignorando espacios.
               </Text>
-              {formError ? <Text style={styles.error}>{formError}</Text> : null}
+              {formError ? <Text nativeID="screens-auth-login-register-error" style={styles.error} testID="screens-auth-login-register-error">{formError}</Text> : null}
               <AppButton
                 label="Crear academia"
                 loading={registerMutation.isPending}
@@ -265,8 +265,8 @@ export function LoginScreen() {
             </>
           ) : (
             <>
-              <Text style={styles.formTitle}>Inicia sesión</Text>
-              <Text style={styles.formSubtitle}>
+              <Text nativeID="screens-auth-login-signin-form-title" style={styles.formTitle} testID="screens-auth-login-signin-form-title">Inicia sesión</Text>
+              <Text nativeID="screens-auth-login-signin-form-subtitle" style={styles.formSubtitle} testID="screens-auth-login-signin-form-subtitle">
                 Usa el correo y la contraseña de la cuenta administradora que ya creaste para tu academia.
               </Text>
               <AppInput
@@ -305,7 +305,7 @@ export function LoginScreen() {
                 secureTextEntry={!showPassword}
                 value={password}
               />
-              {formError ? <Text style={styles.error}>{formError}</Text> : null}
+              {formError ? <Text nativeID="screens-auth-login-signin-error" style={styles.error} testID="screens-auth-login-signin-error">{formError}</Text> : null}
               <AppButton
                 label="Entrar"
                 loading={loginMutation.isPending}
@@ -331,13 +331,13 @@ const styles = StyleSheet.create({
   },
   brandBlock: {
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingHorizontal: spacing.md,
   },
   logoMark: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.primary,
+    borderColor: colors.gold,
     borderRadius: radius.pill,
     borderWidth: 1,
     height: 72,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     width: 72,
   },
   logoMarkText: {
-    color: colors.accent,
+    color: colors.text,
     fontFamily: typography.displayFamily,
     fontSize: 28,
     fontWeight: "800",
@@ -361,13 +361,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     lineHeight: 22,
+    maxWidth: 420,
     textAlign: "center",
   },
   formCard: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   tabs: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderWidth: 1,
     borderRadius: radius.pill,
     flexDirection: "row",
     gap: spacing.xs,
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.gold,
     borderWidth: 1,
   },
   tabButtonPressed: {
@@ -397,7 +400,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   tabLabelActive: {
-    color: colors.accent,
+    color: colors.primary,
   },
   formTitle: {
     color: colors.text,

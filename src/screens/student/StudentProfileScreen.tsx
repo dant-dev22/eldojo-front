@@ -151,21 +151,23 @@ export function StudentProfileScreen() {
       <AppCard style={styles.profileHeader}>
         <View nativeID="screens-student-profile-header" style={styles.sectionMarker} testID="screens-student-profile-header">
         <Image
+          nativeID="screens-student-profile-avatar"
           source={{
             uri:
               profile.photo_url ??
               "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Brazilian%20jiu-jitsu%20student%20portrait%2C%20neutral%20background%2C%20clean%20uniform%2C%20professional%20mobile%20app%20avatar&image_size=square",
           }}
           style={styles.avatar}
+          testID="screens-student-profile-avatar"
         />
-        <View style={styles.profileCopy}>
-          <Text style={styles.name}>{profile.full_name}</Text>
-          <Text style={styles.meta}>Código: {profile.unique_code}</Text>
-          <Text style={styles.meta}>Nacimiento: {formatDate(profile.birth_date)}</Text>
+        <View nativeID="screens-student-profile-copy" style={styles.profileCopy} testID="screens-student-profile-copy">
+          <Text nativeID="screens-student-profile-name" style={styles.name} testID="screens-student-profile-name">{profile.full_name}</Text>
+          <Text nativeID="screens-student-profile-code" style={styles.meta} testID="screens-student-profile-code">Código: {profile.unique_code}</Text>
+          <Text nativeID="screens-student-profile-birth-date" style={styles.meta} testID="screens-student-profile-birth-date">Nacimiento: {formatDate(profile.birth_date)}</Text>
         </View>
-        <View style={styles.badgesRow}>
-          <AppBadge label={formatPaymentStatus(profile.payment_status)} tone={getPaymentTone(profile.payment_status)} />
-          <AppBadge label={profile.status === "active" ? "Activo" : profile.status} tone="neutral" />
+        <View nativeID="screens-student-profile-badges-row" style={styles.badgesRow} testID="screens-student-profile-badges-row">
+          <AppBadge label={formatPaymentStatus(profile.payment_status)} nativeID="screens-student-profile-payment-badge" testID="screens-student-profile-payment-badge" tone={getPaymentTone(profile.payment_status)} />
+          <AppBadge label={profile.status === "active" ? "Activo" : profile.status} nativeID="screens-student-profile-status-badge" testID="screens-student-profile-status-badge" tone="neutral" />
         </View>
         <AppButton
           label="Cambiar foto"
@@ -178,36 +180,38 @@ export function StudentProfileScreen() {
         </View>
       </AppCard>
 
-      <AppCard>
+      <AppCard nativeID="screens-student-profile-summary-card" testID="screens-student-profile-summary-card">
         <View nativeID="screens-student-profile-summary-section" style={styles.sectionMarker} testID="screens-student-profile-summary-section">
-          <Text style={styles.sectionTitle}>Resumen</Text>
-          <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Correo</Text>
-            <Text style={styles.infoValue}>{profile.email}</Text>
+          <Text nativeID="screens-student-profile-summary-title" style={styles.sectionTitle} testID="screens-student-profile-summary-title">Resumen</Text>
+          <View nativeID="screens-student-profile-email-group" style={styles.infoGroup} testID="screens-student-profile-email-group">
+            <Text nativeID="screens-student-profile-email-label" style={styles.infoLabel} testID="screens-student-profile-email-label">Correo</Text>
+            <Text nativeID="screens-student-profile-email-value" style={styles.infoValue} testID="screens-student-profile-email-value">{profile.email}</Text>
           </View>
-          <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Próximo pago</Text>
-            <Text style={styles.infoValue}>{formatDate(profile.next_payment_date)}</Text>
+          <View nativeID="screens-student-profile-next-payment-group" style={styles.infoGroup} testID="screens-student-profile-next-payment-group">
+            <Text nativeID="screens-student-profile-next-payment-label" style={styles.infoLabel} testID="screens-student-profile-next-payment-label">Próximo pago</Text>
+            <Text nativeID="screens-student-profile-next-payment-value" style={styles.infoValue} testID="screens-student-profile-next-payment-value">{formatDate(profile.next_payment_date)}</Text>
           </View>
-          <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Clase actual</Text>
-            <Text style={styles.infoValue}>{currentClass?.name ?? "Sin clase asignada"}</Text>
+          <View nativeID="screens-student-profile-current-class-group" style={styles.infoGroup} testID="screens-student-profile-current-class-group">
+            <Text nativeID="screens-student-profile-current-class-label" style={styles.infoLabel} testID="screens-student-profile-current-class-label">Clase actual</Text>
+            <Text nativeID="screens-student-profile-current-class-value" style={styles.infoValue} testID="screens-student-profile-current-class-value">{currentClass?.name ?? "Sin clase asignada"}</Text>
           </View>
         </View>
       </AppCard>
 
-      <AppCard>
+      <AppCard nativeID="screens-student-profile-current-class-card" testID="screens-student-profile-current-class-card">
         <View nativeID="screens-student-profile-current-class-section" style={styles.sectionMarker} testID="screens-student-profile-current-class-section">
-          <Text style={styles.sectionTitle}>Clase actual</Text>
+          <Text nativeID="screens-student-profile-current-class-title" style={styles.sectionTitle} testID="screens-student-profile-current-class-title">Clase actual</Text>
           {profile.available_classes.length > 0 ? (
             <>
-              <Text style={styles.helperText}>
+              <Text nativeID="screens-student-profile-current-class-helper" style={styles.helperText} testID="screens-student-profile-current-class-helper">
                 Selecciona la clase que quieres marcar como principal en tu perfil.
               </Text>
-              <View style={styles.pickerWrapper}>
+              <View nativeID="screens-student-profile-current-class-picker-wrapper" style={styles.pickerWrapper} testID="screens-student-profile-current-class-picker-wrapper">
                 <Picker
+                  nativeID="screens-student-profile-current-class-picker"
                   selectedValue={currentClassId}
                   onValueChange={(value) => setSelectedClassId(value as number)}
+                  testID="screens-student-profile-current-class-picker"
                 >
                   {profile.available_classes.map((item) => (
                     <Picker.Item key={item.id} label={item.name} value={item.id} />
@@ -215,7 +219,7 @@ export function StudentProfileScreen() {
                 </Picker>
               </View>
               {currentClass?.description ? (
-                <Text style={styles.classDescription}>{currentClass.description}</Text>
+                <Text nativeID="screens-student-profile-current-class-description" style={styles.classDescription} testID="screens-student-profile-current-class-description">{currentClass.description}</Text>
               ) : null}
               <AppButton
                 label="Guardar clase actual"
@@ -226,9 +230,9 @@ export function StudentProfileScreen() {
               />
             </>
           ) : (
-            <View style={styles.emptyBlock}>
-              <Text style={styles.emptyTitle}>Aún no hay clases disponibles</Text>
-              <Text style={styles.emptyDescription}>
+            <View nativeID="screens-student-profile-empty-state" style={styles.emptyBlock} testID="screens-student-profile-empty-state">
+              <Text nativeID="screens-student-profile-empty-title" style={styles.emptyTitle} testID="screens-student-profile-empty-title">Aún no hay clases disponibles</Text>
+              <Text nativeID="screens-student-profile-empty-description" style={styles.emptyDescription} testID="screens-student-profile-empty-description">
                 Cuando el dojo publique clases activas para tu sucursal, podrás seleccionarlas aquí.
               </Text>
             </View>
@@ -258,7 +262,7 @@ const styles = StyleSheet.create({
   profileHeader: {
     alignItems: "center",
     backgroundColor: colors.surfaceStrong,
-    borderColor: "#2E241D",
+    borderColor: colors.gold,
     gap: spacing.md,
   },
   avatar: {
@@ -278,7 +282,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   name: {
-    color: colors.surface,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 28,
     fontWeight: "800",
@@ -286,7 +290,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   meta: {
-    color: "#D1C2B5",
+    color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
   },

@@ -34,11 +34,15 @@ export function ConfirmActionModal({
     <Modal animationType="fade" onRequestClose={onCancel} transparent visible={visible}>
       <View nativeID={overlayId} style={styles.overlay} testID={overlayId}>
         <Pressable nativeID={backdropId} onPress={onCancel} style={styles.backdrop} testID={backdropId} />
-        <View style={styles.sheetWrapper}>
+        <View nativeID={`${idPrefix}-wrapper`} style={styles.sheetWrapper} testID={`${idPrefix}-wrapper`}>
           <View nativeID={sheetId} style={styles.sheet} testID={sheetId}>
             <View nativeID={copyId} style={styles.copyBlock} testID={copyId}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.message}>{message}</Text>
+              <Text nativeID={`${idPrefix}-title`} style={styles.title} testID={`${idPrefix}-title`}>
+                {title}
+              </Text>
+              <Text nativeID={`${idPrefix}-message`} style={styles.message} testID={`${idPrefix}-message`}>
+                {message}
+              </Text>
             </View>
             <View nativeID={actionsId} style={styles.actions} testID={actionsId}>
               <AppButton
