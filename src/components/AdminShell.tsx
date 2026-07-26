@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
-import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -168,11 +168,16 @@ export function AdminShell({
                   nativeID={`components-admin-shell-nav-item-${item.key}`}
                   onPress={item.onPress}
                   testID={`components-admin-shell-nav-item-${item.key}`}
-                  style={({ pressed }) => [
-                    styles.navItem,
-                    item.key === activeSection ? styles.navItemActive : null,
-                    pressed ? styles.navItemPressed : null,
-                  ]}
+                  style={(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+                    return [
+                      styles.navItem,
+                      item.key === activeSection ? styles.navItemActive : null,
+                      hovered ? styles.navItemHovered : null,
+                      state.pressed ? styles.navItemPressed : null,
+                    ];
+                  }}
                 >
                   <Text
                     nativeID={`components-admin-shell-nav-item-label-${item.key}`}
@@ -261,6 +266,7 @@ export function AdminShell({
 
 const styles = StyleSheet.create({
   shell: {
+    backgroundColor: colors.background,
     flex: 1,
     gap: spacing.md,
     width: "100%",
@@ -271,14 +277,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sidebarCard: {
-    backgroundColor: colors.surfaceStrong,
-    borderColor: colors.gold,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0,
+    borderColor: colors.border,
+    borderLeftWidth: 0,
+    borderRightWidth: 1,
+    borderTopWidth: 0,
     flex: 1,
     gap: spacing.xl,
     padding: spacing.xl,
-    ...shadows.card,
   },
   brandBlock: {
     gap: spacing.md,
@@ -286,15 +293,15 @@ const styles = StyleSheet.create({
   logoMark: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     height: 72,
     justifyContent: "center",
     width: 72,
   },
   logoMarkText: {
-    color: colors.accent,
+    color: colors.ink,
     fontFamily: typography.headingFamily,
     fontSize: 30,
     fontWeight: "800",
@@ -304,7 +311,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   summaryRow: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     gap: 4,
+    paddingBottom: spacing.sm,
   },
   summaryLabel: {
     color: colors.textMuted,
@@ -324,19 +334,24 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   navItem: {
-    backgroundColor: "rgba(245, 242, 235, 0.1)",
-    borderColor: "rgba(196, 168, 130, 0.42)",
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: colors.surface,
-    borderColor: colors.gold,
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+  },
+  navItemHovered: {
+    backgroundColor: colors.hover,
+    borderColor: colors.primary,
   },
   navItemPressed: {
-    opacity: 0.85,
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
   },
   navItemLabel: {
     color: colors.text,
@@ -346,7 +361,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   navItemLabelActive: {
-    color: colors.primary,
+    color: colors.ink,
   },
   navItemDescription: {
     color: colors.textMuted,
@@ -359,9 +374,9 @@ const styles = StyleSheet.create({
     marginTop: "auto",
   },
   profileCard: {
-    backgroundColor: "rgba(245, 242, 235, 0.1)",
-    borderRadius: radius.md,
-    borderColor: "rgba(196, 168, 130, 0.5)",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 4,
     padding: spacing.sm,
@@ -379,6 +394,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   header: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
+    borderWidth: 1,
     gap: spacing.sm,
   },
   headerCopy: {
@@ -413,10 +432,6 @@ const mobileStyles = StyleSheet.create({
     flexDirection: "column",
   },
   header: {
-    backgroundColor: colors.panel,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    borderWidth: 1,
     flexDirection: "column",
     padding: spacing.xl,
   },
@@ -439,10 +454,6 @@ const desktopStyles = StyleSheet.create({
   },
   header: {
     alignItems: "flex-start",
-    backgroundColor: colors.panel,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     padding: spacing.xl,

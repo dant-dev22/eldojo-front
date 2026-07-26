@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 
 interface AppModalProps extends PropsWithChildren {
   visible: boolean;
@@ -103,11 +103,10 @@ const styles = StyleSheet.create({
   dialog: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderRadius: 0,
     borderWidth: 1,
     padding: spacing.lg,
     width: "100%",
-    ...shadows.card,
   },
   header: {
     alignItems: "flex-start",
@@ -133,15 +132,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   closeButton: {
-    backgroundColor: colors.goldSoft,
-    borderColor: colors.gold,
-    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   closeLabel: {
-    color: colors.primary,
+    color: colors.ink,
     fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",

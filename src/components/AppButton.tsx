@@ -1,13 +1,13 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 
 interface AppButtonProps {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "danger" | "success";
   nativeID?: string;
   testID?: string;
   accessibilityLabel?: string;
@@ -34,17 +34,36 @@ export function AppButton({
       nativeID={baseId}
       onPress={onPress}
       testID={baseId}
-      style={({ pressed }) => [
-        styles.base,
-        variant === "secondary" ? styles.secondary : variant === "danger" ? styles.danger : styles.primary,
-        isDisabled && styles.disabled,
-        pressed && !isDisabled ? styles.pressed : null,
-      ]}
+      style={(state) => {
+        const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+        return [
+          styles.base,
+          variant === "secondary"
+            ? styles.secondary
+            : variant === "danger"
+              ? styles.danger
+              : variant === "success"
+                ? styles.success
+                : styles.primary,
+          hovered && !isDisabled
+            ? variant === "secondary"
+              ? styles.secondaryHovered
+              : variant === "danger"
+                ? styles.dangerHovered
+                : variant === "success"
+                  ? styles.successHovered
+                  : styles.primaryHovered
+            : null,
+          isDisabled && styles.disabled,
+          state.pressed && !isDisabled ? styles.pressed : null,
+        ];
+      }}
     >
       {loading ? (
         <ActivityIndicator
           color={
-            variant === "secondary" ? colors.primary : variant === "danger" ? colors.danger : colors.onPrimary
+            variant === "secondary" ? colors.ink : variant === "danger" ? colors.danger : colors.onPrimary
           }
           nativeID={`${baseId}-spinner`}
           testID={`${baseId}-spinner`}
@@ -56,6 +75,7 @@ export function AppButton({
             styles.label,
             variant === "secondary" ? styles.secondaryLabel : null,
             variant === "danger" ? styles.dangerLabel : null,
+            variant === "success" ? styles.successLabel : null,
           ]}
           testID={`${baseId}-label`}
         >
@@ -69,44 +89,66 @@ export function AppButton({
 const styles = StyleSheet.create({
   base: {
     alignItems: "center",
-    borderColor: colors.action,
-    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 56,
-    paddingHorizontal: spacing.xl,
-    ...shadows.focus,
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
   },
   primary: {
     backgroundColor: colors.action,
     borderColor: colors.action,
   },
+  primaryHovered: {
+    backgroundColor: colors.actionHover,
+    borderColor: colors.actionHover,
+  },
   secondary: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
+  },
+  secondaryHovered: {
+    backgroundColor: colors.hover,
     borderColor: colors.primary,
   },
   danger: {
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: colors.surface,
     borderColor: colors.danger,
+  },
+  dangerHovered: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.dangerHover,
+  },
+  success: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  successHovered: {
+    backgroundColor: colors.successHover,
+    borderColor: colors.successHover,
   },
   disabled: {
     opacity: 0.55,
   },
   pressed: {
-    opacity: 0.9,
-    transform: [{ translateY: 1 }],
+    opacity: 0.96,
+    transform: [{ scale: 0.985 }, { translateY: 1 }],
   },
   label: {
     color: colors.onPrimary,
     fontFamily: typography.headingFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
   secondaryLabel: {
-    color: colors.primary,
+    color: colors.ink,
   },
   dangerLabel: {
     color: colors.danger,
+  },
+  successLabel: {
+    color: colors.onPrimary,
   },
 });

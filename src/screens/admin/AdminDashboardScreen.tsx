@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Linking, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -21,7 +21,7 @@ import { AppSelect } from "@/components/AppSelect";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus } from "@/utils/format";
@@ -1427,7 +1427,6 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 nativeID="screens-admin-dashboard-new-branch-button"
                 onPress={openCreateBranchModal}
                 testID="screens-admin-dashboard-new-branch-button"
-                variant="secondary"
               />
             ) : null}
             <AppButton
@@ -1435,6 +1434,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               nativeID="screens-admin-dashboard-view-students-button"
               onPress={() => navigation.navigate("StudentsList")}
               testID="screens-admin-dashboard-view-students-button"
+              variant="secondary"
             />
           </View>
         }
@@ -1445,11 +1445,12 @@ export function AdminDashboardScreen({ navigation }: Props) {
         title="Resumen del gimnasio"
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
-          <AppCard
-            nativeID="screens-admin-dashboard-hero-card"
-            style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
-            testID="screens-admin-dashboard-hero-card"
-          >
+          <AnimatedSurface delay={40}>
+            <AppCard
+              nativeID="screens-admin-dashboard-hero-card"
+              style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
+              testID="screens-admin-dashboard-hero-card"
+            >
             <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
               <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
                 <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
@@ -1493,10 +1494,12 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 </View>
               </View>
             ) : null}
-          </AppCard>
+            </AppCard>
+          </AnimatedSurface>
 
           {feedback ? (
-            <View
+            <AnimatedSurface
+              delay={90}
               nativeID="screens-admin-dashboard-feedback-banner"
               style={[styles.feedbackBanner, feedback.tone === "danger" ? styles.feedbackDanger : styles.feedbackSuccess]}
               testID="screens-admin-dashboard-feedback-banner"
@@ -1504,7 +1507,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               <Text nativeID="screens-admin-dashboard-feedback-text" style={[styles.feedbackText, feedback.tone === "danger" ? styles.feedbackTextDanger : null]} testID="screens-admin-dashboard-feedback-text">
                 {feedback.message}
               </Text>
-            </View>
+            </AnimatedSurface>
           ) : null}
 
           {isLoading ? (
@@ -1514,7 +1517,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
               loading
             />
           ) : hasError ? (
-            <AppCard>
+            <AnimatedSurface delay={110}>
+              <AppCard style={styles.panelCard}>
               <StatusView nativeID="screens-admin-dashboard-error-status" title="No pudimos cargar el panel" description={getErrorMessage(dashboardError)} />
               <AppButton
                 label="Reintentar"
@@ -1530,31 +1534,35 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 }}
                 testID="screens-admin-dashboard-retry-button"
               />
-            </AppCard>
+              </AppCard>
+            </AnimatedSurface>
           ) : (
             <>
               <View nativeID="screens-admin-dashboard-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-dashboard-metrics-grid">
-                <MetricCard label="Alumnos activos" value={String(activeStudents)} tone="success" />
-                <MetricCard label="Sucursales activas" value={String(activeBranches)} tone="info" />
-                <MetricCard label="Clases activas" value={String(activeClasses)} tone="neutral" />
-                <MetricCard label="Pagos vencidos" value={String(latePayments)} tone={latePayments > 0 ? "danger" : "neutral"} />
-                <MetricCard label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
+                <MetricCard delay={120} label="Alumnos activos" value={String(activeStudents)} tone="success" />
+                <MetricCard delay={150} label="Sucursales activas" value={String(activeBranches)} tone="info" />
+                <MetricCard delay={180} label="Clases activas" value={String(activeClasses)} tone="neutral" />
+                <MetricCard delay={210} label="Pagos vencidos" value={String(latePayments)} tone={latePayments > 0 ? "danger" : "neutral"} />
+                <MetricCard delay={240} label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
               </View>
 
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
-                <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
+                <AnimatedSurface delay={270}>
+                  <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
                   <Text style={styles.sectionTitle}>Centro CRUD</Text>
                   <QuickAction
                     description="Administra alumnos. Crea, edita, agrega."
                     idPrefix="screens-admin-dashboard-manage-students-action"
                     label="Administrar alumnos"
                     onPress={() => navigation.navigate("StudentsList")}
+                    tone="neutral"
                   />
                   <QuickAction
                     description="Inicia el alta de un alumno nuevo."
                     idPrefix="screens-admin-dashboard-new-student-action"
                     label="Nuevo alumno"
                     onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
+                    tone="primary"
                   />
                   <QuickAction
                     description={
@@ -1566,6 +1574,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     label="Editar gimnasio"
                     onPress={openOrganizationModal}
                     disabled={!canManageOrganization || !organization}
+                    tone="neutral"
                   />
                   <QuickAction
                     description={
@@ -1577,6 +1586,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     label="Nueva sucursal"
                     onPress={openCreateBranchModal}
                     disabled={!canCreateBranches || !organizationId}
+                    tone="primary"
                   />
                   <QuickAction
                     description="Edita tu sucursal."
@@ -1588,6 +1598,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       }
                     }}
                     disabled={!currentBranch || !canEditVisibleBranches}
+                    tone="neutral"
                   />
                   <QuickAction
                     description="Administra tus clases."
@@ -1595,6 +1606,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     label="Nueva clase"
                     onPress={openCreateClassModal}
                     disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
+                    tone="primary"
                   />
                   <QuickAction
                     description="Administra los pagos de tus alumnos."
@@ -1602,6 +1614,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     label="Registrar pago"
                     onPress={openCreatePaymentModal}
                     disabled={visibleStudents.length === 0}
+                    tone="success"
                   />
                   <QuickAction
                     description="Administra la asistencia de tus alumnos."
@@ -1609,10 +1622,13 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     label="Registrar asistencia"
                     onPress={openCreateAttendanceModal}
                     disabled={visibleStudents.length === 0}
+                    tone="success"
                   />
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
 
-                <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
+                <AnimatedSurface delay={300}>
+                  <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
                   <View nativeID="screens-admin-dashboard-organization-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-organization-header">
                     <Text style={styles.sectionTitle}>Gimnasio-academia</Text>
                     <AppBadge label={organization?.is_active ? "Activa" : "Inactiva"} tone={organization?.is_active ? "success" : "warning"} />
@@ -1637,14 +1653,16 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   )}
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
 
-                <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
+                <AnimatedSurface delay={330}>
+                  <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
                   <View nativeID="screens-admin-dashboard-branches-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-branches-header">
                     <Text style={styles.sectionTitle}>Sucursales</Text>
                     {canCreateBranches ? (
                       <View style={isDesktop ? styles.headerButtonStack : null}>
-                        <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} variant="secondary" />
+                        <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} />
                       </View>
                     ) : null}
                   </View>
@@ -1699,16 +1717,18 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   )}
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
 
-                <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
+                <AnimatedSurface delay={360}>
+                  <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
                   <View nativeID="screens-admin-dashboard-attendance-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-attendance-header">
                     <Text style={styles.sectionTitle}>Asistencias</Text>
                     <View style={isDesktop ? styles.headerButtonStack : null}>
                       <AppButton
                         label="Agregar asistencia"
                         onPress={openCreateAttendanceModal}
-                        variant="secondary"
+                        variant="success"
                         disabled={visibleStudents.length === 0}
                       />
                     </View>
@@ -1763,15 +1783,17 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
                     </View>
                   )}
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
 
-                <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
+                <AnimatedSurface delay={390}>
+                  <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
                   <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
                     <Text style={styles.sectionTitle}>Pagos</Text>
                     <AppButton
                       label="Agregar pago"
                       onPress={openCreatePaymentModal}
-                      variant="secondary"
+                      variant="success"
                       disabled={visibleStudents.length === 0}
                     />
                   </View>
@@ -1838,15 +1860,16 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   )}
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
 
-                <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
+                <AnimatedSurface delay={420}>
+                  <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
                   <View nativeID="screens-admin-dashboard-classes-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-classes-header">
                     <Text style={styles.sectionTitle}>Clases</Text>
                     <AppButton
                       label="Agregar clase"
                       onPress={openCreateClassModal}
-                      variant="secondary"
                       disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
                     />
                   </View>
@@ -1902,7 +1925,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   )}
-                </AppCard>
+                  </AppCard>
+                </AnimatedSurface>
               </View>
             </>
           )}
@@ -1951,7 +1975,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
         />
         <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null]}>
           <AppButton label="Cancelar" onPress={() => setOrganizationModalVisible(false)} variant="secondary" disabled={organizationBusy} />
-          <AppButton label="Guardar cambios" onPress={handleOrganizationSave} loading={organizationBusy} />
+          <AppButton label="Guardar cambios" onPress={handleOrganizationSave} loading={organizationBusy} variant="success" />
         </View>
       </AppModal>
 
@@ -2049,6 +2073,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               label={branchDialogMode === "create" ? "Crear sucursal" : "Guardar cambios"}
               onPress={handleBranchSave}
               loading={createBranchMutation.isPending || updateBranchMutation.isPending}
+              variant="success"
             />
           </View>
         </View>
@@ -2161,6 +2186,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               label={attendanceDialogMode === "create" ? "Registrar asistencia" : "Guardar cambios"}
               onPress={handleAttendanceSave}
               loading={createAttendanceMutation.isPending || updateAttendanceMutation.isPending}
+              variant="success"
             />
           </View>
         </View>
@@ -2245,6 +2271,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               label={classDialogMode === "create" ? "Crear clase" : "Guardar cambios"}
               onPress={handleClassSave}
               loading={createClassMutation.isPending || updateClassMutation.isPending}
+              variant="success"
             />
           </View>
         </View>
@@ -2367,6 +2394,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
               label={paymentDialogMode === "create" ? "Registrar pago" : "Guardar cambios"}
               onPress={handlePaymentSave}
               loading={createPaymentMutation.isPending || updatePaymentMutation.isPending}
+              variant="success"
             />
           </View>
         </View>
@@ -2404,10 +2432,12 @@ export function AdminDashboardScreen({ navigation }: Props) {
 }
 
 function MetricCard({
+  delay = 0,
   label,
   value,
   tone,
 }: {
+  delay?: number;
   label: string;
   value: string;
   tone: "neutral" | "success" | "danger" | "info";
@@ -2415,10 +2445,12 @@ function MetricCard({
   const baseId = `screens-admin-dashboard-metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
-    <AppCard nativeID={baseId} style={styles.metricCard} testID={baseId}>
-      <AppBadge label={label} nativeID={`${baseId}-badge`} testID={`${baseId}-badge`} tone={tone} />
-      <Text nativeID={`${baseId}-value`} style={styles.metricValue} testID={`${baseId}-value`}>{value}</Text>
-    </AppCard>
+    <AnimatedSurface delay={delay}>
+      <AppCard nativeID={baseId} style={styles.metricCard} testID={baseId}>
+        <AppBadge label={label} nativeID={`${baseId}-badge`} testID={`${baseId}-badge`} tone={tone} />
+        <Text nativeID={`${baseId}-value`} style={styles.metricValue} testID={`${baseId}-value`}>{value}</Text>
+      </AppCard>
+    </AnimatedSurface>
   );
 }
 
@@ -2439,12 +2471,14 @@ function QuickAction({
   onPress,
   disabled = false,
   idPrefix,
+  tone = "neutral",
 }: {
   label: string;
   description: string;
   onPress: () => void;
   disabled?: boolean;
   idPrefix?: string;
+  tone?: "neutral" | "primary" | "success";
 }) {
   return (
     <Pressable
@@ -2452,16 +2486,85 @@ function QuickAction({
       disabled={disabled}
       nativeID={idPrefix ? `${idPrefix}-button` : undefined}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.quickAction,
-        disabled ? styles.quickActionDisabled : null,
-        pressed && !disabled ? styles.quickActionPressed : null,
-      ]}
+      style={(state) => {
+        const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+        return [
+          styles.quickAction,
+          tone === "primary" ? styles.quickActionPrimary : null,
+          tone === "success" ? styles.quickActionSuccess : null,
+          hovered && !disabled ? styles.quickActionHovered : null,
+          disabled ? styles.quickActionDisabled : null,
+          state.pressed && !disabled ? styles.quickActionPressed : null,
+        ];
+      }}
       testID={idPrefix ? `${idPrefix}-button` : undefined}
     >
-      <Text nativeID={idPrefix ? `${idPrefix}-title` : undefined} style={styles.quickActionTitle} testID={idPrefix ? `${idPrefix}-title` : undefined}>{label}</Text>
+      <Text
+        nativeID={idPrefix ? `${idPrefix}-title` : undefined}
+        style={[
+          styles.quickActionTitle,
+          tone === "primary" ? styles.quickActionTitlePrimary : null,
+          tone === "success" ? styles.quickActionTitleSuccess : null,
+        ]}
+        testID={idPrefix ? `${idPrefix}-title` : undefined}
+      >
+        {label}
+      </Text>
       <Text nativeID={idPrefix ? `${idPrefix}-description` : undefined} style={styles.quickActionDescription} testID={idPrefix ? `${idPrefix}-description` : undefined}>{description}</Text>
     </Pressable>
+  );
+}
+
+function AnimatedSurface({
+  children,
+  delay = 0,
+  nativeID,
+  style,
+  testID,
+}: {
+  children: ReactNode;
+  delay?: number;
+  nativeID?: string;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+
+  useEffect(() => {
+    const animation = Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 220,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [delay, opacity, translateY]);
+
+  return (
+    <Animated.View
+      nativeID={nativeID}
+      style={[style, { opacity, transform: [{ translateY }] }]}
+      testID={testID}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
@@ -2474,9 +2577,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   heroCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     gap: spacing.lg,
-    backgroundColor: colors.surfaceStrong,
-    borderColor: colors.gold,
   },
   heroTop: {
     gap: spacing.md,
@@ -2509,9 +2613,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   scopeItem: {
-    backgroundColor: "rgba(245, 242, 235, 0.1)",
-    borderRadius: radius.md,
-    borderColor: "rgba(196, 168, 130, 0.42)",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     flex: 1,
     gap: 4,
@@ -2534,11 +2638,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metricCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     flex: 1,
     minHeight: 104,
     minWidth: 180,
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
   },
   metricValue: {
     color: colors.text,
@@ -2550,6 +2655,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   panelCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     flex: 1,
     gap: spacing.md,
     minWidth: 280,
@@ -2582,24 +2690,41 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   quickAction: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.md,
+  },
+  quickActionPrimary: {
+    backgroundColor: colors.surface,
+  },
+  quickActionSuccess: {
+    backgroundColor: colors.surface,
+  },
+  quickActionHovered: {
+    backgroundColor: colors.hover,
+    borderColor: colors.primary,
   },
   quickActionDisabled: {
     opacity: 0.6,
   },
   quickActionPressed: {
-    opacity: 0.85,
+    opacity: 0.94,
+    transform: [{ scale: 0.99 }],
   },
   quickActionTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "700",
+  },
+  quickActionTitlePrimary: {
+    color: colors.action,
+  },
+  quickActionTitleSuccess: {
+    color: colors.success,
   },
   quickActionDescription: {
     color: colors.textMuted,
@@ -2608,19 +2733,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   feedbackBanner: {
-    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderRadius: 0,
+    borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   feedbackSuccess: {
     backgroundColor: colors.successSoft,
-    borderColor: "#B7E4C7",
-    borderWidth: 1,
   },
   feedbackDanger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F0B6B6",
-    borderWidth: 1,
   },
   feedbackText: {
     fontFamily: typography.bodyFamily,
@@ -2647,10 +2770,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   branchRow: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
-    backgroundColor: colors.surfaceAlt,
     gap: spacing.md,
     padding: spacing.md,
   },
@@ -2682,7 +2805,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   publicRouteBlock: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     gap: spacing.sm,
+    paddingTop: spacing.sm,
   },
   paymentSummaryRow: {
     flexDirection: "row",
@@ -2690,10 +2816,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   paymentRow: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
-    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
     padding: spacing.md,
   },
@@ -2729,9 +2855,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   paymentContextBox: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
@@ -2743,10 +2869,10 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   attendanceRow: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
-    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
     padding: spacing.md,
   },
@@ -2774,10 +2900,10 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   classPanelRow: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
-    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
     padding: spacing.md,
   },
