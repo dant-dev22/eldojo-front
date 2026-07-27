@@ -118,8 +118,10 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 0.35,
+    textTransform: "uppercase",
   },
   helper: {
     color: colors.textMuted,
@@ -247,21 +249,21 @@ const datePickerStyles = `
 }
 
 .app-datepicker-input {
-  background: ${colors.background};
+  background: ${colors.surfaceAlt};
   border: 1px solid ${colors.border};
   border-radius: ${radius.md}px;
   color: ${colors.text};
   font-family: inherit;
   font-size: 15px;
-  min-height: 48px;
+  min-height: 56px;
   outline: none;
   padding: 0 ${spacing.xl + 8}px 0 ${spacing.md}px;
   width: 100%;
 }
 
 .app-datepicker-input:focus {
-  border-color: ${colors.primary};
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  border-color: ${colors.action};
+  box-shadow: 0 0 0 3px rgba(79, 115, 217, 0.12);
 }
 
 .app-datepicker-input.is-error {

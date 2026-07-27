@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2717,12 +2718,42 @@ function MetricCard({
   tone: "neutral" | "success" | "danger" | "info";
 }) {
   const baseId = `screens-admin-dashboard-metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const toneStyles =
+    tone === "success"
+      ? {
+          backgroundColor: colors.metricMint,
+          icon: "users",
+          iconColor: colors.success,
+        }
+      : tone === "danger"
+        ? {
+            backgroundColor: colors.metricAmber,
+            icon: "alert-circle",
+            iconColor: colors.warning,
+          }
+        : tone === "info"
+          ? {
+              backgroundColor: colors.metricBlue,
+              icon: "user-plus",
+              iconColor: colors.info,
+            }
+          : {
+              backgroundColor: colors.metricLavender,
+              icon: "activity",
+              iconColor: colors.primary,
+            };
 
   return (
     <AnimatedSurface delay={delay}>
-      <AppCard nativeID={baseId} style={styles.metricCard} testID={baseId}>
-        <AppBadge label={label} nativeID={`${baseId}-badge`} testID={`${baseId}-badge`} tone={tone} />
+      <AppCard nativeID={baseId} style={[styles.metricCard, { backgroundColor: toneStyles.backgroundColor }]} testID={baseId}>
+        <View nativeID={`${baseId}-top`} style={styles.metricCardTop} testID={`${baseId}-top`}>
+          <View nativeID={`${baseId}-icon`} style={styles.metricIconWrap} testID={`${baseId}-icon`}>
+            <Feather color={toneStyles.iconColor} name={toneStyles.icon as keyof typeof Feather.glyphMap} size={18} />
+          </View>
+          <AppBadge label="Activo" nativeID={`${baseId}-badge`} testID={`${baseId}-badge`} tone={tone} />
+        </View>
         <Text nativeID={`${baseId}-value`} style={styles.metricValue} testID={`${baseId}-value`}>{value}</Text>
+        <Text nativeID={`${baseId}-label`} style={styles.metricLabel} testID={`${baseId}-label`}>{label}</Text>
       </AppCard>
     </AnimatedSurface>
   );
@@ -2754,6 +2785,13 @@ function QuickAction({
   idPrefix?: string;
   tone?: "neutral" | "primary" | "success";
 }) {
+  const toneStyles =
+    tone === "primary"
+      ? { icon: "plus-circle", iconColor: colors.info }
+      : tone === "success"
+        ? { icon: "check-circle", iconColor: colors.success }
+        : { icon: "arrow-up-right", iconColor: colors.textMuted };
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -2774,17 +2812,22 @@ function QuickAction({
       }}
       testID={idPrefix ? `${idPrefix}-button` : undefined}
     >
-      <Text
-        nativeID={idPrefix ? `${idPrefix}-title` : undefined}
-        style={[
-          styles.quickActionTitle,
-          tone === "primary" ? styles.quickActionTitlePrimary : null,
-          tone === "success" ? styles.quickActionTitleSuccess : null,
-        ]}
-        testID={idPrefix ? `${idPrefix}-title` : undefined}
-      >
-        {label}
-      </Text>
+      <View nativeID={idPrefix ? `${idPrefix}-header` : undefined} style={styles.quickActionHeader} testID={idPrefix ? `${idPrefix}-header` : undefined}>
+        <View nativeID={idPrefix ? `${idPrefix}-icon` : undefined} style={styles.quickActionIconWrap} testID={idPrefix ? `${idPrefix}-icon` : undefined}>
+          <Feather color={toneStyles.iconColor} name={toneStyles.icon as keyof typeof Feather.glyphMap} size={16} />
+        </View>
+        <Text
+          nativeID={idPrefix ? `${idPrefix}-title` : undefined}
+          style={[
+            styles.quickActionTitle,
+            tone === "primary" ? styles.quickActionTitlePrimary : null,
+            tone === "success" ? styles.quickActionTitleSuccess : null,
+          ]}
+          testID={idPrefix ? `${idPrefix}-title` : undefined}
+        >
+          {label}
+        </Text>
+      </View>
       <Text nativeID={idPrefix ? `${idPrefix}-description` : undefined} style={styles.quickActionDescription} testID={idPrefix ? `${idPrefix}-description` : undefined}>{description}</Text>
     </Pressable>
   );
@@ -2907,7 +2950,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   container: {
-    gap: spacing.md,
+    gap: spacing.lg,
     position: "relative",
     width: "100%",
   },
@@ -2917,7 +2960,7 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 28,
     gap: spacing.lg,
   },
   heroTop: {
@@ -3030,9 +3073,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   scopeItem: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     flex: 1,
     gap: 4,
@@ -3055,18 +3098,37 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metricCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 0,
+    borderColor: "transparent",
+    borderRadius: 22,
     flex: 1,
-    minHeight: 104,
+    minHeight: 126,
     minWidth: 0,
+  },
+  metricCardTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  metricIconWrap: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.48)",
+    borderRadius: 14,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
   metricValue: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 38,
+    fontSize: 34,
     fontWeight: "800",
+  },
+  metricLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
   },
   contentGrid: {
     gap: spacing.md,
@@ -3074,7 +3136,7 @@ const styles = StyleSheet.create({
   panelCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 28,
     flex: 1,
     gap: spacing.md,
     minWidth: 0,
@@ -3109,22 +3171,22 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   quickAction: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 20,
     borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.md,
   },
   quickActionPrimary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.infoSoft,
   },
   quickActionSuccess: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.successSoft,
   },
   quickActionHovered: {
-    backgroundColor: colors.hover,
-    borderColor: colors.primary,
+    backgroundColor: colors.hoverStrong,
+    borderColor: colors.action,
   },
   quickActionDisabled: {
     opacity: 0.6,
@@ -3132,6 +3194,19 @@ const styles = StyleSheet.create({
   quickActionPressed: {
     opacity: 0.94,
     transform: [{ scale: 0.99 }],
+  },
+  quickActionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  quickActionIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
   },
   quickActionTitle: {
     color: colors.text,
@@ -3153,7 +3228,7 @@ const styles = StyleSheet.create({
   },
   feedbackBanner: {
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -3190,9 +3265,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   branchRow: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.md,
@@ -3227,10 +3302,12 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   publicRouteBlock: {
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
     gap: spacing.sm,
-    paddingTop: spacing.sm,
+    padding: spacing.sm,
   },
   paymentSummaryRow: {
     flexDirection: "row",
@@ -3238,9 +3315,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   paymentRow: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
@@ -3278,9 +3355,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   paymentContextBox: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 18,
     borderWidth: 1,
     gap: 4,
     padding: spacing.md,
@@ -3292,9 +3369,9 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   attendanceRow: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
@@ -3324,9 +3401,9 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   classPanelRow: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,

@@ -1,10 +1,11 @@
+import { Feather } from "@expo/vector-icons";
 import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
-import { colors, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -30,6 +31,7 @@ type NavItem = {
   key: AdminSection;
   label: string;
   description: string;
+  icon: keyof typeof Feather.glyphMap;
   onPress: () => void;
 };
 
@@ -76,14 +78,16 @@ export function AdminShell({
     () => [
       {
         key: "dashboard",
-        label: "Resumen",
+        label: "Dashboard",
         description: "Vista general del gimnasio",
+        icon: "grid",
         onPress: onGoDashboard,
       },
       {
         key: "students",
         label: "Alumnos",
         description: "Padrón, altas y seguimiento",
+        icon: "users",
         onPress: onGoStudents,
       },
     ],
@@ -129,10 +133,20 @@ export function AdminShell({
         <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
           <View nativeID="components-admin-shell-sidebar-card" style={styles.sidebarCard} testID="components-admin-shell-sidebar-card">
             <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
-              <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
-                <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
-                  EL
-                </Text>
+              <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
+                <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
+                  <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
+                    EL
+                  </Text>
+                </View>
+                <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
+                  <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
+                    ElDojo Admin
+                  </Text>
+                  <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
+                    Operación diaria del gimnasio
+                  </Text>
+                </View>
               </View>
               <View nativeID="components-admin-shell-academy-summary" style={styles.summaryBlock} testID="components-admin-shell-academy-summary">
                 {academySummary.map((item) => (
@@ -180,25 +194,39 @@ export function AdminShell({
                     ];
                   }}
                 >
-                  <Text
-                    nativeID={`components-admin-shell-nav-item-label-${item.key}`}
-                    style={[
-                      styles.navItemLabel,
-                      item.key === activeSection ? styles.navItemLabelActive : null,
-                    ]}
-                    testID={`components-admin-shell-nav-item-label-${item.key}`}
-                  >
-                    {item.label}
-                  </Text>
-                  <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
+                  <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
+                    <Feather color={item.key === activeSection ? colors.sidebarText : colors.sidebarMuted} name={item.icon} size={16} />
+                  </View>
+                  <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
+                    <Text
+                      nativeID={`components-admin-shell-nav-item-label-${item.key}`}
+                      style={[
+                        styles.navItemLabel,
+                        item.key === activeSection ? styles.navItemLabelActive : null,
+                      ]}
+                      testID={`components-admin-shell-nav-item-label-${item.key}`}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
+                  </View>
                 </Pressable>
               ))}
             </View>
 
             <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
               <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
-                <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
-                <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
+                <View nativeID="components-admin-shell-profile-top" style={styles.profileTop} testID="components-admin-shell-profile-top">
+                  <View nativeID="components-admin-shell-profile-avatar" style={styles.profileAvatar} testID="components-admin-shell-profile-avatar">
+                    <Text nativeID="components-admin-shell-profile-avatar-label" style={styles.profileAvatarLabel} testID="components-admin-shell-profile-avatar-label">
+                      {displayName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View nativeID="components-admin-shell-profile-copy" style={styles.profileCopy} testID="components-admin-shell-profile-copy">
+                    <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
+                    <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
+                  </View>
+                </View>
                 <Text nativeID="components-admin-shell-profile-assignments" style={styles.profileMeta} testID="components-admin-shell-profile-assignments">
                   {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
                 </Text>
@@ -225,6 +253,11 @@ export function AdminShell({
           testID="components-admin-shell-header"
         >
           <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
+            <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
+              <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
+                Admin operativo
+              </Text>
+            </View>
             <Text
               nativeID="components-admin-shell-page-title"
               style={[
@@ -385,6 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flex: 1,
     gap: spacing.md,
+    padding: spacing.md,
     width: "100%",
   },
   mainColumn: {
@@ -393,54 +427,78 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sidebarCard: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: 0,
-    borderColor: colors.border,
-    borderLeftWidth: 0,
-    borderRightWidth: 1,
-    borderTopWidth: 0,
+    backgroundColor: colors.sidebar,
+    borderColor: colors.sidebarBorder,
+    borderRadius: 30,
+    borderWidth: 1,
     flex: 1,
     gap: spacing.xl,
     padding: spacing.xl,
   },
   brandBlock: {
-    gap: spacing.md,
+    gap: spacing.lg,
+  },
+  brandRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  brandCopy: {
+    flex: 1,
+    gap: 2,
   },
   logoMark: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: colors.sidebarBorder,
+    borderRadius: 20,
     borderWidth: 1,
-    height: 72,
+    height: 56,
     justifyContent: "center",
-    width: 72,
+    width: 56,
   },
   logoMarkText: {
-    color: colors.ink,
+    color: colors.sidebarText,
     fontFamily: typography.headingFamily,
-    fontSize: 30,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.6,
   },
+  brandTitle: {
+    color: colors.sidebarText,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  brandSubtitle: {
+    color: colors.sidebarMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   summaryBlock: {
+    backgroundColor: colors.sidebarSoft,
+    borderColor: colors.sidebarBorder,
+    borderRadius: 24,
+    borderWidth: 1,
     gap: spacing.sm,
+    padding: spacing.md,
   },
   summaryRow: {
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.sidebarBorder,
     borderBottomWidth: 1,
     gap: 4,
     paddingBottom: spacing.sm,
   },
   summaryLabel: {
-    color: colors.textMuted,
+    color: colors.sidebarMuted,
     fontFamily: typography.headingFamily,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   summaryValue: {
-    color: colors.text,
+    color: colors.sidebarText,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     fontWeight: "600",
@@ -450,61 +508,102 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   navItem: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 0,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    borderRadius: 18,
     borderWidth: 1,
-    gap: 4,
+    flexDirection: "row",
+    gap: spacing.sm,
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    backgroundColor: colors.sidebarSoft,
+    borderColor: colors.sidebarBorder,
   },
   navItemHovered: {
-    backgroundColor: colors.hover,
-    borderColor: colors.primary,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderColor: colors.sidebarBorder,
   },
   navItemPressed: {
     opacity: 0.92,
     transform: [{ scale: 0.995 }],
   },
   navItemLabel: {
-    color: colors.text,
+    color: colors.sidebarText,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.4,
   },
   navItemLabelActive: {
-    color: colors.ink,
+    color: colors.sidebarText,
   },
   navItemDescription: {
-    color: colors.textMuted,
+    color: colors.sidebarMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
+  },
+  navItemIconWrap: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 12,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  navItemIconWrapActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  navItemCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
   },
   sidebarFooter: {
     gap: spacing.sm,
     marginTop: "auto",
   },
   profileCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 0,
+    backgroundColor: colors.sidebarSoft,
+    borderColor: colors.sidebarBorder,
+    borderRadius: 24,
     borderWidth: 1,
-    gap: 4,
-    padding: spacing.sm,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  profileTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  profileAvatar: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: radius.pill,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  profileAvatarLabel: {
+    color: colors.sidebarText,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  profileCopy: {
+    flex: 1,
+    gap: 2,
   },
   profileName: {
-    color: colors.text,
+    color: colors.sidebarText,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "700",
   },
   profileMeta: {
-    color: colors.textMuted,
+    color: colors.sidebarMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
@@ -512,13 +611,31 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.sm,
   },
   headerCopy: {
     flex: 1,
     gap: 4,
+  },
+  pageKicker: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.infoSoft,
+    borderColor: "#CBD9FF",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    marginBottom: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  pageKickerLabel: {
+    color: colors.info,
+    fontFamily: typography.headingFamily,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   pageTitle: {
     color: colors.text,
@@ -548,7 +665,7 @@ const styles = StyleSheet.create({
   compactCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
@@ -571,8 +688,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   compactSummaryItem: {
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: radius.md,
     borderWidth: 1,
     gap: 4,
     minWidth: 0,
@@ -597,6 +715,7 @@ const styles = StyleSheet.create({
 const mobileStyles = StyleSheet.create({
   shell: {
     flexDirection: "column",
+    padding: spacing.sm,
   },
   header: {
     flexDirection: "column",
@@ -659,7 +778,7 @@ const desktopStyles = StyleSheet.create({
   sidebar: {
     alignSelf: "stretch",
     flexShrink: 0,
-    width: 280,
+    width: 300,
   },
   header: {
     alignItems: "flex-start",

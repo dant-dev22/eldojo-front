@@ -25,6 +25,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg,
+    overflow: "hidden",
     ...shadows.card,
   },
 });

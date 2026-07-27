@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    gap: spacing.md,
+    gap: spacing.lg,
     width: "100%",
   },
   header: {
@@ -1081,6 +1081,7 @@ const styles = StyleSheet.create({
   },
   feedbackCard: {
     alignItems: "center",
+    borderRadius: 24,
     flexDirection: "row",
     gap: spacing.md,
     justifyContent: "space-between",
@@ -1127,8 +1128,8 @@ const styles = StyleSheet.create({
   },
   searchCard: {
     gap: spacing.sm,
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   sectionTitle: {
     color: colors.text,
@@ -1144,11 +1145,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   summaryCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 24,
     gap: spacing.md,
   },
   summaryItem: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
     flex: 1,
     gap: 4,
+    padding: spacing.md,
   },
   summaryLabel: {
     color: colors.textMuted,
@@ -1174,6 +1183,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     gap: spacing.md,
     backgroundColor: colors.surface,
+    borderColor: colors.border,
   },
   cardActions: {
     gap: spacing.sm,
@@ -1198,8 +1208,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metaItem: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
     flex: 1,
     gap: 4,
+    padding: spacing.md,
   },
   metaLabel: {
     color: colors.textMuted,
@@ -1221,7 +1236,12 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
     gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
   emptyTitle: {
@@ -1266,7 +1286,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   formStepDot: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.hoverStrong,
     borderColor: colors.border,
     borderRadius: radius.pill,
     borderWidth: 1,
@@ -1274,12 +1294,12 @@ const styles = StyleSheet.create({
     height: 8,
   },
   formStepDotActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.action,
+    borderColor: colors.action,
   },
   formStepDotCompleted: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
+    backgroundColor: colors.metricMint,
+    borderColor: "#BFE9D9",
   },
   formGrid: {
     gap: spacing.md,
@@ -1297,6 +1317,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   confirmCard: {
+    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
   },
   confirmTitle: {

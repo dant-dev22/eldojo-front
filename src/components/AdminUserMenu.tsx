@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMemo, useState } from "react";
 
@@ -82,10 +83,16 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
         <View nativeID="components-admin-user-menu-trigger-avatar" style={styles.avatar} testID="components-admin-user-menu-trigger-avatar">
           <Text nativeID="components-admin-user-menu-trigger-avatar-label" style={styles.avatarLabel} testID="components-admin-user-menu-trigger-avatar-label">{displayInitial}</Text>
         </View>
+        <View nativeID="components-admin-user-menu-trigger-copy" style={styles.triggerCopy} testID="components-admin-user-menu-trigger-copy">
+          <Text nativeID="components-admin-user-menu-trigger-name" style={styles.triggerName} testID="components-admin-user-menu-trigger-name">
+            {displayName}
+          </Text>
+          <Text nativeID="components-admin-user-menu-trigger-role" style={styles.triggerRole} testID="components-admin-user-menu-trigger-role">
+            {formatAdminRole(user?.role)}
+          </Text>
+        </View>
         <View nativeID="components-admin-user-menu-trigger-glyph" style={styles.triggerGlyph} testID="components-admin-user-menu-trigger-glyph">
-          <View nativeID="components-admin-user-menu-trigger-line-1" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-1" />
-          <View nativeID="components-admin-user-menu-trigger-line-2" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-2" />
-          <View nativeID="components-admin-user-menu-trigger-line-3" style={styles.triggerLine} testID="components-admin-user-menu-trigger-line-3" />
+          <Feather color={colors.textMuted} name="chevron-down" size={16} />
         </View>
       </Pressable>
 
@@ -161,12 +168,12 @@ const styles = StyleSheet.create({
   trigger: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
+    borderColor: colors.border,
     borderRadius: radius.pill,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 10,
     paddingVertical: 8,
   },
   triggerPressed: {
@@ -174,28 +181,36 @@ const styles = StyleSheet.create({
   },
   avatar: {
     alignItems: "center",
-    backgroundColor: colors.accent,
+    backgroundColor: colors.actionSoft,
     borderRadius: radius.pill,
     height: 34,
     justifyContent: "center",
     width: 34,
   },
   avatarLabel: {
-    color: colors.surface,
+    color: colors.action,
     fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",
   },
+  triggerCopy: {
+    gap: 1,
+    minWidth: 0,
+  },
+  triggerName: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  triggerRole: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 11,
+  },
   triggerGlyph: {
-    gap: 3,
     justifyContent: "center",
     paddingRight: 2,
-  },
-  triggerLine: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    height: 2,
-    width: 12,
   },
   overlay: {
     backgroundColor: colors.overlay,
@@ -230,14 +245,14 @@ const styles = StyleSheet.create({
   },
   profileAvatar: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.actionSoft,
     borderRadius: radius.pill,
     height: 44,
     justifyContent: "center",
     width: 44,
   },
   profileAvatarLabel: {
-    color: colors.primary,
+    color: colors.action,
     fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "700",
@@ -264,7 +279,9 @@ const styles = StyleSheet.create({
   },
   metaBlock: {
     backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
     borderRadius: radius.md,
+    borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.sm,
   },
@@ -291,10 +308,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   actionButton: {
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
-    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

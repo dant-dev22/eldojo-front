@@ -39,6 +39,10 @@ export function StatusView({ title, description, loading = false, nativeID, test
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
     flex: 1,
     gap: spacing.sm,
     justifyContent: "center",

@@ -1,6 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing, typography } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 import { AppButton } from "@/components/AppButton";
 
 interface ConfirmActionModalProps {
@@ -84,12 +84,13 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 0,
+    borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.md,
     maxWidth: 420,
     padding: spacing.lg,
     width: "100%",
+    ...shadows.card,
   },
   copyBlock: {
     gap: spacing.xs,

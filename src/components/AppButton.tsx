@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 
 interface AppButtonProps {
   label: string;
@@ -89,12 +89,13 @@ export function AppButton({
 const styles = StyleSheet.create({
   base: {
     alignItems: "center",
-    borderColor: colors.border,
-    borderRadius: 8,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   primary: {
     backgroundColor: colors.action,
@@ -106,14 +107,14 @@ const styles = StyleSheet.create({
   },
   secondary: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
   },
   secondaryHovered: {
-    backgroundColor: colors.hover,
-    borderColor: colors.primary,
+    backgroundColor: colors.hoverStrong,
+    borderColor: colors.action,
   },
   danger: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.dangerSoft,
     borderColor: colors.danger,
   },
   dangerHovered: {
@@ -138,12 +139,12 @@ const styles = StyleSheet.create({
   label: {
     color: colors.onPrimary,
     fontFamily: typography.headingFamily,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: 0.15,
   },
   secondaryLabel: {
-    color: colors.ink,
+    color: colors.text,
   },
   dangerLabel: {
     color: colors.danger,

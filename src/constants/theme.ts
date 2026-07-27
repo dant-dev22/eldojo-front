@@ -36,9 +36,18 @@ export const colors = {
   info: "#1D4ED8",
   infoSoft: "#E8F0FF",
   overlay: "rgba(17, 17, 17, 0.22)",
-  ink: "#111111",
+  ink: "#111827",
   hover: "rgba(138, 103, 72, 0.08)",
   hoverStrong: "rgba(138, 103, 72, 0.14)",
+  sidebar: "#111111",
+  sidebarSoft: "#17181A",
+  sidebarBorder: "rgba(255, 255, 255, 0.08)",
+  sidebarText: "#F5F7F9",
+  sidebarMuted: "#A1A7B3",
+  metricLavender: "#F5EEE7",
+  metricMint: "#EEF6EE",
+  metricAmber: "#FBF1DA",
+  metricBlue: "#EDF3FB",
 };
 
 export const spacing = {
@@ -51,9 +60,9 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 12,
-  md: 18,
-  lg: 28,
+  sm: 14,
+  md: 20,
+  lg: 26,
   pill: 999,
 };
 
@@ -85,15 +94,15 @@ export const shadows = {
   card: {
     elevation: 0,
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 28,
   },
   focus: {
     elevation: 0,
-    shadowColor: "#8A6748",
+    shadowColor: "#4F73D9",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
+    shadowOpacity: 0.12,
     shadowRadius: 0,
   },
 };

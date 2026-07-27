@@ -25,54 +25,54 @@ export function AppBadge({ label, tone = "neutral", nativeID, testID }: AppBadge
 const styles = StyleSheet.create({
   base: {
     alignSelf: "flex-start",
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
     borderWidth: 1,
-    minHeight: 28,
+    minHeight: 26,
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   label: {
     fontFamily: typography.headingFamily,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
   },
   neutralContainer: {
     backgroundColor: colors.goldSoft,
-    borderColor: colors.gold,
+    borderColor: colors.borderStrong,
   },
   neutralLabel: {
-    color: colors.primary,
+    color: colors.textMuted,
   },
   successContainer: {
     backgroundColor: colors.successSoft,
-    borderColor: "#AFC675",
+    borderColor: "#BFE9D9",
   },
   successLabel: {
     color: colors.success,
   },
   warningContainer: {
     backgroundColor: colors.warningSoft,
-    borderColor: colors.action,
+    borderColor: "#F0D89B",
   },
   warningLabel: {
     color: colors.warning,
   },
   dangerContainer: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#E7A4A4",
+    borderColor: "#F2BCC5",
   },
   dangerLabel: {
     color: colors.danger,
   },
   infoContainer: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
+    backgroundColor: colors.infoSoft,
+    borderColor: "#C6D7FF",
   },
   infoLabel: {
-    color: colors.primary,
+    color: colors.info,
   },
 });

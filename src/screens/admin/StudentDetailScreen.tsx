@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   container: {
-    gap: spacing.md,
+    gap: spacing.lg,
     width: "100%",
   },
   header: {
@@ -447,12 +447,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   summaryCard: {
+    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
   },
   detailGrid: {
     gap: spacing.md,
   },
   infoCard: {
+    backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
   },
   cardTitle: {
@@ -487,6 +489,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   historyCard: {
+    backgroundColor: colors.surface,
     gap: spacing.md,
   },
   historyHeader: {
@@ -510,8 +513,8 @@ const styles = StyleSheet.create({
   },
   paymentRow: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
-    borderRadius: 16,
+    borderColor: colors.border,
+    borderRadius: 22,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
@@ -548,7 +551,12 @@ const styles = StyleSheet.create({
   },
   inlineStatus: {
     alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
     gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
   inlineStatusSpinner: {
