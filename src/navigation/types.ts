@@ -1,5 +1,10 @@
 export type AuthStackParamList = {
-  Login: undefined;
+  Home: undefined;
+  About: undefined;
+  Events: undefined;
+  Stores: undefined;
+  CreateAccount: undefined;
+  SignIn: undefined;
 };
 
 export type AdminStackParamList = {

@@ -1,4 +1,4 @@
-import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { StatusView } from "@/components/StatusView";
@@ -6,9 +6,17 @@ import { colors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { StudentDetailScreen } from "@/screens/admin/StudentDetailScreen";
-import { LoginScreen } from "@/screens/auth/LoginScreen";
+import {
+  AboutScreen,
+  CreateAccountScreen,
+  EventsScreen,
+  HomeScreen,
+  SignInScreen,
+  StoresScreen,
+} from "@/screens/auth/PublicSiteScreen";
 import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
 import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
+import { PUBLIC_SCREEN_PATHS } from "@/navigation/publicRoutes";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser } from "@/utils/roles";
 
@@ -16,6 +24,7 @@ import type { AdminStackParamList, AuthStackParamList } from "./types";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
+type RootPathParamList = AuthStackParamList & AdminStackParamList;
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -29,12 +38,49 @@ const navigationTheme = {
   },
 };
 
+const linking: LinkingOptions<RootPathParamList> = {
+  prefixes: [],
+  config: {
+    screens: {
+      About: PUBLIC_SCREEN_PATHS.About,
+      AdminHome: "admin",
+      CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
+      Events: PUBLIC_SCREEN_PATHS.Events,
+      Home: PUBLIC_SCREEN_PATHS.Home,
+      SignIn: PUBLIC_SCREEN_PATHS.SignIn,
+      Stores: PUBLIC_SCREEN_PATHS.Stores,
+      StudentDetail: "admin/alumnos/:studentId",
+      StudentsList: "admin/alumnos",
+    },
+  },
+};
+
 function AuthFlow() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen
-        component={LoginScreen}
-        name="Login"
+        component={HomeScreen}
+        name="Home"
+      />
+      <AuthStack.Screen
+        component={AboutScreen}
+        name="About"
+      />
+      <AuthStack.Screen
+        component={EventsScreen}
+        name="Events"
+      />
+      <AuthStack.Screen
+        component={StoresScreen}
+        name="Stores"
+      />
+      <AuthStack.Screen
+        component={CreateAccountScreen}
+        name="CreateAccount"
+      />
+      <AuthStack.Screen
+        component={SignInScreen}
+        name="SignIn"
       />
     </AuthStack.Navigator>
   );
@@ -64,7 +110,7 @@ export function AppNavigator() {
   const publicAttendanceRoute = getPublicAttendanceRoute();
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer linking={linking} theme={navigationTheme}>
       {publicAttendanceRoute ? (
         <PublicAttendanceScreen routeParams={publicAttendanceRoute} />
       ) : status === "loading" ? (

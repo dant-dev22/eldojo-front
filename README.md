@@ -13,6 +13,7 @@ Portal responsive para administrar dojos de BJJ con una UX diferenciada entre mo
 
 ## Alcance implementado
 
+- Rutas publicas web con URL propia para secciones grandes como `home`, `crear cuenta`, `eventos`, `tiendas` y `acerca`
 - Login enfocado al portal de administradores de gimnasio
 - Acceso permitido en esta interfaz solo para `org_admin` y `branch_admin`
 - UX diferenciada para:
@@ -194,6 +195,16 @@ Al terminar, Expo genera una carpeta `dist/`. Esa es la que se publica en el VPS
 cd /var/www/eldojo-mobile
 sudo cp /var/www/eldojo-mobile/deploy/nginx/eldojo-mobile.conf /etc/nginx/sites-available/eldojo-mobile
 ```
+
+Ese archivo ya incluye el fallback necesario para SPA:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+Sin esa regla, rutas publicas como `/home`, `/crear-cuenta`, `/eventos-para-academias` o `/tiendas-de-equipo-de-combate` pueden devolver `404` al recargar o entrar directo desde buscadores.
 
 Activa el sitio y recarga `nginx`:
 
