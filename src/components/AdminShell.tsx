@@ -68,8 +68,9 @@ export function AdminShell({
   children,
 }: AdminShellProps) {
   const { user, signOut } = useAuth();
-  const { contentMaxWidth, isDesktop } = useResponsiveLayout();
+  const { contentMaxWidth, isDesktop, isTablet, width } = useResponsiveLayout();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const isCompact = width < 480;
 
   const navItems = useMemo<NavItem[]>(
     () => [
@@ -217,17 +218,32 @@ export function AdminShell({
       <View nativeID="components-admin-shell-main-column" style={styles.mainColumn} testID="components-admin-shell-main-column">
         <View
           nativeID="components-admin-shell-header"
-          style={[styles.header, isDesktop ? desktopStyles.header : mobileStyles.header]}
+          style={[
+            styles.header,
+            isDesktop ? desktopStyles.header : isTablet ? tabletStyles.header : mobileStyles.header,
+          ]}
           testID="components-admin-shell-header"
         >
           <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
-            <Text nativeID="components-admin-shell-page-title" style={styles.pageTitle} testID="components-admin-shell-page-title">{title}</Text>
+            <Text
+              nativeID="components-admin-shell-page-title"
+              style={[
+                styles.pageTitle,
+                isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : mobileStyles.pageTitle,
+              ]}
+              testID="components-admin-shell-page-title"
+            >
+              {title}
+            </Text>
             <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
           </View>
 
           <View
             nativeID="components-admin-shell-header-actions"
-            style={[styles.headerActions, isDesktop ? desktopStyles.headerActions : mobileStyles.headerActions]}
+            style={[
+              styles.headerActions,
+              isDesktop ? desktopStyles.headerActions : isTablet ? tabletStyles.headerActions : mobileStyles.headerActions,
+            ]}
             testID="components-admin-shell-header-actions"
           >
             {headerActions}
@@ -240,11 +256,111 @@ export function AdminShell({
           </View>
         </View>
 
+        {!isDesktop ? (
+          <View
+            nativeID="components-admin-shell-compact-utilities"
+            style={[
+              styles.utilityStack,
+              isTablet ? tabletStyles.utilityStack : mobileStyles.utilityStack,
+            ]}
+            testID="components-admin-shell-compact-utilities"
+          >
+            <View nativeID="components-admin-shell-compact-nav-card" style={styles.compactCard} testID="components-admin-shell-compact-nav-card">
+              <Text nativeID="components-admin-shell-compact-nav-title" style={styles.compactCardTitle} testID="components-admin-shell-compact-nav-title">
+                Navegacion
+              </Text>
+              <View
+                nativeID="components-admin-shell-compact-nav-grid"
+                style={[
+                  styles.compactNavGrid,
+                  isTablet ? tabletStyles.compactNavGrid : mobileStyles.compactNavGrid,
+                ]}
+                testID="components-admin-shell-compact-nav-grid"
+              >
+                {navItems.map((item) => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    nativeID={`components-admin-shell-compact-nav-item-${item.key}`}
+                    onPress={item.onPress}
+                    testID={`components-admin-shell-compact-nav-item-${item.key}`}
+                    style={(state) => [
+                      styles.navItem,
+                      styles.compactNavItem,
+                      item.key === activeSection ? styles.navItemActive : null,
+                      state.pressed ? styles.navItemPressed : null,
+                    ]}
+                  >
+                    <Text
+                      nativeID={`components-admin-shell-compact-nav-item-label-${item.key}`}
+                      style={[
+                        styles.navItemLabel,
+                        item.key === activeSection ? styles.navItemLabelActive : null,
+                      ]}
+                      testID={`components-admin-shell-compact-nav-item-label-${item.key}`}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      nativeID={`components-admin-shell-compact-nav-item-description-${item.key}`}
+                      style={styles.navItemDescription}
+                      testID={`components-admin-shell-compact-nav-item-description-${item.key}`}
+                    >
+                      {item.description}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View nativeID="components-admin-shell-compact-summary-card" style={styles.compactCard} testID="components-admin-shell-compact-summary-card">
+              <Text nativeID="components-admin-shell-compact-summary-title" style={styles.compactCardTitle} testID="components-admin-shell-compact-summary-title">
+                Academia
+              </Text>
+              <View
+                nativeID="components-admin-shell-compact-summary-grid"
+                style={[
+                  styles.compactSummaryGrid,
+                  isTablet ? tabletStyles.compactSummaryGrid : mobileStyles.compactSummaryGrid,
+                ]}
+                testID="components-admin-shell-compact-summary-grid"
+              >
+                {academySummary.map((item) => (
+                  <View
+                    key={item.key}
+                    nativeID={`components-admin-shell-compact-summary-${item.key}`}
+                    style={[
+                      styles.compactSummaryItem,
+                      isCompact ? mobileStyles.compactSummaryItemCompact : null,
+                    ]}
+                    testID={`components-admin-shell-compact-summary-${item.key}`}
+                  >
+                    <Text
+                      nativeID={`components-admin-shell-compact-summary-${item.key}-label`}
+                      style={styles.compactSummaryLabel}
+                      testID={`components-admin-shell-compact-summary-${item.key}-label`}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      nativeID={`components-admin-shell-compact-summary-${item.key}-value`}
+                      style={styles.compactSummaryValue}
+                      testID={`components-admin-shell-compact-summary-${item.key}-value`}
+                    >
+                      {item.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         <View
           nativeID="components-admin-shell-content-wrap"
           style={[
             styles.contentWrap,
-            isDesktop ? { maxWidth: contentMaxWidth } : null,
+            { maxWidth: contentMaxWidth },
           ]}
           testID="components-admin-shell-content-wrap"
         >
@@ -419,11 +535,62 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     gap: spacing.sm,
+    minWidth: 0,
   },
   contentWrap: {
     alignSelf: "center",
     flex: 1,
     width: "100%",
+  },
+  utilityStack: {
+    gap: spacing.md,
+  },
+  compactCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 0,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  compactCardTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  compactNavGrid: {
+    gap: spacing.sm,
+  },
+  compactNavItem: {
+    minWidth: 0,
+  },
+  compactSummaryGrid: {
+    gap: spacing.sm,
+  },
+  compactSummaryItem: {
+    borderColor: colors.border,
+    borderRadius: 0,
+    borderWidth: 1,
+    gap: 4,
+    minWidth: 0,
+    padding: spacing.sm,
+  },
+  compactSummaryLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  compactSummaryValue: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
   },
 });
 
@@ -433,10 +600,52 @@ const mobileStyles = StyleSheet.create({
   },
   header: {
     flexDirection: "column",
-    padding: spacing.xl,
+    padding: spacing.md,
+  },
+  pageTitle: {
+    fontSize: 26,
   },
   headerActions: {
     alignItems: "stretch",
+    flexDirection: "column",
+    width: "100%",
+  },
+  utilityStack: {
+    flexDirection: "column",
+  },
+  compactNavGrid: {
+    flexDirection: "column",
+  },
+  compactSummaryGrid: {
+    flexDirection: "column",
+  },
+  compactSummaryItemCompact: {
+    padding: spacing.xs,
+  },
+});
+
+const tabletStyles = StyleSheet.create({
+  header: {
+    flexDirection: "column",
+    padding: spacing.xl,
+  },
+  pageTitle: {
+    fontSize: 30,
+  },
+  headerActions: {
+    alignItems: "stretch",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+  },
+  utilityStack: {
+    flexDirection: "column",
+  },
+  compactNavGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  compactSummaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
   },
@@ -457,6 +666,9 @@ const desktopStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     padding: spacing.xl,
+  },
+  pageTitle: {
+    fontSize: 34,
   },
   headerActions: {
     alignItems: "center",

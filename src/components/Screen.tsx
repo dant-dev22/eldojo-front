@@ -1,5 +1,13 @@
 import { PropsWithChildren, ReactElement } from "react";
-import { RefreshControlProps, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  RefreshControlProps,
+  ScrollView,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+  useWindowDimensions,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/constants/theme";
@@ -14,12 +22,15 @@ interface ScreenProps extends PropsWithChildren {
 
 export function Screen({ children, scrollable = false, contentStyle, refreshControl, nativeID, testID }: ScreenProps) {
   const baseId = nativeID ?? testID ?? "components-screen";
+  const { width } = useWindowDimensions();
+  const responsiveContentStyle =
+    width < 480 ? styles.contentCompact : width < 768 ? styles.contentMobile : styles.contentDesktop;
 
   if (scrollable) {
     return (
       <SafeAreaView edges={["top"]} nativeID={`${baseId}-safe-area`} style={styles.safeArea} testID={`${baseId}-safe-area`}>
         <ScrollView
-          contentContainerStyle={[styles.content, contentStyle]}
+          contentContainerStyle={[styles.content, responsiveContentStyle, contentStyle]}
           keyboardShouldPersistTaps="handled"
           nativeID={baseId}
           refreshControl={refreshControl}
@@ -34,7 +45,7 @@ export function Screen({ children, scrollable = false, contentStyle, refreshCont
 
   return (
     <SafeAreaView edges={["top"]} nativeID={`${baseId}-safe-area`} style={styles.safeArea} testID={`${baseId}-safe-area`}>
-      <View nativeID={baseId} style={[styles.content, contentStyle]} testID={baseId}>
+      <View nativeID={baseId} style={[styles.content, responsiveContentStyle, contentStyle]} testID={baseId}>
         {children}
       </View>
     </SafeAreaView>
@@ -50,6 +61,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     flexGrow: 1,
     gap: spacing.md,
+  },
+  contentCompact: {
+    padding: spacing.sm,
+  },
+  contentMobile: {
+    padding: spacing.md,
+  },
+  contentDesktop: {
     padding: spacing.lg,
   },
 });

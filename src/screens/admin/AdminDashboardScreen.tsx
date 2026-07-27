@@ -558,7 +558,8 @@ function formatAttendanceMethod(method: AttendanceMethod): string {
 }
 
 export function AdminDashboardScreen({ navigation }: Props) {
-  const { isDesktop } = useResponsiveLayout();
+  const { isDesktop, width } = useResponsiveLayout();
+  const isCompact = width < 480;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const publicAttendanceOrigin = "https://eldojo.tech";
@@ -1420,7 +1421,11 @@ export function AdminDashboardScreen({ navigation }: Props) {
       <AdminShell
         activeSection="dashboard"
         headerActions={
-          <View nativeID="screens-admin-dashboard-header-actions" style={styles.headerActionGroup} testID="screens-admin-dashboard-header-actions">
+          <View
+            nativeID="screens-admin-dashboard-header-actions"
+            style={[styles.headerActionGroup, isDesktop ? desktopStyles.headerActionGroup : mobileStyles.headerActionGroup]}
+            testID="screens-admin-dashboard-header-actions"
+          >
             {canCreateBranches ? (
               <AppButton
                 label="Nueva sucursal"
@@ -1454,12 +1459,22 @@ export function AdminDashboardScreen({ navigation }: Props) {
             <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
               <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
                 <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
-                <Text nativeID="screens-admin-dashboard-hero-title" style={styles.title} testID="screens-admin-dashboard-hero-title">{heroTitle}</Text>
+                <Text
+                  nativeID="screens-admin-dashboard-hero-title"
+                  style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
+                  testID="screens-admin-dashboard-hero-title"
+                >
+                  {heroTitle}
+                </Text>
                 <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
                   Visualiza lo esencial y opera tu gimnasio desde un solo lugar.
                 </Text>
               </View>
-              <View nativeID="screens-admin-dashboard-hero-actions" style={styles.heroActions} testID="screens-admin-dashboard-hero-actions">
+              <View
+                nativeID="screens-admin-dashboard-hero-actions"
+                style={[styles.heroActions, isDesktop ? desktopStyles.heroActions : mobileStyles.heroActions]}
+                testID="screens-admin-dashboard-hero-actions"
+              >
                 <AppButton
                   label="Nuevo alumno"
                   nativeID="screens-admin-dashboard-new-student-button"
@@ -2587,19 +2602,20 @@ const styles = StyleSheet.create({
   },
   heroCopy: {
     gap: spacing.sm,
+    minWidth: 0,
   },
   heroActions: {
     gap: spacing.sm,
+    minWidth: 0,
   },
   headerActionGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: spacing.sm,
+    minWidth: 0,
   },
   title: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
@@ -2643,7 +2659,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     flex: 1,
     minHeight: 104,
-    minWidth: 180,
+    minWidth: 0,
   },
   metricValue: {
     color: colors.text,
@@ -2660,11 +2676,13 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     flex: 1,
     gap: spacing.md,
-    minWidth: 280,
+    minWidth: 0,
+    width: "100%",
   },
   cardHeaderRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "space-between",
   },
@@ -2687,7 +2705,7 @@ const styles = StyleSheet.create({
   },
   headerButtonStack: {
     alignSelf: "stretch",
-    minWidth: 180,
+    minWidth: 0,
   },
   quickAction: {
     backgroundColor: colors.surface,
@@ -2768,6 +2786,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 16,
     fontWeight: "700",
+    lineHeight: 22,
   },
   branchRow: {
     backgroundColor: colors.surface,
@@ -2778,14 +2797,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   branchCopy: {
+    minWidth: 0,
     gap: 4,
   },
   branchTitleRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
   },
   branchName: {
     color: colors.text,
@@ -2803,6 +2823,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+    width: "100%",
   },
   publicRouteBlock: {
     borderTopColor: colors.border,
@@ -2824,13 +2845,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   paymentHeaderRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "space-between",
   },
   paymentAmountBlock: {
+    minWidth: 0,
     gap: 4,
   },
   paymentAmount: {
@@ -2877,7 +2899,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   attendanceHeaderRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
@@ -2886,6 +2908,7 @@ const styles = StyleSheet.create({
   attendanceCopy: {
     flex: 1,
     gap: 4,
+    minWidth: 0,
   },
   attendanceTitle: {
     color: colors.text,
@@ -2910,13 +2933,14 @@ const styles = StyleSheet.create({
   classCopy: {
     flex: 1,
     gap: 4,
+    minWidth: 0,
   },
   classTitleRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
   },
   className: {
     color: colors.text,
@@ -2977,10 +3001,20 @@ const styles = StyleSheet.create({
 
 const mobileStyles = StyleSheet.create({
   heroCard: {
-    paddingBottom: spacing.lg,
+    padding: spacing.md,
   },
   heroTop: {
     flexDirection: "column",
+  },
+  heroActions: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    width: "100%",
+  },
+  headerActionGroup: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    width: "100%",
   },
   scopeRow: {
     flexDirection: "column",
@@ -2990,6 +3024,9 @@ const mobileStyles = StyleSheet.create({
   },
   contentGrid: {
     flexDirection: "column",
+  },
+  titleCompact: {
+    fontSize: 24,
   },
   modalActions: {
     flexDirection: "column",
@@ -3004,6 +3041,13 @@ const desktopStyles = StyleSheet.create({
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  heroActions: {
+    alignItems: "flex-end",
+  },
+  headerActionGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   scopeRow: {
     flexDirection: "row",
