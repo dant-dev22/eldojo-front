@@ -136,4 +136,22 @@ export const authApi = {
     const { data } = await http.get<User>("/auth/me");
     return data;
   },
+
+  async updateTutorialState(payload: { first_time: boolean }): Promise<User> {
+    if (shouldUseWebFetch()) {
+      const accessToken = await getAccessToken();
+
+      return requestJson<User>("/auth/me/tutorial-state", {
+        body: JSON.stringify(payload),
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+    }
+
+    const { data } = await http.patch<User>("/auth/me/tutorial-state", payload);
+    return data;
+  },
 };

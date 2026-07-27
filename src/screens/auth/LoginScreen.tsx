@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import {
   DimensionValue,
   Image,
-  ImageBackground,
   LayoutChangeEvent,
   Pressable,
   SafeAreaView,
@@ -41,10 +40,10 @@ const logoPlaceholder = buildWebsiteImage(
   "square"
 );
 
-const heroBackground = buildWebsiteImage(
-  "premium martial arts academy interior, warm cream and olive tones, dramatic natural light, tatami mats, boxing ring corner, reception and training area, realistic photography for a modern SaaS website hero background",
-  "landscape_16_9"
-);
+const heroBackground = require("../../img/fondos.jpg");
+
+const HERO_IMAGE_MAX_WIDTH = 1280;
+const HERO_IMAGE_OFFSET_Y = 0;
 
 const aboutImage = buildWebsiteImage(
   "dojo owner reviewing student schedule and payments on a laptop inside a clean martial arts academy, warm neutral palette, premium realistic website illustration",
@@ -97,6 +96,18 @@ const storeCards: ShowcaseItem[] = [
   ),
 }));
 
+const SECTION_ITEMS: Array<{ key: SectionKey; label: string }> = [
+  { key: "events", label: "Eventos" },
+  { key: "about", label: "Acerca" },
+  { key: "stores", label: "Tiendas" },
+];
+
+const HERO_HIGHLIGHTS = [
+  "Controla alumnos, pagos y asistencia en una sola vista.",
+  "Arranca rapido desde celular sin perder legibilidad.",
+  "Configura tu academia y entra al panel en pocos pasos.",
+];
+
 function countAcademyLetters(value: string): number {
   return value
     .normalize("NFD")
@@ -133,7 +144,7 @@ function formatAuthError(error: unknown): string {
 
 export function LoginScreen() {
   const { signIn, registerAcademy } = useAuth();
-  const { contentMaxWidth, isDesktop, isTablet, width } = useResponsiveLayout();
+  const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
   const scrollRef = useRef<ScrollView>(null);
   const [mode, setMode] = useState<AuthMode>("login");
   const [isAuthVisible, setIsAuthVisible] = useState(false);
@@ -177,10 +188,21 @@ export function LoginScreen() {
       return 700;
     }
 
-    return 660;
-  }, [isDesktop, isTablet]);
+    return isAuthVisible ? 820 : 720;
+  }, [isAuthVisible, isDesktop, isTablet]);
 
   const layoutWidth = Math.min(contentMaxWidth, 1200);
+  const showcaseCardWidth = useMemo<number>(() => {
+    if (isDesktop) {
+      return 260;
+    }
+
+    if (isTablet) {
+      return 280;
+    }
+
+    return Math.max(Math.min(width - spacing.lg * 2 - spacing.md, 320), 252);
+  }, [isDesktop, isTablet, width]);
   const storeCardWidthStyle = useMemo<{ width: DimensionValue }>(
     () => ({
       width: isDesktop ? "31.8%" : isTablet ? "48%" : "100%",
@@ -262,52 +284,73 @@ export function LoginScreen() {
           nativeID="screens-auth-login-navbar"
           style={[
             styles.navbar,
+            isMobile ? styles.navbarMobile : styles.navbarDesktop,
             { paddingHorizontal: width >= 1280 ? 32 : spacing.lg },
           ]}
           testID="screens-auth-login-navbar"
         >
-          <View nativeID="screens-auth-login-navbar-inner" style={[styles.navbarInner, { maxWidth: layoutWidth }]} testID="screens-auth-login-navbar-inner">
-            <Pressable
-              accessibilityRole="button"
-              nativeID="screens-auth-login-navbar-logo-button"
-              onPress={() => scrollRef.current?.scrollTo({ animated: true, y: 0 })}
-              style={styles.navbarLogoButton}
-              testID="screens-auth-login-navbar-logo-button"
-            >
-              <Image
-                nativeID="screens-auth-login-navbar-logo-image"
-                source={{ uri: logoPlaceholder }}
-                style={styles.navbarLogo}
-                testID="screens-auth-login-navbar-logo-image"
-              />
-            </Pressable>
-
-            <View nativeID="screens-auth-login-navbar-links" style={styles.navbarLinks} testID="screens-auth-login-navbar-links">
-              {[
-                { key: "events", label: "Eventos" },
-                { key: "about", label: "Acerca de nosotros" },
-                { key: "stores", label: "Tiendas" },
-              ].map((item) => (
-                <Pressable
-                  key={item.key}
-                  accessibilityRole="button"
-                  nativeID={`screens-auth-login-navbar-link-${item.key}`}
-                  onPress={() => scrollToSection(item.key as SectionKey)}
-                  style={({ pressed }) => [styles.navbarLinkButton, pressed ? styles.navbarLinkPressed : null]}
-                  testID={`screens-auth-login-navbar-link-${item.key}`}
-                >
-                  <Text
-                    nativeID={`screens-auth-login-navbar-link-${item.key}-label`}
-                    style={styles.navbarLinkLabel}
-                    testID={`screens-auth-login-navbar-link-${item.key}-label`}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              ))}
+          <View
+            nativeID="screens-auth-login-navbar-inner"
+            style={[
+              styles.navbarInner,
+              isMobile ? styles.navbarInnerMobile : null,
+              { maxWidth: layoutWidth },
+            ]}
+            testID="screens-auth-login-navbar-inner"
+          >
+            <View nativeID="screens-auth-login-navbar-brand" style={styles.navbarBrand} testID="screens-auth-login-navbar-brand">
+              <Pressable
+                accessibilityRole="button"
+                nativeID="screens-auth-login-navbar-logo-button"
+                onPress={() => scrollRef.current?.scrollTo({ animated: true, y: 0 })}
+                style={styles.navbarLogoButton}
+                testID="screens-auth-login-navbar-logo-button"
+              >
+                <Image
+                  nativeID="screens-auth-login-navbar-logo-image"
+                  source={{ uri: logoPlaceholder }}
+                  style={styles.navbarLogo}
+                  testID="screens-auth-login-navbar-logo-image"
+                />
+              </Pressable>
+              <View nativeID="screens-auth-login-navbar-brand-copy" style={styles.navbarBrandCopy} testID="screens-auth-login-navbar-brand-copy">
+                <Text nativeID="screens-auth-login-navbar-brand-title" style={styles.navbarBrandTitle} testID="screens-auth-login-navbar-brand-title">
+                  ElDojo
+                </Text>
+                <Text nativeID="screens-auth-login-navbar-brand-subtitle" style={styles.navbarBrandSubtitle} testID="screens-auth-login-navbar-brand-subtitle">
+                  Gestion simple para academias
+                </Text>
+              </View>
             </View>
 
-            <View nativeID="screens-auth-login-navbar-auth-actions" style={styles.navbarAuthActions} testID="screens-auth-login-navbar-auth-actions">
+            {!isMobile ? (
+              <View nativeID="screens-auth-login-navbar-links" style={styles.navbarLinks} testID="screens-auth-login-navbar-links">
+                {SECTION_ITEMS.map((item) => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    nativeID={`screens-auth-login-navbar-link-${item.key}`}
+                    onPress={() => scrollToSection(item.key)}
+                    style={({ pressed }) => [styles.navbarLinkButton, pressed ? styles.navbarLinkPressed : null]}
+                    testID={`screens-auth-login-navbar-link-${item.key}`}
+                  >
+                    <Text
+                      nativeID={`screens-auth-login-navbar-link-${item.key}-label`}
+                      style={styles.navbarLinkLabel}
+                      testID={`screens-auth-login-navbar-link-${item.key}-label`}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            <View
+              nativeID="screens-auth-login-navbar-auth-actions"
+              style={[styles.navbarAuthActions, isMobile ? styles.navbarAuthActionsMobile : null]}
+              testID="screens-auth-login-navbar-auth-actions"
+            >
               <Pressable
                 accessibilityRole="button"
                 nativeID="screens-auth-login-navbar-register-button"
@@ -315,6 +358,7 @@ export function LoginScreen() {
                 style={({ pressed }) => [
                   styles.navbarAuthButton,
                   styles.navbarAuthButtonPrimary,
+                  isMobile ? styles.navbarAuthButtonMobile : null,
                   pressed ? styles.navbarLinkPressed : null,
                 ]}
                 testID="screens-auth-login-navbar-register-button"
@@ -327,7 +371,6 @@ export function LoginScreen() {
                   Crear cuenta
                 </Text>
               </Pressable>
-
               <Pressable
                 accessibilityRole="button"
                 nativeID="screens-auth-login-navbar-login-button"
@@ -335,6 +378,7 @@ export function LoginScreen() {
                 style={({ pressed }) => [
                   styles.navbarAuthButton,
                   styles.navbarAuthButtonSecondary,
+                  isMobile ? styles.navbarAuthButtonMobile : null,
                   pressed ? styles.navbarLinkPressed : null,
                 ]}
                 testID="screens-auth-login-navbar-login-button"
@@ -360,18 +404,36 @@ export function LoginScreen() {
           showsVerticalScrollIndicator={false}
           testID="screens-auth-login-scroll-view"
         >
-          <ImageBackground
+          <View
             nativeID="screens-auth-login-hero-section"
-            source={{ uri: heroBackground }}
-            style={[styles.heroSection, { minHeight: heroHeight, paddingTop: 120 }]}
-            imageStyle={styles.heroSectionImage}
+            style={[
+              styles.heroSection,
+              isMobile ? styles.heroSectionMobile : null,
+              { minHeight: heroHeight, paddingTop: isDesktop ? 120 : isTablet ? 112 : spacing.xl },
+            ]}
             testID="screens-auth-login-hero-section"
           >
+            <View nativeID="screens-auth-login-hero-media" style={styles.heroMedia} testID="screens-auth-login-hero-media">
+              <Image
+                nativeID="screens-auth-login-hero-image"
+                resizeMode="stretch"
+                source={heroBackground}
+                style={[
+                  styles.heroSectionImage,
+                  {
+                    maxWidth: HERO_IMAGE_MAX_WIDTH,
+                    transform: [{ translateY: HERO_IMAGE_OFFSET_Y }],
+                  },
+                ]}
+                testID="screens-auth-login-hero-image"
+              />
+            </View>
             <View nativeID="screens-auth-login-hero-background-overlay" style={styles.heroBackgroundOverlay} testID="screens-auth-login-hero-background-overlay" />
             <View
               nativeID="screens-auth-login-hero-content"
               style={[
                 styles.heroContent,
+                isMobile ? styles.heroContentMobile : null,
                 { maxWidth: isAuthVisible ? 560 : layoutWidth },
                 isDesktop && !isAuthVisible ? styles.heroContentDesktop : null,
                 isAuthVisible ? styles.heroContentAuth : null,
@@ -379,24 +441,52 @@ export function LoginScreen() {
               testID="screens-auth-login-hero-content"
             >
               {!isAuthVisible ? (
-                <View nativeID="screens-auth-login-hero-copy" style={styles.heroCopy} testID="screens-auth-login-hero-copy">
+                <View
+                  nativeID="screens-auth-login-hero-copy"
+                  style={[styles.heroCopy, isMobile ? styles.heroCopyMobile : null]}
+                  testID="screens-auth-login-hero-copy"
+                >
                   <Text nativeID="screens-auth-login-hero-eyebrow" style={styles.heroEyebrow} testID="screens-auth-login-hero-eyebrow">
                     Software operativo para dojos
                   </Text>
                   <Text
                     nativeID="screens-auth-login-hero-title"
-                    style={styles.heroTitle}
+                    style={[styles.heroTitle, isMobile ? styles.heroTitleMobile : null]}
                     testID="screens-auth-login-hero-title"
                   >
                     La administracion de un club de pelea nunca fue tan sencilla.
                   </Text>
                   <Text
                     nativeID="screens-auth-login-hero-description"
-                    style={styles.heroDescription}
+                    style={[styles.heroDescription, isMobile ? styles.heroDescriptionMobile : null]}
                     testID="screens-auth-login-hero-description"
                   >
                     Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.
                   </Text>
+
+                  <View nativeID="screens-auth-login-hero-highlights" style={styles.heroHighlights} testID="screens-auth-login-hero-highlights">
+                    {HERO_HIGHLIGHTS.map((item, index) => (
+                      <View
+                        key={item}
+                        nativeID={`screens-auth-login-hero-highlight-${index + 1}`}
+                        style={styles.heroHighlightItem}
+                        testID={`screens-auth-login-hero-highlight-${index + 1}`}
+                      >
+                        <View
+                          nativeID={`screens-auth-login-hero-highlight-dot-${index + 1}`}
+                          style={styles.heroHighlightDot}
+                          testID={`screens-auth-login-hero-highlight-dot-${index + 1}`}
+                        />
+                        <Text
+                          nativeID={`screens-auth-login-hero-highlight-text-${index + 1}`}
+                          style={styles.heroHighlightText}
+                          testID={`screens-auth-login-hero-highlight-text-${index + 1}`}
+                        >
+                          {item}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
 
                   <View nativeID="screens-auth-login-hero-actions" style={styles.heroActions} testID="screens-auth-login-hero-actions">
                     <AppButton
@@ -413,13 +503,49 @@ export function LoginScreen() {
                       variant="secondary"
                     />
                   </View>
+
+                  {isMobile ? (
+                    <ScrollView
+                      contentContainerStyle={styles.mobileSectionNavContent}
+                      horizontal
+                      nativeID="screens-auth-login-mobile-section-nav"
+                      showsHorizontalScrollIndicator={false}
+                      testID="screens-auth-login-mobile-section-nav"
+                    >
+                      {SECTION_ITEMS.map((item) => (
+                        <Pressable
+                          key={item.key}
+                          accessibilityRole="button"
+                          nativeID={`screens-auth-login-mobile-section-chip-${item.key}`}
+                          onPress={() => scrollToSection(item.key)}
+                          style={({ pressed }) => [
+                            styles.mobileSectionChip,
+                            pressed ? styles.mobileSectionChipPressed : null,
+                          ]}
+                          testID={`screens-auth-login-mobile-section-chip-${item.key}`}
+                        >
+                          <Text
+                            nativeID={`screens-auth-login-mobile-section-chip-${item.key}-label`}
+                            style={styles.mobileSectionChipLabel}
+                            testID={`screens-auth-login-mobile-section-chip-${item.key}-label`}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  ) : null}
                 </View>
               ) : null}
 
               {isAuthVisible ? (
                 <AppCard
                   nativeID="screens-auth-login-form-card"
-                  style={[styles.formCard, isDesktop ? styles.formCardDesktop : null]}
+                  style={[
+                    styles.formCard,
+                    isDesktop ? styles.formCardDesktop : null,
+                    isMobile ? styles.formCardMobile : null,
+                  ]}
                   testID="screens-auth-login-form-card"
                 >
                   <View nativeID="screens-auth-login-mode-tabs" style={styles.tabs} testID="screens-auth-login-mode-tabs">
@@ -590,7 +716,7 @@ export function LoginScreen() {
                 </AppCard>
               ) : null}
             </View>
-          </ImageBackground>
+          </View>
 
           <View
             nativeID="screens-auth-login-page-content"
@@ -688,7 +814,12 @@ export function LoginScreen() {
                     accessibilityRole="button"
                     nativeID={`screens-auth-login-event-card-${item.id}`}
                     onPress={() => setSelectedShowcaseItem(item)}
-                    style={({ pressed }) => [styles.cardPressable, styles.showcaseCard, pressed ? styles.showcaseCardPressed : null]}
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      styles.showcaseCard,
+                      { width: showcaseCardWidth },
+                      pressed ? styles.showcaseCardPressed : null,
+                    ]}
                     testID={`screens-auth-login-event-card-${item.id}`}
                   >
                     <AppCard nativeID={`screens-auth-login-event-card-shell-${item.id}`} style={styles.marketingCard} testID={`screens-auth-login-event-card-shell-${item.id}`}>
@@ -862,22 +993,27 @@ const styles = StyleSheet.create({
   },
   heroBackgroundOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(23, 22, 18, 0.46)",
+    backgroundColor: "rgba(23, 22, 18, 0.38)",
   },
   navbar: {
     backgroundColor: "rgba(23, 22, 18, 0.88)",
     borderBottomColor: "rgba(255, 255, 255, 0.12)",
     borderBottomWidth: 1,
     elevation: 3,
-    left: 0,
-    position: "absolute",
-    right: 0,
     shadowColor: "#8C96A3",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
-    top: 0,
     zIndex: 20,
+  },
+  navbarDesktop: {
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  navbarMobile: {
+    position: "relative",
   },
   navbarInner: {
     alignItems: "center",
@@ -887,6 +1023,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: spacing.md,
     width: "100%",
+  },
+  navbarInnerMobile: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: spacing.sm,
+  },
+  navbarBrand: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
   },
   navbarLogoButton: {
     alignItems: "center",
@@ -899,6 +1045,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 56,
     width: 56,
+  },
+  navbarBrandCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  navbarBrandTitle: {
+    color: colors.onPrimary,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  navbarBrandSubtitle: {
+    color: colors.onPrimaryMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
   },
   navbarLinks: {
     flex: 1,
@@ -914,6 +1077,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "flex-end",
   },
+  navbarAuthActionsMobile: {
+    width: "100%",
+  },
   navbarAuthButton: {
     alignItems: "center",
     borderRadius: radius.pill,
@@ -921,6 +1087,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 40,
     paddingHorizontal: spacing.md,
+  },
+  navbarAuthButtonMobile: {
+    flex: 1,
+    minHeight: 48,
   },
   navbarAuthButtonPrimary: {
     backgroundColor: colors.primarySoft,
@@ -963,13 +1133,26 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
+    backgroundColor: "#151410",
     justifyContent: "center",
     overflow: "hidden",
     paddingHorizontal: spacing.lg,
     position: "relative",
     width: "100%",
   },
+  heroMedia: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    backgroundColor: "#E8DDC7",
+    justifyContent: "flex-start",
+    overflow: "hidden",
+  },
+  heroSectionMobile: {
+    justifyContent: "flex-start",
+    paddingBottom: spacing["2xl"],
+  },
   heroSectionImage: {
+    height: "100%",
     width: "100%",
   },
   heroContent: {
@@ -977,6 +1160,9 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     zIndex: 1,
     width: "100%",
+  },
+  heroContentMobile: {
+    gap: spacing.lg,
   },
   heroContentAuth: {
     alignItems: "center",
@@ -990,6 +1176,13 @@ const styles = StyleSheet.create({
   heroCopy: {
     gap: spacing.md,
     maxWidth: 620,
+  },
+  heroCopyMobile: {
+    backgroundColor: "rgba(23, 22, 18, 0.58)",
+    borderColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.lg,
   },
   heroEyebrow: {
     color: colors.onPrimaryMuted,
@@ -1007,12 +1200,42 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     lineHeight: 62,
   },
+  heroTitleMobile: {
+    fontSize: 38,
+    lineHeight: 44,
+  },
   heroDescription: {
     color: colors.onPrimaryMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 18,
     lineHeight: 28,
     maxWidth: 560,
+  },
+  heroDescriptionMobile: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  heroHighlights: {
+    gap: spacing.sm,
+  },
+  heroHighlightItem: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  heroHighlightDot: {
+    backgroundColor: colors.actionSoft,
+    borderRadius: radius.pill,
+    height: 8,
+    marginTop: 8,
+    width: 8,
+  },
+  heroHighlightText: {
+    color: colors.onPrimary,
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 16,
+    lineHeight: 24,
   },
   heroActions: {
     flexDirection: "row",
@@ -1031,6 +1254,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.96)",
     gap: spacing.lg,
     maxWidth: 520,
+  },
+  formCardMobile: {
+    maxWidth: "100%",
+    width: "100%",
   },
   formCardDesktop: {
     width: "100%",
@@ -1194,6 +1421,29 @@ const styles = StyleSheet.create({
   cardPressable: {
     borderRadius: radius.lg,
   },
+  mobileSectionNavContent: {
+    gap: spacing.sm,
+    paddingRight: spacing.sm,
+  },
+  mobileSectionChip: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    borderColor: "rgba(255, 255, 255, 0.22)",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+  },
+  mobileSectionChipPressed: {
+    opacity: 0.8,
+  },
+  mobileSectionChipLabel: {
+    color: colors.onPrimary,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   marketingCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -1221,7 +1471,6 @@ const styles = StyleSheet.create({
   },
   showcaseCard: {
     borderRadius: radius.lg,
-    width: 260,
   },
   showcaseCardPressed: {
     opacity: 0.88,

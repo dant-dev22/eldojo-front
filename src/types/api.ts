@@ -26,6 +26,7 @@ export interface User {
   email: string;
   role: UserRole;
   is_active: boolean;
+  first_time: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;

@@ -14,6 +14,7 @@ interface AuthContextValue {
   signIn: (payload: LoginPayload) => Promise<void>;
   registerAcademy: (payload: AcademyRegisterPayload) => Promise<void>;
   signOut: () => Promise<void>;
+  completeFirstTimeTutorial: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -36,6 +37,22 @@ function mapTokens(response: {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<User | null>(null);
+
+  const persistAuthenticatedUser = async (nextUser: User) => {
+    const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
+
+    if (accessToken && refreshToken) {
+      await saveSession(
+        {
+          accessToken,
+          refreshToken,
+          expiresIn: 0,
+          refreshExpiresIn: 0,
+        },
+        nextUser
+      );
+    }
+  };
 
   useEffect(() => {
     registerUnauthorizedHandler(async () => {
@@ -66,15 +83,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
         if (accessToken && refreshToken) {
-          await saveSession(
-            {
-              accessToken,
-              refreshToken,
-              expiresIn: 0,
-              refreshExpiresIn: 0,
-            },
-            freshUser
-          );
+          await persistAuthenticatedUser(freshUser);
         }
         setUser(freshUser);
         setStatus("authenticated");
@@ -111,9 +120,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
       },
       signOut: async () => {
+        if (user?.first_time) {
+          try {
+            await authApi.updateTutorialState({ first_time: false });
+          } catch {
+            // El cierre de sesión no debe bloquearse si la sincronización falla.
+          }
+        }
         await clearSession();
         setUser(null);
         setStatus("unauthenticated");
+      },
+      completeFirstTimeTutorial: async () => {
+        const updatedUser = await authApi.updateTutorialState({ first_time: false });
+        await persistAuthenticatedUser(updatedUser);
+        setUser(updatedUser);
       },
       refreshUser: async () => {
         const freshUser = await authApi.getCurrentUser();
@@ -129,15 +150,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         ]);
 
         if (accessToken && storedRefreshToken) {
-          await saveSession(
-            {
-              accessToken,
-              refreshToken: storedRefreshToken,
-              expiresIn: 0,
-              refreshExpiresIn: 0,
-            },
-            freshUser
-          );
+          await persistAuthenticatedUser(freshUser);
         }
 
         setUser(freshUser);

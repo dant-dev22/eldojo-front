@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Linking, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Linking, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -119,6 +119,18 @@ type AttendanceFormErrors = Partial<Record<keyof AttendanceFormState, string>>;
 type BranchFormErrors = Partial<Record<keyof BranchFormState, string>>;
 type ClassFormErrors = Partial<Record<keyof ClassFormState, string>>;
 type PaymentFormErrors = Partial<Record<keyof PaymentFormState, string>>;
+type TutorialStepId = "hero" | "crud" | "branches" | "attendance";
+type TutorialStep = {
+  id: TutorialStepId;
+  title: string;
+  description: string;
+};
+type TutorialAnchorFrame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 const STATUS_OPTIONS = [
   { label: "Activa", value: "active" },
@@ -138,6 +150,28 @@ const PAYMENT_RECORD_STATUS_OPTIONS: Array<{ label: string; value: PaymentRecord
 const ATTENDANCE_METHOD_OPTIONS: Array<{ label: string; value: AttendanceMethod }> = [
   { label: "Manual", value: "manual" },
   { label: "QR", value: "qr" },
+];
+const FIRST_TIME_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    id: "hero",
+    title: "Bienvenido a tu panel",
+    description: "Aqui veras el estado general del gimnasio y los accesos principales para arrancar rapido.",
+  },
+  {
+    id: "crud",
+    title: "Este es tu centro operativo",
+    description: "Desde este bloque puedes dar de alta alumnos, sucursales, clases, pagos y asistencias sin cambiar de vista.",
+  },
+  {
+    id: "branches",
+    title: "Configura tus sucursales",
+    description: "Empieza creando o ajustando tu sede principal. Desde aqui tambien compartes la liga publica de asistencia.",
+  },
+  {
+    id: "attendance",
+    title: "Registra asistencias en segundos",
+    description: "Cuando tengas alumnos activos, este bloque te deja cargar asistencias manuales y revisar los ultimos registros.",
+  },
 ];
 
 const DEFAULT_DISCIPLINE_NAMES = ["MMA", "BJJ", "JUDO"] as const;
@@ -559,8 +593,9 @@ function formatAttendanceMethod(method: AttendanceMethod): string {
 
 export function AdminDashboardScreen({ navigation }: Props) {
   const { isDesktop, width } = useResponsiveLayout();
+  const { height: windowHeight } = useWindowDimensions();
   const isCompact = width < 480;
-  const { user } = useAuth();
+  const { completeFirstTimeTutorial, user } = useAuth();
   const queryClient = useQueryClient();
   const publicAttendanceOrigin = "https://eldojo.tech";
   const currentAssignment = user?.admin_assignments[0] ?? null;
@@ -599,6 +634,15 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(createEmptyPaymentForm());
   const [paymentErrors, setPaymentErrors] = useState<PaymentFormErrors>({});
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+  const [tutorialBusy, setTutorialBusy] = useState(false);
+  const [tutorialAnchorFrame, setTutorialAnchorFrame] = useState<TutorialAnchorFrame | null>(null);
+  const tutorialAnchorRefs = useRef<Record<TutorialStepId, View | null>>({
+    attendance: null,
+    branches: null,
+    crud: null,
+    hero: null,
+  });
 
   const studentsQuery = useQuery({
     queryKey: ["dashboard-students"],
@@ -651,6 +695,87 @@ export function AdminDashboardScreen({ navigation }: Props) {
       }),
     enabled: Boolean(user),
   });
+
+  const tutorialActive = user?.first_time === true;
+  const activeTutorialStep = tutorialActive ? FIRST_TIME_TUTORIAL_STEPS[tutorialStepIndex] ?? null : null;
+
+  useEffect(() => {
+    if (tutorialActive) {
+      setTutorialStepIndex(0);
+      setTutorialBusy(false);
+    }
+  }, [tutorialActive]);
+
+  const measureTutorialAnchor = useCallback((stepId: TutorialStepId) => {
+    const anchor = tutorialAnchorRefs.current[stepId];
+
+    if (!anchor) {
+      return;
+    }
+
+    anchor.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+      if (measuredWidth <= 0 || measuredHeight <= 0) {
+        return;
+      }
+
+      setTutorialAnchorFrame({
+        height: measuredHeight,
+        width: measuredWidth,
+        x,
+        y,
+      });
+    });
+  }, []);
+
+  const syncActiveTutorialAnchor = useCallback(
+    (stepId: TutorialStepId | null) => {
+      if (!stepId) {
+        setTutorialAnchorFrame(null);
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        measureTutorialAnchor(stepId);
+      });
+    },
+    [measureTutorialAnchor],
+  );
+
+  useEffect(() => {
+    syncActiveTutorialAnchor(activeTutorialStep?.id ?? null);
+  }, [activeTutorialStep?.id, syncActiveTutorialAnchor, width, windowHeight]);
+
+  const tutorialDialogStyle = useMemo<StyleProp<ViewStyle>>(() => {
+    const sidePadding = spacing.md;
+    const maxDialogWidth = Math.min(isDesktop ? 420 : 360, width - sidePadding * 2);
+
+    if (!tutorialAnchorFrame) {
+      return {
+        left: sidePadding,
+        top: 96,
+        width: maxDialogWidth,
+      };
+    }
+
+    const dialogWidth = Math.max(
+      Math.min(tutorialAnchorFrame.width - spacing.sm, maxDialogWidth),
+      Math.min(280, maxDialogWidth),
+    );
+    const left = Math.min(
+      Math.max(tutorialAnchorFrame.x + spacing.sm, sidePadding),
+      width - dialogWidth - sidePadding,
+    );
+    const top = Math.min(
+      Math.max(tutorialAnchorFrame.y + spacing.sm, 88),
+      Math.max(88, windowHeight - 260),
+    );
+
+    return {
+      left,
+      top,
+      width: dialogWidth,
+    };
+  }, [isDesktop, tutorialAnchorFrame, width, windowHeight]);
 
   const invalidateOperationalQueries = async () => {
     await Promise.all([
@@ -1411,6 +1536,51 @@ export function AdminDashboardScreen({ navigation }: Props) {
     voidPaymentMutation.isPending ||
     deleteAttendanceMutation.isPending;
 
+  const handleTutorialAdvance = async () => {
+    if (!tutorialActive || !activeTutorialStep || tutorialBusy) {
+      return;
+    }
+
+    if (tutorialStepIndex < FIRST_TIME_TUTORIAL_STEPS.length - 1) {
+      setTutorialStepIndex((current) => current + 1);
+      return;
+    }
+
+    setTutorialBusy(true);
+
+    try {
+      await completeFirstTimeTutorial();
+      setFeedback({
+        tone: "success",
+        message: "Recorrido inicial completado. Ya puedes operar el panel a tu ritmo.",
+      });
+    } catch (error) {
+      setFeedback({ tone: "danger", message: getErrorMessage(error) });
+    } finally {
+      setTutorialBusy(false);
+    }
+  };
+
+  const handleTutorialDismiss = async () => {
+    if (!tutorialActive || tutorialBusy) {
+      return;
+    }
+
+    setTutorialBusy(true);
+
+    try {
+      await completeFirstTimeTutorial();
+      setFeedback({
+        tone: "success",
+        message: "Tutorial cerrado. Ya puedes usar el panel libremente.",
+      });
+    } catch (error) {
+      setFeedback({ tone: "danger", message: getErrorMessage(error) });
+    } finally {
+      setTutorialBusy(false);
+    }
+  };
+
   return (
     <Screen
       scrollable
@@ -1451,65 +1621,80 @@ export function AdminDashboardScreen({ navigation }: Props) {
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
           <AnimatedSurface delay={40}>
-            <AppCard
-              nativeID="screens-admin-dashboard-hero-card"
-              style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
-              testID="screens-admin-dashboard-hero-card"
+            <View
+              collapsable={false}
+              nativeID="screens-admin-dashboard-hero-tutorial-anchor"
+              onLayout={() => {
+                if (activeTutorialStep?.id === "hero") {
+                  syncActiveTutorialAnchor("hero");
+                }
+              }}
+              ref={(node) => {
+                tutorialAnchorRefs.current.hero = node;
+              }}
+              style={styles.tutorialAnchorTarget}
+              testID="screens-admin-dashboard-hero-tutorial-anchor"
             >
-            <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
-              <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
-                <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
-                <Text
-                  nativeID="screens-admin-dashboard-hero-title"
-                  style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
-                  testID="screens-admin-dashboard-hero-title"
-                >
-                  {heroTitle}
-                </Text>
-                <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
-                  Visualiza lo esencial y opera tu gimnasio desde un solo lugar.
-                </Text>
-              </View>
-              <View
-                nativeID="screens-admin-dashboard-hero-actions"
-                style={[styles.heroActions, isDesktop ? desktopStyles.heroActions : mobileStyles.heroActions]}
-                testID="screens-admin-dashboard-hero-actions"
+              <AppCard
+                nativeID="screens-admin-dashboard-hero-card"
+                style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
+                testID="screens-admin-dashboard-hero-card"
               >
-                <AppButton
-                  label="Nuevo alumno"
-                  nativeID="screens-admin-dashboard-new-student-button"
-                  onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
-                  testID="screens-admin-dashboard-new-student-button"
-                />
-                {canManageOrganization && organization ? (
+              <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
+                <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
+                  <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
+                  <Text
+                    nativeID="screens-admin-dashboard-hero-title"
+                    style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
+                    testID="screens-admin-dashboard-hero-title"
+                  >
+                    {heroTitle}
+                  </Text>
+                  <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
+                    Visualiza lo esencial y opera tu gimnasio desde un solo lugar.
+                  </Text>
+                </View>
+                <View
+                  nativeID="screens-admin-dashboard-hero-actions"
+                  style={[styles.heroActions, isDesktop ? desktopStyles.heroActions : mobileStyles.heroActions]}
+                  testID="screens-admin-dashboard-hero-actions"
+                >
                   <AppButton
-                    label="Editar gimnasio"
-                    nativeID="screens-admin-dashboard-edit-organization-button"
-                    onPress={openOrganizationModal}
-                    testID="screens-admin-dashboard-edit-organization-button"
-                    variant="secondary"
+                    label="Nuevo alumno"
+                    nativeID="screens-admin-dashboard-new-student-button"
+                    onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
+                    testID="screens-admin-dashboard-new-student-button"
                   />
-                ) : null}
+                  {canManageOrganization && organization ? (
+                    <AppButton
+                      label="Editar gimnasio"
+                      nativeID="screens-admin-dashboard-edit-organization-button"
+                      onPress={openOrganizationModal}
+                      testID="screens-admin-dashboard-edit-organization-button"
+                      variant="secondary"
+                    />
+                  ) : null}
+                </View>
               </View>
-            </View>
 
-            {isDesktop ? (
-              <View nativeID="screens-admin-dashboard-scope-row" style={[styles.scopeRow, desktopStyles.scopeRow]} testID="screens-admin-dashboard-scope-row">
-                <View nativeID="screens-admin-dashboard-scope-channel" style={styles.scopeItem} testID="screens-admin-dashboard-scope-channel">
-                  <Text nativeID="screens-admin-dashboard-scope-channel-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-channel-label">Canal actual</Text>
-                  <Text nativeID="screens-admin-dashboard-scope-channel-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-channel-value">Web responsive</Text>
+              {isDesktop ? (
+                <View nativeID="screens-admin-dashboard-scope-row" style={[styles.scopeRow, desktopStyles.scopeRow]} testID="screens-admin-dashboard-scope-row">
+                  <View nativeID="screens-admin-dashboard-scope-channel" style={styles.scopeItem} testID="screens-admin-dashboard-scope-channel">
+                    <Text nativeID="screens-admin-dashboard-scope-channel-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-channel-label">Canal actual</Text>
+                    <Text nativeID="screens-admin-dashboard-scope-channel-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-channel-value">Web responsive</Text>
+                  </View>
+                  <View nativeID="screens-admin-dashboard-scope-role" style={styles.scopeItem} testID="screens-admin-dashboard-scope-role">
+                    <Text nativeID="screens-admin-dashboard-scope-role-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-role-label">Rol activo</Text>
+                    <Text nativeID="screens-admin-dashboard-scope-role-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-role-value">{user?.role === "org_admin" ? "Org admin" : "Branch admin"}</Text>
+                  </View>
+                  <View nativeID="screens-admin-dashboard-scope-scope" style={styles.scopeItem} testID="screens-admin-dashboard-scope-scope">
+                    <Text nativeID="screens-admin-dashboard-scope-scope-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-scope-label">Alcance</Text>
+                    <Text nativeID="screens-admin-dashboard-scope-scope-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-scope-value">{scopedBranchId ? "Sucursal" : "Organizacion"}</Text>
+                  </View>
                 </View>
-                <View nativeID="screens-admin-dashboard-scope-role" style={styles.scopeItem} testID="screens-admin-dashboard-scope-role">
-                  <Text nativeID="screens-admin-dashboard-scope-role-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-role-label">Rol activo</Text>
-                  <Text nativeID="screens-admin-dashboard-scope-role-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-role-value">{user?.role === "org_admin" ? "Org admin" : "Branch admin"}</Text>
-                </View>
-                <View nativeID="screens-admin-dashboard-scope-scope" style={styles.scopeItem} testID="screens-admin-dashboard-scope-scope">
-                  <Text nativeID="screens-admin-dashboard-scope-scope-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-scope-label">Alcance</Text>
-                  <Text nativeID="screens-admin-dashboard-scope-scope-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-scope-value">{scopedBranchId ? "Sucursal" : "Organizacion"}</Text>
-                </View>
-              </View>
-            ) : null}
-            </AppCard>
+              ) : null}
+              </AppCard>
+            </View>
           </AnimatedSurface>
 
           {feedback ? (
@@ -1563,83 +1748,98 @@ export function AdminDashboardScreen({ navigation }: Props) {
 
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 <AnimatedSurface delay={270}>
-                  <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
-                  <Text style={styles.sectionTitle}>Centro CRUD</Text>
-                  <QuickAction
-                    description="Administra alumnos. Crea, edita, agrega."
-                    idPrefix="screens-admin-dashboard-manage-students-action"
-                    label="Administrar alumnos"
-                    onPress={() => navigation.navigate("StudentsList")}
-                    tone="neutral"
-                  />
-                  <QuickAction
-                    description="Inicia el alta de un alumno nuevo."
-                    idPrefix="screens-admin-dashboard-new-student-action"
-                    label="Nuevo alumno"
-                    onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
-                    tone="primary"
-                  />
-                  <QuickAction
-                    description={
-                      canManageOrganization
-                        ? "Edita datos de tu gimnasio."
-                        : "Disponible solo para org admin. Tu rol si puede operar la sucursal asignada."
-                    }
-                    idPrefix="screens-admin-dashboard-edit-organization-action"
-                    label="Editar gimnasio"
-                    onPress={openOrganizationModal}
-                    disabled={!canManageOrganization || !organization}
-                    tone="neutral"
-                  />
-                  <QuickAction
-                    description={
-                      canCreateBranches
-                        ? "Da de alta una sucursal nueva ligada a esta organizacion."
-                        : "La creacion de sucursales esta disponible solo para org admin."
-                    }
-                    idPrefix="screens-admin-dashboard-new-branch-action"
-                    label="Nueva sucursal"
-                    onPress={openCreateBranchModal}
-                    disabled={!canCreateBranches || !organizationId}
-                    tone="primary"
-                  />
-                  <QuickAction
-                    description="Edita tu sucursal."
-                    idPrefix="screens-admin-dashboard-edit-branch-action"
-                    label="Editar mi sucursal"
-                    onPress={() => {
-                      if (currentBranch) {
-                        openEditBranchModal(currentBranch);
+                  <View
+                    collapsable={false}
+                    nativeID="screens-admin-dashboard-crud-tutorial-anchor"
+                    onLayout={() => {
+                      if (activeTutorialStep?.id === "crud") {
+                        syncActiveTutorialAnchor("crud");
                       }
                     }}
-                    disabled={!currentBranch || !canEditVisibleBranches}
-                    tone="neutral"
-                  />
-                  <QuickAction
-                    description="Administra tus clases."
-                    idPrefix="screens-admin-dashboard-new-class-action"
-                    label="Nueva clase"
-                    onPress={openCreateClassModal}
-                    disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
-                    tone="primary"
-                  />
-                  <QuickAction
-                    description="Administra los pagos de tus alumnos."
-                    idPrefix="screens-admin-dashboard-new-payment-action"
-                    label="Registrar pago"
-                    onPress={openCreatePaymentModal}
-                    disabled={visibleStudents.length === 0}
-                    tone="success"
-                  />
-                  <QuickAction
-                    description="Administra la asistencia de tus alumnos."
-                    idPrefix="screens-admin-dashboard-new-attendance-action"
-                    label="Registrar asistencia"
-                    onPress={openCreateAttendanceModal}
-                    disabled={visibleStudents.length === 0}
-                    tone="success"
-                  />
-                  </AppCard>
+                    ref={(node) => {
+                      tutorialAnchorRefs.current.crud = node;
+                    }}
+                    style={styles.tutorialAnchorTarget}
+                    testID="screens-admin-dashboard-crud-tutorial-anchor"
+                  >
+                    <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
+                    <Text style={styles.sectionTitle}>Centro CRUD</Text>
+                    <QuickAction
+                      description="Administra alumnos. Crea, edita, agrega."
+                      idPrefix="screens-admin-dashboard-manage-students-action"
+                      label="Administrar alumnos"
+                      onPress={() => navigation.navigate("StudentsList")}
+                      tone="neutral"
+                    />
+                    <QuickAction
+                      description="Inicia el alta de un alumno nuevo."
+                      idPrefix="screens-admin-dashboard-new-student-action"
+                      label="Nuevo alumno"
+                      onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
+                      tone="primary"
+                    />
+                    <QuickAction
+                      description={
+                        canManageOrganization
+                          ? "Edita datos de tu gimnasio."
+                          : "Disponible solo para org admin. Tu rol si puede operar la sucursal asignada."
+                      }
+                      idPrefix="screens-admin-dashboard-edit-organization-action"
+                      label="Editar gimnasio"
+                      onPress={openOrganizationModal}
+                      disabled={!canManageOrganization || !organization}
+                      tone="neutral"
+                    />
+                    <QuickAction
+                      description={
+                        canCreateBranches
+                          ? "Da de alta una sucursal nueva ligada a esta organizacion."
+                          : "La creacion de sucursales esta disponible solo para org admin."
+                      }
+                      idPrefix="screens-admin-dashboard-new-branch-action"
+                      label="Nueva sucursal"
+                      onPress={openCreateBranchModal}
+                      disabled={!canCreateBranches || !organizationId}
+                      tone="primary"
+                    />
+                    <QuickAction
+                      description="Edita tu sucursal."
+                      idPrefix="screens-admin-dashboard-edit-branch-action"
+                      label="Editar mi sucursal"
+                      onPress={() => {
+                        if (currentBranch) {
+                          openEditBranchModal(currentBranch);
+                        }
+                      }}
+                      disabled={!currentBranch || !canEditVisibleBranches}
+                      tone="neutral"
+                    />
+                    <QuickAction
+                      description="Administra tus clases."
+                      idPrefix="screens-admin-dashboard-new-class-action"
+                      label="Nueva clase"
+                      onPress={openCreateClassModal}
+                      disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
+                      tone="primary"
+                    />
+                    <QuickAction
+                      description="Administra los pagos de tus alumnos."
+                      idPrefix="screens-admin-dashboard-new-payment-action"
+                      label="Registrar pago"
+                      onPress={openCreatePaymentModal}
+                      disabled={visibleStudents.length === 0}
+                      tone="success"
+                    />
+                    <QuickAction
+                      description="Administra la asistencia de tus alumnos."
+                      idPrefix="screens-admin-dashboard-new-attendance-action"
+                      label="Registrar asistencia"
+                      onPress={openCreateAttendanceModal}
+                      disabled={visibleStudents.length === 0}
+                      tone="success"
+                    />
+                    </AppCard>
+                  </View>
                 </AnimatedSurface>
 
                 <AnimatedSurface delay={300}>
@@ -1672,133 +1872,163 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 </AnimatedSurface>
 
                 <AnimatedSurface delay={330}>
-                  <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
-                  <View nativeID="screens-admin-dashboard-branches-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-branches-header">
-                    <Text style={styles.sectionTitle}>Sucursales</Text>
-                    {canCreateBranches ? (
-                      <View style={isDesktop ? styles.headerButtonStack : null}>
-                        <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} />
-                      </View>
-                    ) : null}
-                  </View>
-                  {visibleBranches.length > 0 ? (
-                    visibleBranches.map((branch) => (
-                      <View key={branch.id} nativeID={`screens-admin-dashboard-branch-row-${branch.id}`} style={styles.branchRow} testID={`screens-admin-dashboard-branch-row-${branch.id}`}>
-                        <View nativeID={`screens-admin-dashboard-branch-copy-${branch.id}`} style={styles.branchCopy} testID={`screens-admin-dashboard-branch-copy-${branch.id}`}>
-                          <View nativeID={`screens-admin-dashboard-branch-title-row-${branch.id}`} style={styles.branchTitleRow} testID={`screens-admin-dashboard-branch-title-row-${branch.id}`}>
-                            <Text nativeID={`screens-admin-dashboard-branch-name-${branch.id}`} style={styles.branchName} testID={`screens-admin-dashboard-branch-name-${branch.id}`}>{branch.name}</Text>
-                            <AppBadge label={branch.is_active ? "Activa" : "Inactiva"} nativeID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} testID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} tone={branch.is_active ? "success" : "warning"} />
-                          </View>
-                          <Text nativeID={`screens-admin-dashboard-branch-location-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-location-${branch.id}`}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
-                          <Text nativeID={`screens-admin-dashboard-branch-address-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-address-${branch.id}`}>{branch.address}</Text>
+                  <View
+                    collapsable={false}
+                    nativeID="screens-admin-dashboard-branches-tutorial-anchor"
+                    onLayout={() => {
+                      if (activeTutorialStep?.id === "branches") {
+                        syncActiveTutorialAnchor("branches");
+                      }
+                    }}
+                    ref={(node) => {
+                      tutorialAnchorRefs.current.branches = node;
+                    }}
+                    style={styles.tutorialAnchorTarget}
+                    testID="screens-admin-dashboard-branches-tutorial-anchor"
+                  >
+                    <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
+                    <View nativeID="screens-admin-dashboard-branches-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-branches-header">
+                      <Text style={styles.sectionTitle}>Sucursales</Text>
+                      {canCreateBranches ? (
+                        <View style={isDesktop ? styles.headerButtonStack : null}>
+                          <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} />
                         </View>
-                        <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
-                          {organization ? (
-                            <AppButton
-                              label="Abrir asistencia"
-                              nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                              onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
-                              testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                              variant="secondary"
-                              disabled={!branch.is_active}
-                            />
-                          ) : null}
-                          <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
-                          {canDeactivateBranches && branch.is_active ? (
-                            <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
-                          ) : null}
-                        </View>
-                        {organization && branch.is_active ? (
-                          <View nativeID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`} style={styles.publicRouteBlock} testID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`}>
-                            <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
-                              {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
-                            </Text>
-                            <AppButton
-                              label="Copiar liga"
-                              nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                              onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
-                              testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                              variant="secondary"
-                            />
-                          </View>
-                        ) : null}
-                      </View>
-                    ))
-                  ) : (
-                    <View style={styles.emptyBlock}>
-                      <Text style={styles.emptyTitle}>Sin sucursales registradas</Text>
-                      <Text style={styles.emptyDescription}>
-                        Da de alta tu primera sucursal para poder operar alumnos, clases y asistencia en este panel.
-                      </Text>
+                      ) : null}
                     </View>
-                  )}
-                  </AppCard>
+                    {visibleBranches.length > 0 ? (
+                      visibleBranches.map((branch) => (
+                        <View key={branch.id} nativeID={`screens-admin-dashboard-branch-row-${branch.id}`} style={styles.branchRow} testID={`screens-admin-dashboard-branch-row-${branch.id}`}>
+                          <View nativeID={`screens-admin-dashboard-branch-copy-${branch.id}`} style={styles.branchCopy} testID={`screens-admin-dashboard-branch-copy-${branch.id}`}>
+                            <View nativeID={`screens-admin-dashboard-branch-title-row-${branch.id}`} style={styles.branchTitleRow} testID={`screens-admin-dashboard-branch-title-row-${branch.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-branch-name-${branch.id}`} style={styles.branchName} testID={`screens-admin-dashboard-branch-name-${branch.id}`}>{branch.name}</Text>
+                              <AppBadge label={branch.is_active ? "Activa" : "Inactiva"} nativeID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} testID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} tone={branch.is_active ? "success" : "warning"} />
+                            </View>
+                            <Text nativeID={`screens-admin-dashboard-branch-location-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-location-${branch.id}`}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
+                            <Text nativeID={`screens-admin-dashboard-branch-address-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-address-${branch.id}`}>{branch.address}</Text>
+                          </View>
+                          <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
+                            {organization ? (
+                              <AppButton
+                                label="Abrir asistencia"
+                                nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                                testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                variant="secondary"
+                                disabled={!branch.is_active}
+                              />
+                            ) : null}
+                            <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
+                            {canDeactivateBranches && branch.is_active ? (
+                              <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
+                            ) : null}
+                          </View>
+                          {organization && branch.is_active ? (
+                            <View nativeID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`} style={styles.publicRouteBlock} testID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
+                                {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
+                              </Text>
+                              <AppButton
+                                label="Copiar liga"
+                                nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
+                                testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                variant="secondary"
+                              />
+                            </View>
+                          ) : null}
+                        </View>
+                      ))
+                    ) : (
+                      <View style={styles.emptyBlock}>
+                        <Text style={styles.emptyTitle}>Sin sucursales registradas</Text>
+                        <Text style={styles.emptyDescription}>
+                          Da de alta tu primera sucursal para poder operar alumnos, clases y asistencia en este panel.
+                        </Text>
+                      </View>
+                    )}
+                    </AppCard>
+                  </View>
                 </AnimatedSurface>
 
                 <AnimatedSurface delay={360}>
-                  <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
-                  <View nativeID="screens-admin-dashboard-attendance-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-attendance-header">
-                    <Text style={styles.sectionTitle}>Asistencias</Text>
-                    <View style={isDesktop ? styles.headerButtonStack : null}>
-                      <AppButton
-                        label="Agregar asistencia"
-                        onPress={openCreateAttendanceModal}
-                        variant="success"
-                        disabled={visibleStudents.length === 0}
-                      />
+                  <View
+                    collapsable={false}
+                    nativeID="screens-admin-dashboard-attendance-tutorial-anchor"
+                    onLayout={() => {
+                      if (activeTutorialStep?.id === "attendance") {
+                        syncActiveTutorialAnchor("attendance");
+                      }
+                    }}
+                    ref={(node) => {
+                      tutorialAnchorRefs.current.attendance = node;
+                    }}
+                    style={styles.tutorialAnchorTarget}
+                    testID="screens-admin-dashboard-attendance-tutorial-anchor"
+                  >
+                    <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
+                    <View nativeID="screens-admin-dashboard-attendance-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-attendance-header">
+                      <Text style={styles.sectionTitle}>Asistencias</Text>
+                      <View style={isDesktop ? styles.headerButtonStack : null}>
+                        <AppButton
+                          label="Agregar asistencia"
+                          onPress={openCreateAttendanceModal}
+                          variant="success"
+                          disabled={visibleStudents.length === 0}
+                        />
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.paymentSummaryRow}>
-                    <AppBadge label={`${visibleAttendanceRecords.length} registros`} tone="neutral" />
-                    <AppBadge label={`${todayAttendanceCount} hoy`} tone={todayAttendanceCount > 0 ? "success" : "neutral"} />
-                  </View>
-                  {visibleAttendanceRecords.length > 0 ? (
-                    visibleAttendanceRecords.slice(0, 8).map((attendance) => {
-                      const student =
-                        visibleStudents.find((item) => item.id === attendance.student_id) ?? null;
-                      const classItem =
-                        visibleClasses.find((item) => item.id === attendance.class_id) ?? null;
-                      const branchName =
-                        visibleBranches.find((branch) => branch.id === attendance.branch_id)?.name ??
-                        `Sucursal ${attendance.branch_id}`;
+                    <View style={styles.paymentSummaryRow}>
+                      <AppBadge label={`${visibleAttendanceRecords.length} registros`} tone="neutral" />
+                      <AppBadge label={`${todayAttendanceCount} hoy`} tone={todayAttendanceCount > 0 ? "success" : "neutral"} />
+                    </View>
+                    {visibleAttendanceRecords.length > 0 ? (
+                      visibleAttendanceRecords.slice(0, 8).map((attendance) => {
+                        const student =
+                          visibleStudents.find((item) => item.id === attendance.student_id) ?? null;
+                        const classItem =
+                          visibleClasses.find((item) => item.id === attendance.class_id) ?? null;
+                        const branchName =
+                          visibleBranches.find((branch) => branch.id === attendance.branch_id)?.name ??
+                          `Sucursal ${attendance.branch_id}`;
 
-                      return (
-                        <View key={attendance.id} nativeID={`screens-admin-dashboard-attendance-row-${attendance.id}`} style={styles.attendanceRow} testID={`screens-admin-dashboard-attendance-row-${attendance.id}`}>
-                          <View nativeID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`} style={styles.attendanceHeaderRow} testID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`}>
-                            <View nativeID={`screens-admin-dashboard-attendance-copy-${attendance.id}`} style={styles.attendanceCopy} testID={`screens-admin-dashboard-attendance-copy-${attendance.id}`}>
-                              <Text nativeID={`screens-admin-dashboard-attendance-title-${attendance.id}`} style={styles.attendanceTitle} testID={`screens-admin-dashboard-attendance-title-${attendance.id}`}>
-                                {student
-                                  ? `${student.first_name} ${student.last_name}`
-                                  : `Alumno ${attendance.student_id}`}
-                              </Text>
-                              <Text nativeID={`screens-admin-dashboard-attendance-meta-${attendance.id}`} style={styles.attendanceMeta} testID={`screens-admin-dashboard-attendance-meta-${attendance.id}`}>
-                                {student ? `${student.unique_code} · ${branchName}` : branchName}
-                              </Text>
+                        return (
+                          <View key={attendance.id} nativeID={`screens-admin-dashboard-attendance-row-${attendance.id}`} style={styles.attendanceRow} testID={`screens-admin-dashboard-attendance-row-${attendance.id}`}>
+                            <View nativeID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`} style={styles.attendanceHeaderRow} testID={`screens-admin-dashboard-attendance-header-row-${attendance.id}`}>
+                              <View nativeID={`screens-admin-dashboard-attendance-copy-${attendance.id}`} style={styles.attendanceCopy} testID={`screens-admin-dashboard-attendance-copy-${attendance.id}`}>
+                                <Text nativeID={`screens-admin-dashboard-attendance-title-${attendance.id}`} style={styles.attendanceTitle} testID={`screens-admin-dashboard-attendance-title-${attendance.id}`}>
+                                  {student
+                                    ? `${student.first_name} ${student.last_name}`
+                                    : `Alumno ${attendance.student_id}`}
+                                </Text>
+                                <Text nativeID={`screens-admin-dashboard-attendance-meta-${attendance.id}`} style={styles.attendanceMeta} testID={`screens-admin-dashboard-attendance-meta-${attendance.id}`}>
+                                  {student ? `${student.unique_code} · ${branchName}` : branchName}
+                                </Text>
+                              </View>
+                              <AppBadge
+                                label={formatAttendanceMethod(attendance.method)}
+                                nativeID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
+                                testID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
+                                tone={attendance.method === "qr" ? "info" : "neutral"}
+                              />
                             </View>
-                            <AppBadge
-                              label={formatAttendanceMethod(attendance.method)}
-                              nativeID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
-                              testID={`screens-admin-dashboard-attendance-method-badge-${attendance.id}`}
-                              tone={attendance.method === "qr" ? "info" : "neutral"}
-                            />
+                            <View nativeID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`}>
+                              <EntityField idPrefix={`screens-admin-dashboard-attendance-checkin-${attendance.id}`} label="Check-in" value={formatDateTime(attendance.check_in_at)} />
+                              <EntityField idPrefix={`screens-admin-dashboard-attendance-class-${attendance.id}`} label="Clase" value={classItem?.name ?? "Sin clase"} />
+                            </View>
+                            <View nativeID={`screens-admin-dashboard-attendance-actions-${attendance.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-attendance-actions-${attendance.id}`}>
+                              <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
+                              <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
+                            </View>
                           </View>
-                          <View nativeID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-attendance-meta-grid-${attendance.id}`}>
-                            <EntityField idPrefix={`screens-admin-dashboard-attendance-checkin-${attendance.id}`} label="Check-in" value={formatDateTime(attendance.check_in_at)} />
-                            <EntityField idPrefix={`screens-admin-dashboard-attendance-class-${attendance.id}`} label="Clase" value={classItem?.name ?? "Sin clase"} />
-                          </View>
-                          <View nativeID={`screens-admin-dashboard-attendance-actions-${attendance.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-attendance-actions-${attendance.id}`}>
-                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
-                            <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
-                          </View>
-                        </View>
-                      );
-                    })
-                  ) : (
-                    <View style={styles.emptyBlock}>
-                      <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
-                    </View>
-                  )}
-                  </AppCard>
+                        );
+                      })
+                    ) : (
+                      <View style={styles.emptyBlock}>
+                        <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
+                      </View>
+                    )}
+                    </AppCard>
+                  </View>
                 </AnimatedSurface>
 
                 <AnimatedSurface delay={390}>
@@ -1947,6 +2177,35 @@ export function AdminDashboardScreen({ navigation }: Props) {
           )}
         </View>
       </AdminShell>
+
+      {activeTutorialStep ? (
+        <Modal
+          animationType="fade"
+          onRequestClose={() => {
+            void handleTutorialDismiss();
+          }}
+          transparent
+          visible
+        >
+          <View nativeID="screens-admin-dashboard-tutorial-modal-root" style={styles.tutorialModalRoot} testID="screens-admin-dashboard-tutorial-modal-root">
+            <View nativeID="screens-admin-dashboard-tutorial-overlay" style={styles.tutorialOverlay} testID="screens-admin-dashboard-tutorial-overlay" />
+            <FirstTimeTutorialBubble
+              currentStep={tutorialStepIndex + 1}
+              description={activeTutorialStep.description}
+              loading={tutorialBusy}
+              onAdvance={() => {
+                void handleTutorialAdvance();
+              }}
+              onDismiss={() => {
+                void handleTutorialDismiss();
+              }}
+              style={tutorialDialogStyle}
+              title={activeTutorialStep.title}
+              totalSteps={FIRST_TIME_TUTORIAL_STEPS.length}
+            />
+          </View>
+        </Modal>
+      ) : null}
 
       <AppModal
         visible={organizationModalVisible}
@@ -2531,6 +2790,66 @@ function QuickAction({
   );
 }
 
+function FirstTimeTutorialBubble({
+  currentStep,
+  description,
+  loading = false,
+  onAdvance,
+  onDismiss,
+  style,
+  title,
+  totalSteps,
+}: {
+  currentStep: number;
+  description: string;
+  loading?: boolean;
+  onAdvance: () => void;
+  onDismiss: () => void;
+  style?: StyleProp<ViewStyle>;
+  title: string;
+  totalSteps: number;
+}) {
+  return (
+    <View
+      nativeID={`screens-admin-dashboard-tutorial-step-${currentStep}`}
+      style={[styles.tutorialBubble, style]}
+      testID={`screens-admin-dashboard-tutorial-step-${currentStep}`}
+    >
+      <View style={styles.tutorialHeaderRow}>
+        <View style={styles.tutorialHeader}>
+          <Text style={styles.tutorialEyebrow}>{`Tutorial inicial - Paso ${currentStep} de ${totalSteps}`}</Text>
+          <Text style={styles.tutorialTitle}>{title}</Text>
+        </View>
+        <Pressable
+          accessibilityLabel="Cerrar tutorial"
+          accessibilityRole="button"
+          nativeID={`screens-admin-dashboard-tutorial-close-button-${currentStep}`}
+          onPress={onDismiss}
+          style={({ pressed }) => [styles.tutorialCloseButton, pressed ? styles.tutorialCloseButtonPressed : null]}
+          testID={`screens-admin-dashboard-tutorial-close-button-${currentStep}`}
+        >
+          <Text
+            nativeID={`screens-admin-dashboard-tutorial-close-label-${currentStep}`}
+            style={styles.tutorialCloseLabel}
+            testID={`screens-admin-dashboard-tutorial-close-label-${currentStep}`}
+          >
+            ×
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={styles.tutorialDescription}>{description}</Text>
+      <View style={styles.tutorialActions}>
+        <AppButton
+          label={currentStep === totalSteps ? "Finalizar guia" : "Siguiente"}
+          loading={loading}
+          onPress={onAdvance}
+          variant="secondary"
+        />
+      </View>
+    </View>
+  );
+}
+
 function AnimatedSurface({
   children,
   delay = 0,
@@ -2589,7 +2908,11 @@ const styles = StyleSheet.create({
   },
   container: {
     gap: spacing.md,
+    position: "relative",
     width: "100%",
+  },
+  tutorialAnchorTarget: {
+    minWidth: 0,
   },
   heroCard: {
     backgroundColor: colors.surface,
@@ -2603,6 +2926,84 @@ const styles = StyleSheet.create({
   heroCopy: {
     gap: spacing.sm,
     minWidth: 0,
+  },
+  tutorialBubble: {
+    backgroundColor: colors.surface,
+    borderColor: colors.action,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: spacing.md,
+    maxWidth: 420,
+    padding: spacing.lg,
+    position: "absolute",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    zIndex: 2,
+    elevation: 12,
+  },
+  tutorialModalRoot: {
+    flex: 1,
+  },
+  tutorialOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(17, 17, 17, 0.68)",
+  },
+  tutorialHeaderRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  tutorialHeader: {
+    flex: 1,
+    gap: 4,
+  },
+  tutorialEyebrow: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  tutorialTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 20,
+    fontWeight: "800",
+    lineHeight: 26,
+  },
+  tutorialDescription: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  tutorialActions: {
+    alignItems: "flex-start",
+  },
+  tutorialCloseButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  tutorialCloseButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.96 }],
+  },
+  tutorialCloseLabel: {
+    color: colors.ink,
+    fontFamily: typography.headingFamily,
+    fontSize: 20,
+    fontWeight: "800",
+    lineHeight: 24,
   },
   heroActions: {
     gap: spacing.sm,

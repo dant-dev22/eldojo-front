@@ -1,8 +1,6 @@
 import type { AuthTokens } from "@/types/api";
 import { clearSession, getRefreshToken, saveSession } from "@/utils/storage";
 
-import { authApi } from "./authApi";
-
 type UnauthorizedHandler = () => Promise<void> | void;
 
 let onUnauthorized: UnauthorizedHandler | null = null;
@@ -22,6 +20,7 @@ export async function refreshSessionTokens(): Promise<AuthTokens | null> {
       }
 
       try {
+        const { authApi } = await import("./authApi");
         const response = await authApi.refresh(refreshToken);
         const tokens: AuthTokens = {
           accessToken: response.access_token,
