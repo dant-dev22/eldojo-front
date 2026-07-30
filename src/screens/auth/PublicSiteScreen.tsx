@@ -176,26 +176,25 @@ const HOME_HIGHLIGHTS = [
   "Configura tu academia y entra al panel en pocos pasos.",
 ];
 
-const DESKTOP_NAV_ITEMS: Array<{ key: DesktopNavKey; label: string; page: PublicPageKey }> = [
-  { key: "home", label: "Inicio", page: "home" },
-  { key: "about", label: "Acerca", page: "about" },
-  { key: "events", label: "Eventos", page: "events" },
+const DESKTOP_NAV_ITEMS: Array<{ key: DesktopNavKey; label: string; page: PublicPageKey; section: SectionKey | null }> = [
+  { key: "home", label: "Inicio", page: "home", section: null },
+  { key: "about", label: "¿Qué hace ElDojo?", page: "about", section: "about" },
+  { key: "events", label: "Eventos", page: "events", section: "events" },
 ];
 
 const MOBILE_SECTION_NAV_ITEMS: Array<{ key: SectionKey | "home"; label: string; page: PublicPageKey }> = [
   { key: "home", label: "Inicio", page: "home" },
-  { key: "about", label: "Acerca", page: "about" },
+  { key: "about", label: "¿Qué hace ElDojo?", page: "about" },
   { key: "events", label: "Eventos", page: "events" },
-  { key: "stores", label: "Tiendas", page: "stores" },
 ];
 
 const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
   about: ["about"],
   createAccount: ["about"],
   events: ["events"],
-  home: ["about", "events", "stores"],
+  home: ["events", "about"],
   signIn: ["about"],
-  stores: ["stores"],
+  stores: [],
 };
 
 const PAGE_COPY: Record<
@@ -208,7 +207,7 @@ const PAGE_COPY: Record<
 > = {
   home: {
     description: "Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.",
-    eyebrow: "Software operativo para dojos",
+    eyebrow: "Software de administracion",
     title: "La administracion de un club de pelea nunca fue tan sencilla.",
   },
   about: {
@@ -287,12 +286,7 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
       onLayout={onLayout}
       style={[styles.infoSection, isDesktop ? styles.infoSectionDesktop : null]}
       testID="screens-auth-public-about-section"
-      {...getWebClassNameProps(
-        joinWebClassNames(
-          "screens-auth-public-about-section",
-          isDesktop ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-2" : null
-        )
-      )}
+      {...getWebClassNameProps("screens-auth-public-about-section")}
     >
       <Image
         nativeID="screens-auth-public-about-image"
@@ -322,8 +316,18 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
               style={styles.highlightItem}
               testID={`screens-auth-public-about-highlight-${index + 1}`}
             >
-              <View style={styles.highlightDot} />
-              <Text style={styles.highlightText}>{item}</Text>
+              <View
+                nativeID={`screens-auth-public-about-highlight-dot-${index + 1}`}
+                style={styles.highlightDot}
+                testID={`screens-auth-public-about-highlight-dot-${index + 1}`}
+              />
+              <Text
+                nativeID={`screens-auth-public-about-highlight-text-${index + 1}`}
+                style={styles.highlightText}
+                testID={`screens-auth-public-about-highlight-text-${index + 1}`}
+              >
+                {item}
+              </Text>
             </View>
           ))}
         </View>
@@ -343,12 +347,7 @@ function renderEventsSection(
       onLayout={onLayout}
       style={styles.stackedSection}
       testID="screens-auth-public-events-section"
-      {...getWebClassNameProps(
-        joinWebClassNames(
-          "screens-auth-public-events-section",
-          "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-3"
-        )
-      )}
+      {...getWebClassNameProps("screens-auth-public-events-section")}
     >
       <View nativeID="screens-auth-public-events-copy" style={styles.sectionCopyBlock} testID="screens-auth-public-events-copy">
         <Text nativeID="screens-auth-public-events-eyebrow" style={styles.sectionEyebrow} testID="screens-auth-public-events-eyebrow">
@@ -383,12 +382,43 @@ function renderEventsSection(
             ]}
             testID={`screens-auth-public-event-card-${item.id}`}
           >
-            <AppCard style={styles.marketingCard}>
-              <Image source={{ uri: item.image }} style={styles.showcaseImage} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardEyebrow}>Evento destacado</Text>
-                <Text style={styles.showcaseTitle}>{item.title}</Text>
-                <Text style={styles.cardCaption}>Vista previa con formato promocional y jerarquia visual estandar.</Text>
+            <AppCard
+              nativeID={`screens-auth-public-event-card-shell-${item.id}`}
+              style={styles.marketingCard}
+              testID={`screens-auth-public-event-card-shell-${item.id}`}
+            >
+              <Image
+                nativeID={`screens-auth-public-event-image-${item.id}`}
+                source={{ uri: item.image }}
+                style={styles.showcaseImage}
+                testID={`screens-auth-public-event-image-${item.id}`}
+              />
+              <View
+                nativeID={`screens-auth-public-event-body-${item.id}`}
+                style={styles.cardBody}
+                testID={`screens-auth-public-event-body-${item.id}`}
+              >
+                <Text
+                  nativeID={`screens-auth-public-event-eyebrow-${item.id}`}
+                  style={styles.cardEyebrow}
+                  testID={`screens-auth-public-event-eyebrow-${item.id}`}
+                >
+                  Evento destacado
+                </Text>
+                <Text
+                  nativeID={`screens-auth-public-event-title-${item.id}`}
+                  style={styles.showcaseTitle}
+                  testID={`screens-auth-public-event-title-${item.id}`}
+                >
+                  {item.title}
+                </Text>
+                <Text
+                  nativeID={`screens-auth-public-event-caption-${item.id}`}
+                  style={styles.cardCaption}
+                  testID={`screens-auth-public-event-caption-${item.id}`}
+                >
+                  Vista previa con formato promocional y jerarquia visual estandar.
+                </Text>
               </View>
             </AppCard>
           </Pressable>
@@ -447,12 +477,43 @@ function renderStoresSection(
             style={({ pressed }) => [styles.cardPressable, styles.storeCard, storeCardWidthStyle, pressed ? styles.showcaseCardPressed : null]}
             testID={`screens-auth-public-store-card-${item.id}`}
           >
-            <AppCard style={styles.marketingCard}>
-              <Image source={{ uri: item.image }} style={styles.storeImage} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardEyebrow}>Catalogo</Text>
-                <Text style={styles.storeTitle}>{item.title}</Text>
-                <Text style={styles.cardCaption}>Tarjeta limpia para producto, aliado o patrocinador.</Text>
+            <AppCard
+              nativeID={`screens-auth-public-store-card-shell-${item.id}`}
+              style={styles.marketingCard}
+              testID={`screens-auth-public-store-card-shell-${item.id}`}
+            >
+              <Image
+                nativeID={`screens-auth-public-store-image-${item.id}`}
+                source={{ uri: item.image }}
+                style={styles.storeImage}
+                testID={`screens-auth-public-store-image-${item.id}`}
+              />
+              <View
+                nativeID={`screens-auth-public-store-body-${item.id}`}
+                style={styles.cardBody}
+                testID={`screens-auth-public-store-body-${item.id}`}
+              >
+                <Text
+                  nativeID={`screens-auth-public-store-eyebrow-${item.id}`}
+                  style={styles.cardEyebrow}
+                  testID={`screens-auth-public-store-eyebrow-${item.id}`}
+                >
+                  Catalogo
+                </Text>
+                <Text
+                  nativeID={`screens-auth-public-store-title-${item.id}`}
+                  style={styles.storeTitle}
+                  testID={`screens-auth-public-store-title-${item.id}`}
+                >
+                  {item.title}
+                </Text>
+                <Text
+                  nativeID={`screens-auth-public-store-caption-${item.id}`}
+                  style={styles.cardCaption}
+                  testID={`screens-auth-public-store-caption-${item.id}`}
+                >
+                  Tarjeta limpia para producto, aliado o patrocinador.
+                </Text>
               </View>
             </AppCard>
           </Pressable>
@@ -527,6 +588,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const content = PAGE_COPY[page];
   const isAuthPage = page === "createAccount" || page === "signIn";
   const isWebDesktop = Platform.OS === "web" && isDesktop;
+  const showHeroCopy = !(isWebDesktop && isAuthPage);
   const mode: AuthMode = page === "createAccount" ? "academy" : "login";
 
   useEffect(() => {
@@ -585,6 +647,10 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
         animation-delay: 240ms;
       }
 
+      .eldojo-public-desktop-form-fade-in {
+        animation: eldojoPublicDesktopFormFadeIn 1500ms ease both;
+      }
+
       @keyframes eldojoPublicDesktopFadeIn {
         from {
           opacity: 0;
@@ -594,6 +660,16 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
         to {
           opacity: 1;
           transform: translateY(0);
+        }
+      }
+
+      @keyframes eldojoPublicDesktopFormFadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
         }
       }
     `;
@@ -685,7 +761,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
     }
   };
 
-  const handleDesktopNavbarPress = (target: DesktopNavKey) => {
+  const handleDesktopNavbarPress = (target: DesktopNavKey, section: SectionKey | null) => {
     setDesktopNavSelection(target);
 
     if (target === "home") {
@@ -698,15 +774,15 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
       return;
     }
 
-    if (PAGE_SECTIONS[page].includes(target)) {
-      scrollToSection(target);
+    if (section && PAGE_SECTIONS[page].includes(section)) {
+      scrollToSection(section);
       return;
     }
 
-    pendingScrollTargetRef.current = target;
+    pendingScrollTargetRef.current = section;
 
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, target);
+    if (section && Platform.OS === "web" && typeof window !== "undefined") {
+      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, section);
     }
 
     navigateToPage("home");
@@ -842,14 +918,33 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                 testID="screens-auth-public-home-link"
                 {...getWebClassNameProps("screens-auth-public-home-link eldojo-public-desktop-hover-target")}
               >
-                <Image source={{ uri: logoPlaceholder }} style={styles.navbarLogo} />
+                <Image
+                  nativeID="screens-auth-public-home-link-image"
+                  source={{ uri: logoPlaceholder }}
+                  style={styles.navbarLogo}
+                  testID="screens-auth-public-home-link-image"
+                />
               </Pressable>
               <View
+                nativeID="screens-auth-public-brand-copy"
                 style={styles.navbarBrandCopy}
+                testID="screens-auth-public-brand-copy"
                 {...getWebClassNameProps("screens-auth-public-brand-copy")}
               >
-                <Text style={styles.navbarBrandTitle} {...getWebClassNameProps("screens-auth-public-brand-title")}>ElDojo</Text>
-                <Text style={styles.navbarBrandSubtitle} {...getWebClassNameProps("screens-auth-public-brand-subtitle")}>
+                <Text
+                  nativeID="screens-auth-public-brand-title"
+                  style={styles.navbarBrandTitle}
+                  testID="screens-auth-public-brand-title"
+                  {...getWebClassNameProps("screens-auth-public-brand-title")}
+                >
+                  ElDojo
+                </Text>
+                <Text
+                  nativeID="screens-auth-public-brand-subtitle"
+                  style={styles.navbarBrandSubtitle}
+                  testID="screens-auth-public-brand-subtitle"
+                  {...getWebClassNameProps("screens-auth-public-brand-subtitle")}
+                >
                   Gestion simple para academias
                 </Text>
               </View>
@@ -865,7 +960,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                       key={item.page}
                       accessibilityRole="link"
                       nativeID={`screens-auth-public-navbar-link-${item.key}`}
-                      onPress={() => (isWebDesktop ? handleDesktopNavbarPress(item.key) : navigateToPage(item.page))}
+                      onPress={() => (isWebDesktop ? handleDesktopNavbarPress(item.key, item.section) : navigateToPage(item.page))}
                       style={(state) => {
                         const hovered = (state as typeof state & { hovered?: boolean }).hovered;
 
@@ -883,11 +978,13 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
 
                         return (
                           <Text
+                            nativeID={`screens-auth-public-navbar-link-${item.key}-label`}
                             style={[
                               styles.navbarLinkLabel,
                               hovered || isActive ? styles.navbarLinkLabelActive : null,
                               isActive ? styles.navbarLinkLabelSelected : null,
                             ]}
+                            testID={`screens-auth-public-navbar-link-${item.key}-label`}
                             {...getWebClassNameProps(`screens-auth-public-navbar-link-${item.key}-label`)}
                           >
                             {item.label}
@@ -915,7 +1012,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                     styles.navbarAuthButton,
                     styles.navbarAuthButtonPrimary,
                     isMobile ? styles.navbarAuthButtonMobile : null,
-                    hovered || page === "createAccount" ? styles.navbarLinkButtonActive : null,
+                    hovered ? styles.navbarAuthButtonPrimaryHover : null,
                     state.pressed ? styles.navbarLinkPressed : null,
                   ];
                 }}
@@ -927,12 +1024,13 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
 
                   return (
                     <Text
+                      nativeID="screens-auth-public-navbar-create-account-label"
                       style={[
                         styles.navbarAuthButtonLabel,
                         styles.navbarAuthButtonLabelPrimary,
-                        hovered || page === "createAccount" ? styles.navbarLinkLabelActive : null,
-                        page === "createAccount" ? styles.navbarLinkLabelSelected : null,
+                      hovered ? styles.navbarAuthButtonLabelPrimaryHover : null,
                       ]}
+                      testID="screens-auth-public-navbar-create-account-label"
                       {...getWebClassNameProps("screens-auth-public-navbar-create-account-label")}
                     >
                       Crear cuenta
@@ -951,7 +1049,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                     styles.navbarAuthButton,
                     styles.navbarAuthButtonSecondary,
                     isMobile ? styles.navbarAuthButtonMobile : null,
-                    hovered || page === "signIn" ? styles.navbarLinkButtonActive : null,
+                    hovered ? styles.navbarAuthButtonSecondaryHover : null,
                     state.pressed ? styles.navbarLinkPressed : null,
                   ];
                 }}
@@ -963,11 +1061,12 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
 
                   return (
                     <Text
+                      nativeID="screens-auth-public-navbar-signin-label"
                       style={[
                         styles.navbarAuthButtonLabel,
-                        hovered || page === "signIn" ? styles.navbarLinkLabelActive : null,
-                        page === "signIn" ? styles.navbarLinkLabelSelected : null,
+                      hovered ? styles.navbarAuthButtonLabelSecondaryHover : null,
                       ]}
+                      testID="screens-auth-public-navbar-signin-label"
                       {...getWebClassNameProps("screens-auth-public-navbar-signin-label")}
                     >
                       Iniciar sesion
@@ -999,11 +1098,28 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
             testID="screens-auth-public-hero-section"
             {...getWebClassNameProps("screens-auth-public-hero-section")}
           >
-            <View style={styles.heroMedia} {...getWebClassNameProps("screens-auth-public-hero-media")}>
-              <Image resizeMode="stretch" source={heroBackground} style={styles.heroSectionImage} />
-            </View>
-            <View style={styles.heroBackgroundOverlay} {...getWebClassNameProps("screens-auth-public-hero-background-overlay")} />
             <View
+              nativeID="screens-auth-public-hero-media"
+              style={styles.heroMedia}
+              testID="screens-auth-public-hero-media"
+              {...getWebClassNameProps("screens-auth-public-hero-media")}
+            >
+              <Image
+                nativeID="screens-auth-public-hero-image"
+                resizeMode="stretch"
+                source={heroBackground}
+                style={styles.heroSectionImage}
+                testID="screens-auth-public-hero-image"
+              />
+            </View>
+            <View
+              nativeID="screens-auth-public-hero-background-overlay"
+              style={styles.heroBackgroundOverlay}
+              testID="screens-auth-public-hero-background-overlay"
+              {...getWebClassNameProps("screens-auth-public-hero-background-overlay")}
+            />
+            <View
+              nativeID="screens-auth-public-hero-content"
               style={[
                 styles.heroContent,
                 isMobile ? styles.heroContentMobile : null,
@@ -1011,104 +1127,137 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                 isDesktop && !isAuthPage ? styles.heroContentDesktop : null,
                 isAuthPage && isDesktop ? styles.heroContentAuthDesktop : null,
               ]}
+              testID="screens-auth-public-hero-content"
               {...getWebClassNameProps("screens-auth-public-hero-content")}
             >
-              <View
-                style={[
-                  styles.heroCopy,
-                  isMobile ? styles.heroCopyMobile : null,
-                  isAuthPage ? styles.heroCopyAuth : null,
-                  isAuthPage && isDesktop ? styles.heroCopyAuthDesktop : null,
-                ]}
-                {...getWebClassNameProps(
-                  joinWebClassNames(
-                    "screens-auth-public-hero-copy",
-                    isWebDesktop && !isAuthPage ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : null
-                  )
-                )}
-              >
-                <Text style={styles.heroEyebrow} {...getWebClassNameProps("screens-auth-public-hero-eyebrow")}>{content.eyebrow}</Text>
-                <Text
-                  style={[styles.heroTitle, isMobile ? styles.heroTitleMobile : null]}
-                  {...getWebClassNameProps("screens-auth-public-hero-title")}
+              {showHeroCopy ? (
+                <View
+                  nativeID="screens-auth-public-hero-copy"
+                  style={[
+                    styles.heroCopy,
+                    isMobile ? styles.heroCopyMobile : null,
+                    isAuthPage ? styles.heroCopyAuth : null,
+                    isAuthPage && isDesktop ? styles.heroCopyAuthDesktop : null,
+                  ]}
+                  testID="screens-auth-public-hero-copy"
+                  {...getWebClassNameProps(
+                    joinWebClassNames(
+                      "screens-auth-public-hero-copy",
+                      isWebDesktop && !isAuthPage ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : null
+                    )
+                  )}
                 >
-                  {content.title}
-                </Text>
-                <Text
-                  style={[styles.heroDescription, isMobile ? styles.heroDescriptionMobile : null]}
-                  {...getWebClassNameProps("screens-auth-public-hero-description")}
-                >
-                  {content.description}
-                </Text>
+                  <Text
+                    nativeID="screens-auth-public-hero-eyebrow"
+                    style={styles.heroEyebrow}
+                    testID="screens-auth-public-hero-eyebrow"
+                    {...getWebClassNameProps("screens-auth-public-hero-eyebrow")}
+                  >
+                    {content.eyebrow}
+                  </Text>
+                  <Text
+                    nativeID="screens-auth-public-hero-title"
+                    style={[styles.heroTitle, isMobile ? styles.heroTitleMobile : null]}
+                    testID="screens-auth-public-hero-title"
+                    {...getWebClassNameProps("screens-auth-public-hero-title")}
+                  >
+                    {content.title}
+                  </Text>
+                  <Text
+                    nativeID="screens-auth-public-hero-description"
+                    style={[styles.heroDescription, isMobile ? styles.heroDescriptionMobile : null]}
+                    testID="screens-auth-public-hero-description"
+                    {...getWebClassNameProps("screens-auth-public-hero-description")}
+                  >
+                    {content.description}
+                  </Text>
 
-                {page === "home" ? (
-                  <View style={styles.heroHighlights} {...getWebClassNameProps("screens-auth-public-hero-highlights")}>
-                    {HOME_HIGHLIGHTS.map((item, index) => (
-                      <View
-                        key={item}
-                        style={styles.heroHighlightItem}
-                        {...getWebClassNameProps(`screens-auth-public-hero-highlight-${index + 1}`)}
-                      >
+                  {page === "home" ? (
+                    <View style={styles.heroHighlights} {...getWebClassNameProps("screens-auth-public-hero-highlights")}>
+                      {HOME_HIGHLIGHTS.map((item, index) => (
                         <View
-                          style={styles.heroHighlightDot}
-                          {...getWebClassNameProps(`screens-auth-public-hero-highlight-dot-${index + 1}`)}
-                        />
-                        <Text
-                          style={styles.heroHighlightText}
-                          {...getWebClassNameProps(`screens-auth-public-hero-highlight-text-${index + 1}`)}
+                          key={item}
+                          style={styles.heroHighlightItem}
+                          {...getWebClassNameProps(`screens-auth-public-hero-highlight-${index + 1}`)}
                         >
-                          {item}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+                          <View
+                            style={styles.heroHighlightDot}
+                            {...getWebClassNameProps(`screens-auth-public-hero-highlight-dot-${index + 1}`)}
+                          />
+                          <Text
+                            style={styles.heroHighlightText}
+                            {...getWebClassNameProps(`screens-auth-public-hero-highlight-text-${index + 1}`)}
+                          >
+                            {item}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
 
-                {!isAuthPage ? (
-                  <View style={styles.heroActions} {...getWebClassNameProps("screens-auth-public-hero-actions")}>
-                    <AppButton
-                      label="Crear una cuenta"
-                      nativeID="screens-auth-public-open-register-button"
-                      onPress={() => navigateToPage("createAccount")}
-                      testID="screens-auth-public-open-register-button"
-                    />
-                    <AppButton
-                      label={page === "home" ? "Iniciar sesion" : "Ver panel de acceso"}
-                      nativeID="screens-auth-public-open-login-button"
-                      onPress={() => navigateToPage("signIn")}
-                      testID="screens-auth-public-open-login-button"
-                      variant="secondary"
-                    />
-                  </View>
-                ) : null}
+                  {!isAuthPage ? (
+                    <View style={styles.heroActions} {...getWebClassNameProps("screens-auth-public-hero-actions")}>
+                      <AppButton
+                        label="Crear una cuenta"
+                        nativeID="screens-auth-public-open-register-button"
+                        onPress={() => navigateToPage("createAccount")}
+                        testID="screens-auth-public-open-register-button"
+                      />
+                      <AppButton
+                        label={page === "home" ? "Iniciar sesion" : "Ver panel de acceso"}
+                        nativeID="screens-auth-public-open-login-button"
+                        onPress={() => navigateToPage("signIn")}
+                        testID="screens-auth-public-open-login-button"
+                        variant="secondary"
+                      />
+                    </View>
+                  ) : null}
 
-                {isMobile ? (
-                  <ScrollView contentContainerStyle={styles.mobileSectionNavContent} horizontal showsHorizontalScrollIndicator={false}>
-                    {MOBILE_SECTION_NAV_ITEMS.map((item) => {
-                      const isActive = page === item.page;
-                      return (
-                        <Pressable
-                          key={item.page}
-                          accessibilityRole="link"
-                          onPress={() => navigateToPage(item.page)}
-                          style={({ pressed }) => [
-                            styles.mobileSectionChip,
-                            isActive ? styles.mobileSectionChipActive : null,
-                            pressed ? styles.mobileSectionChipPressed : null,
-                          ]}
-                        >
-                          <Text style={styles.mobileSectionChipLabel}>{item.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                ) : null}
-              </View>
+                  {isMobile ? (
+                    <ScrollView
+                      contentContainerStyle={styles.mobileSectionNavContent}
+                      horizontal
+                      nativeID="screens-auth-public-mobile-section-nav"
+                      showsHorizontalScrollIndicator={false}
+                      testID="screens-auth-public-mobile-section-nav"
+                    >
+                      {MOBILE_SECTION_NAV_ITEMS.map((item) => {
+                        const isActive = page === item.page;
+                        return (
+                          <Pressable
+                            key={item.page}
+                            accessibilityRole="link"
+                            nativeID={`screens-auth-public-mobile-section-chip-${item.key}`}
+                            onPress={() => navigateToPage(item.page)}
+                            style={({ pressed }) => [
+                              styles.mobileSectionChip,
+                              isActive ? styles.mobileSectionChipActive : null,
+                              pressed ? styles.mobileSectionChipPressed : null,
+                            ]}
+                            testID={`screens-auth-public-mobile-section-chip-${item.key}`}
+                          >
+                            <Text
+                              nativeID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
+                              style={styles.mobileSectionChipLabel}
+                              testID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
+                            >
+                              {item.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  ) : null}
+                </View>
+              ) : null}
 
               {isAuthPage ? (
                 <AppCard
                   nativeID="screens-auth-public-form-card"
-                  className="screens-auth-public-form-card"
+                  className={joinWebClassNames(
+                    "screens-auth-public-form-card",
+                    isWebDesktop ? "eldojo-public-desktop-form-fade-in" : null
+                  )}
                   style={[
                     styles.formCard,
                     isDesktop ? styles.formCardDesktop : null,
@@ -1116,104 +1265,157 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                   ]}
                   testID="screens-auth-public-form-card"
                 >
-                  <View style={styles.tabs}>
+                  <View nativeID="screens-auth-public-form-tabs" style={styles.tabs} testID="screens-auth-public-form-tabs">
                     <Pressable
                       accessibilityRole="link"
+                      nativeID="screens-auth-public-form-tab-create-account"
                       onPress={() => navigateToPage("createAccount")}
                       style={({ pressed }) => [
                         styles.tabButton,
                         mode === "academy" ? styles.tabButtonActive : null,
                         pressed ? styles.tabButtonPressed : null,
                       ]}
+                      testID="screens-auth-public-form-tab-create-account"
                     >
-                      <Text style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}>Crear cuenta</Text>
+                      <Text
+                        nativeID="screens-auth-public-form-tab-create-account-label"
+                        style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}
+                        testID="screens-auth-public-form-tab-create-account-label"
+                      >
+                        Crear cuenta
+                      </Text>
                     </Pressable>
                     <Pressable
                       accessibilityRole="link"
+                      nativeID="screens-auth-public-form-tab-signin"
                       onPress={() => navigateToPage("signIn")}
                       style={({ pressed }) => [
                         styles.tabButton,
                         mode === "login" ? styles.tabButtonActive : null,
                         pressed ? styles.tabButtonPressed : null,
                       ]}
+                      testID="screens-auth-public-form-tab-signin"
                     >
-                      <Text style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}>Iniciar sesion</Text>
+                      <Text
+                        nativeID="screens-auth-public-form-tab-signin-label"
+                        style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}
+                        testID="screens-auth-public-form-tab-signin-label"
+                      >
+                        Iniciar sesion
+                      </Text>
                     </Pressable>
                   </View>
 
                   {mode === "academy" ? (
                     <>
-                      <Text style={styles.formTitle}>
+                      <Text nativeID="screens-auth-public-register-form-title" style={styles.formTitle} testID="screens-auth-public-register-form-title">
                         {formFeedback ? "Revisa tu correo" : "Abre tu academia"}
                       </Text>
-                      <Text style={styles.formSubtitle}>
+                      <Text nativeID="screens-auth-public-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-register-form-subtitle">
                         {formFeedback
                           ? "Tu cuenta quedó pendiente de confirmación. Cuando abras el enlace del correo, activaremos tu panel automáticamente."
                           : "Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo."}
                       </Text>
-                      <AppInput label="Academia" onChangeText={setAcademyName} placeholder="Union MMA" value={academyName} />
-                      <AppInput label="Nombre" onChangeText={setAdminFirstName} placeholder="Tu nombre" value={adminFirstName} />
-                      <AppInput label="Apellidos" onChangeText={setAdminLastName} placeholder="Tus apellidos" value={adminLastName} />
+                      <AppInput
+                        label="Academia"
+                        nativeID="screens-auth-public-register-academy-input"
+                        onChangeText={setAcademyName}
+                        placeholder="Union MMA"
+                        testID="screens-auth-public-register-academy-input"
+                        value={academyName}
+                      />
+                      <AppInput
+                        label="Nombre"
+                        nativeID="screens-auth-public-register-first-name-input"
+                        onChangeText={setAdminFirstName}
+                        placeholder="Tu nombre"
+                        testID="screens-auth-public-register-first-name-input"
+                        value={adminFirstName}
+                      />
+                      <AppInput
+                        label="Apellidos"
+                        nativeID="screens-auth-public-register-last-name-input"
+                        onChangeText={setAdminLastName}
+                        placeholder="Tus apellidos"
+                        testID="screens-auth-public-register-last-name-input"
+                        value={adminLastName}
+                      />
                       <AppInput
                         autoCapitalize="none"
                         autoComplete="email"
                         keyboardType="email-address"
                         label="Correo"
+                        nativeID="screens-auth-public-register-email-input"
                         onChangeText={setEmail}
                         placeholder="admin@tuacademia.com"
+                        testID="screens-auth-public-register-email-input"
                         value={email}
                       />
                       {!formFeedback ? (
                         <AppInput
                           autoComplete="new-password"
                           label="Contrasena"
+                          nativeID="screens-auth-public-register-password-input"
                           onChangeText={setPassword}
                           placeholder="Crea una contraseña"
                           rightAdornment={
                             <Pressable
                               accessibilityLabel={showRegisterPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
                               accessibilityRole="button"
+                              nativeID="screens-auth-public-register-password-toggle"
                               onPress={() => setShowRegisterPassword((current) => !current)}
                               style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                              testID="screens-auth-public-register-password-toggle"
                             >
                               <Feather color={colors.textMuted} name={showRegisterPassword ? "eye-off" : "eye"} size={18} />
                             </Pressable>
                           }
                           secureTextEntry={!showRegisterPassword}
+                          testID="screens-auth-public-register-password-input"
                           value={password}
                         />
                       ) : null}
-                      <Text style={styles.helper}>
+                      <Text nativeID="screens-auth-public-register-helper" style={styles.helper} testID="screens-auth-public-register-helper">
                         {formFeedback
                           ? "Si no te llegó el mensaje, puedes reenviar el enlace con el mismo correo."
                           : "El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre."}
                       </Text>
-                      {formError ? <Text style={styles.error}>{formError}</Text> : null}
-                      {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
+                      {formError ? <Text nativeID="screens-auth-public-register-error" style={styles.error} testID="screens-auth-public-register-error">{formError}</Text> : null}
+                      {formFeedback ? <Text nativeID="screens-auth-public-register-feedback" style={styles.success} testID="screens-auth-public-register-feedback">{formFeedback}</Text> : null}
                       {formFeedback ? (
-                        <View style={styles.formActions}>
+                        <View nativeID="screens-auth-public-register-actions" style={styles.formActions} testID="screens-auth-public-register-actions">
                           <AppButton
                             label="Reenviar enlace"
                             loading={resendMutation.isPending}
+                            nativeID="screens-auth-public-register-resend-button"
                             onPress={handleResendConfirmation}
+                            testID="screens-auth-public-register-resend-button"
                           />
                           <AppButton
                             label="Corregir correo"
+                            nativeID="screens-auth-public-register-reset-feedback-button"
                             onPress={() => {
                               setFormError(null);
                               setFormFeedback(null);
                             }}
+                            testID="screens-auth-public-register-reset-feedback-button"
                             variant="secondary"
                           />
                         </View>
                       ) : (
-                        <AppButton label="Crear academia" loading={registerMutation.isPending} onPress={handleAcademySubmit} />
+                        <AppButton
+                          label="Crear academia"
+                          loading={registerMutation.isPending}
+                          nativeID="screens-auth-public-register-submit-button"
+                          onPress={handleAcademySubmit}
+                          testID="screens-auth-public-register-submit-button"
+                        />
                       )}
                     </>
                   ) : (
                     <>
-                      <Text style={styles.formTitle}>Bienvenido de vuelta</Text>
-                      <Text style={styles.formSubtitle}>
+                      <Text nativeID="screens-auth-public-signin-form-title" style={styles.formTitle} testID="screens-auth-public-signin-form-title">Bienvenido de vuelta</Text>
+                      <Text nativeID="screens-auth-public-signin-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-signin-form-subtitle">
                         Inicia sesion con la cuenta administradora de tu academia para entrar al panel operativo.
                       </Text>
                       <AppInput
@@ -1221,39 +1423,53 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         autoComplete="email"
                         keyboardType="email-address"
                         label="Correo"
+                        nativeID="screens-auth-public-signin-email-input"
                         onChangeText={setEmail}
                         placeholder="admin@tuacademia.com"
+                        testID="screens-auth-public-signin-email-input"
                         value={email}
                       />
                       <AppInput
                         autoComplete="password"
                         label="Contrasena"
+                        nativeID="screens-auth-public-signin-password-input"
                         onChangeText={setPassword}
                         placeholder="Tu contraseña"
                         rightAdornment={
                           <Pressable
                             accessibilityLabel={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
                             accessibilityRole="button"
+                            nativeID="screens-auth-public-signin-password-toggle"
                             onPress={() => setShowPassword((current) => !current)}
                             style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                            testID="screens-auth-public-signin-password-toggle"
                           >
                             <Feather color={colors.textMuted} name={showPassword ? "eye-off" : "eye"} size={18} />
                           </Pressable>
                         }
                         secureTextEntry={!showPassword}
+                        testID="screens-auth-public-signin-password-input"
                         value={password}
                       />
-                      {formError ? <Text style={styles.error}>{formError}</Text> : null}
-                      {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
+                      {formError ? <Text nativeID="screens-auth-public-signin-error" style={styles.error} testID="screens-auth-public-signin-error">{formError}</Text> : null}
+                      {formFeedback ? <Text nativeID="screens-auth-public-signin-feedback" style={styles.success} testID="screens-auth-public-signin-feedback">{formFeedback}</Text> : null}
                       {isConfirmationPendingMessage(formError) ? (
                         <AppButton
                           label="Reenviar enlace de confirmación"
                           loading={resendMutation.isPending}
+                          nativeID="screens-auth-public-signin-resend-button"
                           onPress={handleResendConfirmation}
+                          testID="screens-auth-public-signin-resend-button"
                           variant="secondary"
                         />
                       ) : null}
-                      <AppButton label="Entrar" loading={loginMutation.isPending} onPress={handleLoginSubmit} />
+                      <AppButton
+                        label="Entrar"
+                        loading={loginMutation.isPending}
+                        nativeID="screens-auth-public-signin-submit-button"
+                        onPress={handleLoginSubmit}
+                        testID="screens-auth-public-signin-submit-button"
+                      />
                     </>
                   )}
                 </AppCard>
@@ -1262,7 +1478,13 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
           </View>
 
           <View
-            style={[styles.pageContent, { maxWidth: layoutWidth }]}
+            nativeID="screens-auth-public-page-content"
+            style={[
+              styles.pageContent,
+              page === "home" ? styles.pageContentHome : null,
+              { maxWidth: layoutWidth },
+            ]}
+            testID="screens-auth-public-page-content"
             {...getWebClassNameProps("screens-auth-public-page-content")}
           >
             {PAGE_SECTIONS[page].includes("about") ? renderAboutSection(isDesktop, registerSectionOffset("about")) : null}
@@ -1292,32 +1514,75 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
             )}
           >
             <View
+              nativeID="screens-auth-public-footer-inner"
               style={[styles.footerInner, { maxWidth: layoutWidth }]}
+              testID="screens-auth-public-footer-inner"
               {...getWebClassNameProps("screens-auth-public-footer-inner")}
             >
               <View
+                nativeID="screens-auth-public-footer-top"
                 style={[styles.footerTop, isDesktop ? styles.footerTopDesktop : null]}
+                testID="screens-auth-public-footer-top"
                 {...getWebClassNameProps("screens-auth-public-footer-top")}
               >
-                <View style={styles.footerBrandBlock} {...getWebClassNameProps("screens-auth-public-footer-brand")}>
-                  <Text style={styles.footerBrandTitle} {...getWebClassNameProps("screens-auth-public-footer-brand-title")}>ElDojo</Text>
-                  <Text style={styles.footerCredit} {...getWebClassNameProps("screens-auth-public-footer-credit")}>
+                <View
+                  nativeID="screens-auth-public-footer-brand"
+                  style={styles.footerBrandBlock}
+                  testID="screens-auth-public-footer-brand"
+                  {...getWebClassNameProps("screens-auth-public-footer-brand")}
+                >
+                  <Text
+                    nativeID="screens-auth-public-footer-brand-title"
+                    style={styles.footerBrandTitle}
+                    testID="screens-auth-public-footer-brand-title"
+                    {...getWebClassNameProps("screens-auth-public-footer-brand-title")}
+                  >
+                    ElDojo
+                  </Text>
+                  <Text
+                    nativeID="screens-auth-public-footer-credit"
+                    style={styles.footerCredit}
+                    testID="screens-auth-public-footer-credit"
+                    {...getWebClassNameProps("screens-auth-public-footer-credit")}
+                  >
                     Diseñado por rais.com
                   </Text>
                 </View>
 
                 <View
+                  nativeID="screens-auth-public-footer-content"
                   style={[styles.footerContent, isDesktop ? styles.footerContentDesktop : null]}
+                  testID="screens-auth-public-footer-content"
                   {...getWebClassNameProps("screens-auth-public-footer-content")}
                 >
-                  <View style={styles.footerBlock} {...getWebClassNameProps("screens-auth-public-footer-contact")}>
-                    <Text style={styles.footerTitle} {...getWebClassNameProps("screens-auth-public-footer-contact-title")}>
+                  <View
+                    nativeID="screens-auth-public-footer-contact"
+                    style={styles.footerBlock}
+                    testID="screens-auth-public-footer-contact"
+                    {...getWebClassNameProps("screens-auth-public-footer-contact")}
+                  >
+                    <Text
+                      nativeID="screens-auth-public-footer-contact-title"
+                      style={styles.footerTitle}
+                      testID="screens-auth-public-footer-contact-title"
+                      {...getWebClassNameProps("screens-auth-public-footer-contact-title")}
+                    >
                       Contacto
                     </Text>
-                    <Text style={styles.footerText} {...getWebClassNameProps("screens-auth-public-footer-contact-email")}>
+                    <Text
+                      nativeID="screens-auth-public-footer-contact-email"
+                      style={styles.footerText}
+                      testID="screens-auth-public-footer-contact-email"
+                      {...getWebClassNameProps("screens-auth-public-footer-contact-email")}
+                    >
                       hola@eldojo.tech
                     </Text>
-                    <Text style={styles.footerText} {...getWebClassNameProps("screens-auth-public-footer-contact-phone")}>
+                    <Text
+                      nativeID="screens-auth-public-footer-contact-phone"
+                      style={styles.footerText}
+                      testID="screens-auth-public-footer-contact-phone"
+                      {...getWebClassNameProps("screens-auth-public-footer-contact-phone")}
+                    >
                       +52 81 0000 0000
                     </Text>
                   </View>
@@ -1335,7 +1600,14 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
           title={selectedShowcaseItem?.title ?? "Vista previa"}
           visible={Boolean(selectedShowcaseItem)}
         >
-          {selectedShowcaseItem ? <Image source={{ uri: selectedShowcaseItem.image }} style={styles.modalImage} /> : null}
+          {selectedShowcaseItem ? (
+            <Image
+              nativeID="screens-auth-public-showcase-modal-image"
+              source={{ uri: selectedShowcaseItem.image }}
+              style={styles.modalImage}
+              testID="screens-auth-public-showcase-modal-image"
+            />
+          ) : null}
         </AppModal>
       </View>
     </SafeAreaView>
@@ -1506,9 +1778,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.action,
     borderColor: colors.action,
   },
+  navbarAuthButtonPrimaryHover: {
+    backgroundColor: colors.surface,
+    borderColor: colors.surface,
+  },
   navbarAuthButtonSecondary: {
     backgroundColor: "transparent",
     borderColor: "rgba(255, 255, 255, 0.28)",
+  },
+  navbarAuthButtonSecondaryHover: {
+    backgroundColor: colors.surface,
+    borderColor: colors.surface,
   },
   navbarAuthButtonLabel: {
     color: colors.onPrimary,
@@ -1519,6 +1799,12 @@ const styles = StyleSheet.create({
   },
   navbarAuthButtonLabelPrimary: {
     color: colors.onPrimary,
+  },
+  navbarAuthButtonLabelPrimaryHover: {
+    color: colors.text,
+  },
+  navbarAuthButtonLabelSecondaryHover: {
+    color: colors.text,
   },
   mainScroll: {
     flex: 1,
@@ -1682,10 +1968,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing["2xl"],
     width: "100%",
   },
+  pageContentHome: {
+    backgroundColor: "#faf7f0",
+  },
   formCard: {
     backgroundColor: "rgba(255, 255, 255, 0.96)",
-    gap: spacing.lg,
+    gap: spacing.md,
+    marginBottom: 32,
     maxWidth: 520,
+    padding: spacing.md,
   },
   formCardMobile: {
     maxWidth: "100%",
@@ -1710,7 +2001,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flex: 1,
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 40,
     paddingHorizontal: spacing.sm,
   },
   tabButtonActive: {
@@ -1734,7 +2025,7 @@ const styles = StyleSheet.create({
   formTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.2,
   },
@@ -1742,13 +2033,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   helper: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   error: {
     color: colors.danger,
@@ -1762,7 +2053,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   formActions: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   passwordToggle: {
     alignItems: "center",
@@ -1945,7 +2236,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   footerShellDesktop: {
-    minHeight: 240,
+    minHeight: 120,
   },
   footerInner: {
     alignSelf: "center",
@@ -1954,14 +2245,15 @@ const styles = StyleSheet.create({
   footerTop: {
     gap: spacing.lg,
     justifyContent: "space-between",
-    paddingVertical: spacing["2xl"],
+    paddingVertical: spacing.lg,
   },
   footerTopDesktop: {
-    alignItems: "flex-start",
+    alignItems: "center",
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
   },
   footerBrandBlock: {
+    alignItems: "center",
     gap: 4,
     minWidth: 220,
   },
@@ -1983,9 +2275,10 @@ const styles = StyleSheet.create({
   footerContentDesktop: {
     flex: 1,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "center",
   },
   footerBlock: {
+    alignItems: "center",
     flex: 1,
     gap: spacing.xs,
     minWidth: 180,
@@ -1995,6 +2288,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "700",
+    textAlign: "center",
     textTransform: "uppercase",
   },
   footerText: {
@@ -2002,6 +2296,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
+    textAlign: "center",
   },
   modalImage: {
     borderColor: colors.borderStrong,

@@ -447,7 +447,8 @@ export function LoginScreen() {
                   testID="screens-auth-login-hero-copy"
                 >
                   <Text nativeID="screens-auth-login-hero-eyebrow" style={styles.heroEyebrow} testID="screens-auth-login-hero-eyebrow">
-                    Software operativo para dojos
+                    
+                    Software de administracion
                   </Text>
                   <Text
                     nativeID="screens-auth-login-hero-title"
