@@ -14,6 +14,7 @@ export const PUBLIC_ROUTE_SEGMENTS = {
   stores: slugifyRouteSegment("tiendas de equipo de combate"),
   createAccount: slugifyRouteSegment("crear cuenta"),
   signIn: slugifyRouteSegment("iniciar sesion"),
+  confirmAccount: slugifyRouteSegment("confirmar cuenta"),
 } as const;
 
 export const PUBLIC_SCREEN_PATHS = {
@@ -23,6 +24,7 @@ export const PUBLIC_SCREEN_PATHS = {
   Stores: PUBLIC_ROUTE_SEGMENTS.stores,
   CreateAccount: PUBLIC_ROUTE_SEGMENTS.createAccount,
   SignIn: PUBLIC_ROUTE_SEGMENTS.signIn,
+  ConfirmAccount: PUBLIC_ROUTE_SEGMENTS.confirmAccount,
 } as const;
 
 export type PublicScreenName = keyof typeof PUBLIC_SCREEN_PATHS;

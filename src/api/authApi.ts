@@ -1,6 +1,9 @@
 import { http } from "@/api/http";
 import type {
+  AcademyConfirmPayload,
   AcademyRegisterPayload,
+  AcademyRegisterResponse,
+  AcademyResendConfirmationPayload,
   LoginPayload,
   LoginResponse,
   StudentRegisterPayload,
@@ -104,9 +107,9 @@ export const authApi = {
     return data;
   },
 
-  async registerAcademy(payload: AcademyRegisterPayload): Promise<LoginResponse> {
+  async registerAcademy(payload: AcademyRegisterPayload): Promise<AcademyRegisterResponse> {
     if (shouldUseWebFetch()) {
-      return requestJson<LoginResponse>("/auth/academy/register", {
+      return requestJson<AcademyRegisterResponse>("/auth/academy/register", {
         body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
@@ -115,7 +118,42 @@ export const authApi = {
       });
     }
 
-    const { data } = await http.post<LoginResponse>("/auth/academy/register", payload);
+    const { data } = await http.post<AcademyRegisterResponse>("/auth/academy/register", payload);
+    return data;
+  },
+
+  async confirmAcademy(payload: AcademyConfirmPayload): Promise<LoginResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/academy/confirm", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/academy/confirm", payload);
+    return data;
+  },
+
+  async resendAcademyConfirmation(
+    payload: AcademyResendConfirmationPayload
+  ): Promise<AcademyRegisterResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<AcademyRegisterResponse>("/auth/academy/resend-confirmation", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<AcademyRegisterResponse>(
+      "/auth/academy/resend-confirmation",
+      payload
+    );
     return data;
   },
 

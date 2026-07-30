@@ -6,6 +6,8 @@ import { colors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { StudentDetailScreen } from "@/screens/admin/StudentDetailScreen";
+import { AccountConfirmedScreen } from "@/screens/auth/AccountConfirmedScreen";
+import { ConfirmAccountScreen } from "@/screens/auth/ConfirmAccountScreen";
 import {
   AboutScreen,
   CreateAccountScreen,
@@ -44,6 +46,7 @@ const linking: LinkingOptions<RootPathParamList> = {
     screens: {
       About: PUBLIC_SCREEN_PATHS.About,
       AdminHome: "admin",
+      ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
       Home: PUBLIC_SCREEN_PATHS.Home,
@@ -82,6 +85,10 @@ function AuthFlow() {
         component={SignInScreen}
         name="SignIn"
       />
+      <AuthStack.Screen
+        component={ConfirmAccountScreen}
+        name="ConfirmAccount"
+      />
     </AuthStack.Navigator>
   );
 }
@@ -106,7 +113,7 @@ function AdminFlow() {
 }
 
 export function AppNavigator() {
-  const { status, user } = useAuth();
+  const { showPostConfirmation, status, user } = useAuth();
   const publicAttendanceRoute = getPublicAttendanceRoute();
 
   return (
@@ -123,6 +130,8 @@ export function AppNavigator() {
         <AuthFlow />
       ) : !isGymAdminUser(user) ? (
         <AuthFlow />
+      ) : showPostConfirmation ? (
+        <AccountConfirmedScreen />
       ) : (
         <AdminFlow />
       )}

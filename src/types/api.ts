@@ -49,6 +49,14 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface AcademyRegisterResponse {
+  status: "pending_confirmation";
+  email: string;
+  email_sent: boolean;
+  message: string;
+  verification_expires_in_hours: number;
+}
+
 export interface StudentRegisterPayload {
   unique_code: string;
   email: string;
@@ -61,6 +69,14 @@ export interface AcademyRegisterPayload {
   admin_last_name: string;
   email: string;
   password: string;
+}
+
+export interface AcademyConfirmPayload {
+  token: string;
+}
+
+export interface AcademyResendConfirmationPayload {
+  email: string;
 }
 
 export interface LoginPayload {

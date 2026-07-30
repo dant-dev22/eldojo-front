@@ -2,7 +2,13 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useSt
 
 import { authApi } from "@/api/authApi";
 import { handleUnauthorized, registerUnauthorizedHandler } from "@/api/sessionManager";
-import type { AcademyRegisterPayload, AuthTokens, LoginPayload, User } from "@/types/api";
+import type {
+  AcademyRegisterPayload,
+  AcademyRegisterResponse,
+  AuthTokens,
+  LoginPayload,
+  User,
+} from "@/types/api";
 import { clearSession, getAccessToken, getRefreshToken, getStoredUser, saveSession } from "@/utils/storage";
 import { getGymAdminAccessMessage, isGymAdminUser } from "@/utils/roles";
 
@@ -12,10 +18,14 @@ interface AuthContextValue {
   status: AuthStatus;
   user: User | null;
   signIn: (payload: LoginPayload) => Promise<void>;
-  registerAcademy: (payload: AcademyRegisterPayload) => Promise<void>;
+  registerAcademy: (payload: AcademyRegisterPayload) => Promise<AcademyRegisterResponse>;
+  confirmAcademyAccount: (token: string) => Promise<void>;
+  resendAcademyConfirmation: (email: string) => Promise<AcademyRegisterResponse>;
   signOut: () => Promise<void>;
   completeFirstTimeTutorial: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  showPostConfirmation: boolean;
+  dismissPostConfirmation: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -37,6 +47,7 @@ function mapTokens(response: {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<User | null>(null);
+  const [showPostConfirmation, setShowPostConfirmation] = useState(false);
 
   const persistAuthenticatedUser = async (nextUser: User) => {
     const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
@@ -72,6 +83,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setUser(storedUser);
+      setShowPostConfirmation(false);
 
       try {
         const freshUser = await authApi.getCurrentUser();
@@ -107,18 +119,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
+        setShowPostConfirmation(false);
         setStatus("authenticated");
       },
       registerAcademy: async (payload) => {
-        const response = await authApi.registerAcademy(payload);
+        return authApi.registerAcademy(payload);
+      },
+      confirmAcademyAccount: async (token) => {
+        const response = await authApi.confirmAcademy({ token });
         if (!isGymAdminUser(response.user)) {
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
+        setShowPostConfirmation(true);
         setStatus("authenticated");
       },
+      resendAcademyConfirmation: async (email) =>
+        authApi.resendAcademyConfirmation({ email: email.trim().toLowerCase() }),
       signOut: async () => {
         if (user?.first_time) {
           try {
@@ -129,6 +148,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         await clearSession();
         setUser(null);
+        setShowPostConfirmation(false);
         setStatus("unauthenticated");
       },
       completeFirstTimeTutorial: async () => {
@@ -156,8 +176,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(freshUser);
         setStatus("authenticated");
       },
+      showPostConfirmation,
+      dismissPostConfirmation: () => setShowPostConfirmation(false),
     }),
-    [status, user]
+    [showPostConfirmation, status, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

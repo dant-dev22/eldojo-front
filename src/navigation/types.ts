@@ -5,6 +5,7 @@ export type AuthStackParamList = {
   Stores: undefined;
   CreateAccount: undefined;
   SignIn: undefined;
+  ConfirmAccount: undefined;
 };
 
 export type AdminStackParamList = {

@@ -246,7 +246,15 @@ function formatAuthError(error: unknown): string {
     return "La contraseña no es correcta.";
   }
 
+  if (normalized.includes("no ha sido confirmada")) {
+    return "Tu cuenta aún no ha sido confirmada. Revisa tu correo o solicita un nuevo enlace.";
+  }
+
   return message.endsWith(".") ? message : `${message}.`;
+}
+
+function isConfirmationPendingMessage(message: string | null): boolean {
+  return (message ?? "").toLowerCase().includes("confirm");
 }
 
 function renderAboutSection(isDesktop: boolean) {
@@ -402,7 +410,7 @@ function renderStoresSection(
 
 export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const { signIn, registerAcademy } = useAuth();
+  const { resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
 
   useWebSeo(page);
@@ -416,15 +424,40 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formFeedback, setFormFeedback] = useState<string | null>(null);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
-    onError: (error) => setFormError(formatAuthError(error)),
+    onError: (error) => {
+      setFormFeedback(null);
+      setFormError(formatAuthError(error));
+    },
   });
 
   const registerMutation = useMutation({
     mutationFn: registerAcademy,
-    onError: (error) => setFormError(formatAuthError(error)),
+    onError: (error) => {
+      setFormFeedback(null);
+      setFormError(formatAuthError(error));
+    },
+    onSuccess: (response) => {
+      setFormError(null);
+      setFormFeedback(response.message);
+      setPassword("");
+      setShowRegisterPassword(false);
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: resendAcademyConfirmation,
+    onError: (error) => {
+      setFormFeedback(null);
+      setFormError(formatAuthError(error));
+    },
+    onSuccess: (response) => {
+      setFormError(null);
+      setFormFeedback(response.message);
+    },
   });
 
   const content = PAGE_COPY[page];
@@ -466,6 +499,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
 
   const navigateToPage = (nextPage: PublicPageKey) => {
     setFormError(null);
+    setFormFeedback(null);
     navigation.navigate(PUBLIC_PAGE_TO_SCREEN[nextPage]);
   };
 
@@ -476,6 +510,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
     }
 
     setFormError(null);
+    setFormFeedback(null);
     loginMutation.mutate({
       email: email.trim().toLowerCase(),
       password,
@@ -505,6 +540,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
     }
 
     setFormError(null);
+    setFormFeedback(null);
     registerMutation.mutate({
       academy_name: academyName.trim(),
       admin_first_name: adminFirstName.trim(),
@@ -512,6 +548,18 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
       email: email.trim().toLowerCase(),
       password,
     });
+  };
+
+  const handleResendConfirmation = () => {
+    if (!email.trim()) {
+      setFormFeedback(null);
+      setFormError("Escribe el correo de la cuenta para reenviar el enlace.");
+      return;
+    }
+
+    setFormError(null);
+    setFormFeedback(null);
+    resendMutation.mutate(email.trim().toLowerCase());
   };
 
   return (
@@ -727,9 +775,13 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
 
                   {mode === "academy" ? (
                     <>
-                      <Text style={styles.formTitle}>Abre tu academia</Text>
+                      <Text style={styles.formTitle}>
+                        {formFeedback ? "Revisa tu correo" : "Abre tu academia"}
+                      </Text>
                       <Text style={styles.formSubtitle}>
-                        Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo.
+                        {formFeedback
+                          ? "Tu cuenta quedó pendiente de confirmación. Cuando abras el enlace del correo, activaremos tu panel automáticamente."
+                          : "Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo."}
                       </Text>
                       <AppInput label="Academia" onChangeText={setAcademyName} placeholder="Union MMA" value={academyName} />
                       <AppInput label="Nombre" onChangeText={setAdminFirstName} placeholder="Tu nombre" value={adminFirstName} />
@@ -743,27 +795,52 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         placeholder="admin@tuacademia.com"
                         value={email}
                       />
-                      <AppInput
-                        autoComplete="new-password"
-                        label="Contrasena"
-                        onChangeText={setPassword}
-                        placeholder="Crea una contraseña"
-                        rightAdornment={
-                          <Pressable
-                            accessibilityLabel={showRegisterPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
-                            accessibilityRole="button"
-                            onPress={() => setShowRegisterPassword((current) => !current)}
-                            style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
-                          >
-                            <Feather color={colors.textMuted} name={showRegisterPassword ? "eye-off" : "eye"} size={18} />
-                          </Pressable>
-                        }
-                        secureTextEntry={!showRegisterPassword}
-                        value={password}
-                      />
-                      <Text style={styles.helper}>El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre.</Text>
+                      {!formFeedback ? (
+                        <AppInput
+                          autoComplete="new-password"
+                          label="Contrasena"
+                          onChangeText={setPassword}
+                          placeholder="Crea una contraseña"
+                          rightAdornment={
+                            <Pressable
+                              accessibilityLabel={showRegisterPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                              accessibilityRole="button"
+                              onPress={() => setShowRegisterPassword((current) => !current)}
+                              style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                            >
+                              <Feather color={colors.textMuted} name={showRegisterPassword ? "eye-off" : "eye"} size={18} />
+                            </Pressable>
+                          }
+                          secureTextEntry={!showRegisterPassword}
+                          value={password}
+                        />
+                      ) : null}
+                      <Text style={styles.helper}>
+                        {formFeedback
+                          ? "Si no te llegó el mensaje, puedes reenviar el enlace con el mismo correo."
+                          : "El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre."}
+                      </Text>
                       {formError ? <Text style={styles.error}>{formError}</Text> : null}
-                      <AppButton label="Crear academia" loading={registerMutation.isPending} onPress={handleAcademySubmit} />
+                      {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
+                      {formFeedback ? (
+                        <View style={styles.formActions}>
+                          <AppButton
+                            label="Reenviar enlace"
+                            loading={resendMutation.isPending}
+                            onPress={handleResendConfirmation}
+                          />
+                          <AppButton
+                            label="Corregir correo"
+                            onPress={() => {
+                              setFormError(null);
+                              setFormFeedback(null);
+                            }}
+                            variant="secondary"
+                          />
+                        </View>
+                      ) : (
+                        <AppButton label="Crear academia" loading={registerMutation.isPending} onPress={handleAcademySubmit} />
+                      )}
                     </>
                   ) : (
                     <>
@@ -799,6 +876,15 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         value={password}
                       />
                       {formError ? <Text style={styles.error}>{formError}</Text> : null}
+                      {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
+                      {isConfirmationPendingMessage(formError) ? (
+                        <AppButton
+                          label="Reenviar enlace de confirmación"
+                          loading={resendMutation.isPending}
+                          onPress={handleResendConfirmation}
+                          variant="secondary"
+                        />
+                      ) : null}
                       <AppButton label="Entrar" loading={loginMutation.isPending} onPress={handleLoginSubmit} />
                     </>
                   )}
@@ -1264,6 +1350,15 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
+  },
+  success: {
+    color: colors.primary,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  formActions: {
+    gap: spacing.sm,
   },
   passwordToggle: {
     alignItems: "center",
