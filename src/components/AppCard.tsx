@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
 import { colors, radius, shadows, spacing } from "@/constants/theme";
 
@@ -7,11 +7,23 @@ interface AppCardProps extends PropsWithChildren {
   style?: StyleProp<ViewStyle>;
   nativeID?: string;
   testID?: string;
+  className?: string;
 }
 
-export function AppCard({ children, style, nativeID, testID }: AppCardProps) {
+function getWebClassNameProps(className?: string) {
+  return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
+}
+
+export function AppCard({ children, style, nativeID, testID, className }: AppCardProps) {
+  const baseId = nativeID ?? testID;
+
   return (
-    <View nativeID={nativeID} style={[styles.card, style]} testID={testID}>
+    <View
+      nativeID={nativeID}
+      style={[styles.card, style]}
+      testID={testID}
+      {...getWebClassNameProps(className ?? baseId)}
+    >
       {children}
     </View>
   );

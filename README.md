@@ -258,6 +258,10 @@ sudo systemctl reload nginx
 - Los accesos de alumnos y super admins se separarán en experiencias distintas en entregas posteriores.
 - La UI usa grupos de estilos distintos para mobile y desktop, con layouts diferentes según el ancho disponible.
 - El flujo admin actual abre primero un dashboard y desde ahí navega al listado de alumnos.
+
+## Regla de testing web
+
+- En `web-desktop`, todo elemento HTML renderizado para la experiencia pública debe exponer una clase propia que describa su función dentro de la pantalla. La convención recomendada es reutilizar el identificador funcional del elemento, por ejemplo `screens-auth-public-navbar-create-account-button`, para mantener alineados `className`, `nativeID` y `testID` y así simplificar los selectores de testing.
 - El módulo de alumnos permite alta, edición y baja lógica mediante modales; el alta muestra un resumen previo para confirmación.
 - Cada alumno ahora cuenta con una vista de detalle para consultar su ficha general y el historial de pagos asociado.
 - Para que la Fase 1 cierre de forma integral, se añadieron endpoints móviles mínimos al backend:

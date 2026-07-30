@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from "react-native";
 
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
@@ -11,6 +11,12 @@ interface AppButtonProps {
   nativeID?: string;
   testID?: string;
   accessibilityLabel?: string;
+  className?: string;
+  labelClassName?: string;
+}
+
+function getWebClassNameProps(className?: string) {
+  return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
 }
 
 export function AppButton({
@@ -22,6 +28,8 @@ export function AppButton({
   nativeID,
   testID,
   accessibilityLabel,
+  className,
+  labelClassName,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
   const baseId = nativeID ?? testID ?? `components-app-button-${label.toLowerCase().replace(/\s+/g, "-")}`;
@@ -34,6 +42,7 @@ export function AppButton({
       nativeID={baseId}
       onPress={onPress}
       testID={baseId}
+      {...getWebClassNameProps(className ?? baseId)}
       style={(state) => {
         const hovered = (state as typeof state & { hovered?: boolean }).hovered;
 
@@ -78,6 +87,7 @@ export function AppButton({
             variant === "success" ? styles.successLabel : null,
           ]}
           testID={`${baseId}-label`}
+          {...getWebClassNameProps(labelClassName ?? `${baseId}-label`)}
         >
           {label}
         </Text>

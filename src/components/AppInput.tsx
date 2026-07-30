@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
 
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
@@ -7,37 +7,83 @@ export interface AppInputProps extends TextInputProps {
   label: string;
   error?: string | null;
   rightAdornment?: ReactNode;
+  wrapperClassName?: string;
+  labelClassName?: string;
+  containerClassName?: string;
+  inputClassName?: string;
+  adornmentClassName?: string;
+  errorClassName?: string;
 }
 
-export function AppInput({ label, error, rightAdornment, style, nativeID, testID, ...props }: AppInputProps) {
+function getWebClassNameProps(className?: string) {
+  return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
+}
+
+export function AppInput({
+  label,
+  error,
+  rightAdornment,
+  style,
+  nativeID,
+  testID,
+  wrapperClassName,
+  labelClassName,
+  containerClassName,
+  inputClassName,
+  adornmentClassName,
+  errorClassName,
+  ...props
+}: AppInputProps) {
   const baseId =
     nativeID ?? testID ?? `components-app-input-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
-    <View nativeID={`${baseId}-wrapper`} style={styles.wrapper} testID={`${baseId}-wrapper`}>
-      <Text nativeID={`${baseId}-label`} style={styles.label} testID={`${baseId}-label`}>
+    <View
+      nativeID={`${baseId}-wrapper`}
+      style={styles.wrapper}
+      testID={`${baseId}-wrapper`}
+      {...getWebClassNameProps(wrapperClassName ?? `${baseId}-wrapper`)}
+    >
+      <Text
+        nativeID={`${baseId}-label`}
+        style={styles.label}
+        testID={`${baseId}-label`}
+        {...getWebClassNameProps(labelClassName ?? `${baseId}-label`)}
+      >
         {label}
       </Text>
       <View
         nativeID={`${baseId}-container`}
         style={[styles.inputContainer, error ? styles.inputError : null]}
         testID={`${baseId}-container`}
+        {...getWebClassNameProps(containerClassName ?? `${baseId}-container`)}
       >
         <TextInput
           nativeID={nativeID}
           placeholderTextColor={colors.textMuted}
           style={[styles.input, style]}
           testID={testID}
+          {...getWebClassNameProps(inputClassName ?? baseId)}
           {...props}
         />
         {rightAdornment ? (
-          <View nativeID={`${baseId}-adornment`} style={styles.adornment} testID={`${baseId}-adornment`}>
+          <View
+            nativeID={`${baseId}-adornment`}
+            style={styles.adornment}
+            testID={`${baseId}-adornment`}
+            {...getWebClassNameProps(adornmentClassName ?? `${baseId}-adornment`)}
+          >
             {rightAdornment}
           </View>
         ) : null}
       </View>
       {error ? (
-        <Text nativeID={`${baseId}-error`} style={styles.error} testID={`${baseId}-error`}>
+        <Text
+          nativeID={`${baseId}-error`}
+          style={styles.error}
+          testID={`${baseId}-error`}
+          {...getWebClassNameProps(errorClassName ?? `${baseId}-error`)}
+        >
           {error}
         </Text>
       ) : null}
