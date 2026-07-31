@@ -234,9 +234,9 @@ const PAGE_COPY: Record<
     title: "Muestra a tus tiendas y marcas con una ruta pensada para SEO.",
   },
   createAccount: {
-    description: "Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo.",
+    description: "Registra tu academia y crea la cuenta para administrarla hoy mismo.",
     eyebrow: "Crear cuenta",
-    title: "Abre tu academia y activa tu panel operativo.",
+    title: "Registra tu academia y activa tu panel operativo.",
   },
   signIn: {
     description: "Inicia sesion con la cuenta administradora de tu academia para entrar al panel operativo.",
@@ -1489,12 +1489,12 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                   {mode === "academy" ? (
                     <>
                       <Text nativeID="screens-auth-public-register-form-title" style={styles.formTitle} testID="screens-auth-public-register-form-title">
-                        {isAwaitingConfirmation ? "Esperando confirmación" : "Abre tu academia"}
+                        {isAwaitingConfirmation ? "Esperando confirmación" : "Registra tu academia"}
                       </Text>
                       <Text nativeID="screens-auth-public-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-register-form-subtitle">
                         {isAwaitingConfirmation
                           ? "Tu cuenta quedó pendiente de confirmación. Puedes abrir el enlace desde cualquier navegador o dispositivo y esta página entrará sola en cuanto detecte la confirmación."
-                          : "Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo."}
+                          : "Registra tu academia y crea la cuenta para administrarla hoy mismo."}
                       </Text>
                       {isAwaitingConfirmation ? (
                         <View nativeID="screens-auth-public-register-pending-state" style={styles.pendingConfirmationCard} testID="screens-auth-public-register-pending-state">

@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
@@ -555,7 +555,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
-        subtitle="Consulta el padron del gimnasio, filtra por nombre y opera altas, ediciones y bajas sin salir del navegador."
+        subtitle="consulta y administra el estado del alumnado de tu Dojo"
         title="Panel de alumnos"
       >
       <View nativeID="screens-admin-students-list-content" style={styles.container} testID="screens-admin-students-list-content">
@@ -579,9 +579,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         <View nativeID="screens-admin-students-list-top-grid" style={[styles.topGrid, isDesktop ? desktopStyles.topGrid : mobileStyles.topGrid]} testID="screens-admin-students-list-top-grid">
           <AppCard nativeID="screens-admin-students-list-search-card" style={styles.searchCard} testID="screens-admin-students-list-search-card">
             <Text nativeID="screens-admin-students-list-search-title" style={styles.sectionTitle} testID="screens-admin-students-list-search-title">Búsqueda operativa</Text>
-            <Text nativeID="screens-admin-students-list-search-description" style={styles.sectionDescription} testID="screens-admin-students-list-search-description">
-              Filtra por nombre para encontrar rápido al alumno que necesitas o abre el alta desde este panel.
-            </Text>
+            <Text nativeID="screens-admin-students-list-search-description" style={styles.sectionDescription} testID="screens-admin-students-list-search-description">filtra por nombre</Text>
             <AppInput
               label="Buscar por nombre"
               nativeID="screens-admin-students-list-search-input"
@@ -628,6 +626,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </View>
         ) : (
           <FlatList
+            style={styles.resultsList}
             contentContainerStyle={styles.listContent}
             data={students}
             keyExtractor={(item) => String(item.id)}
@@ -669,30 +668,56 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   </View>
                 </View>
                 <View nativeID={`screens-admin-students-list-card-actions-${item.id}`} style={[styles.cardActions, isDesktop ? desktopStyles.cardActions : mobileStyles.cardActions]} testID={`screens-admin-students-list-card-actions-${item.id}`}>
-                  <AppButton
-                    label="Ver detalle"
-                    nativeID={`screens-admin-students-list-detail-button-${item.id}`}
-                    onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
-                    testID={`screens-admin-students-list-detail-button-${item.id}`}
-                    variant="secondary"
-                  />
-                  <AppButton
-                    label="Editar"
-                    nativeID={`screens-admin-students-list-edit-button-${item.id}`}
-                    onPress={() => handleOpenEdit(item)}
-                    testID={`screens-admin-students-list-edit-button-${item.id}`}
-                    variant="secondary"
-                  />
-                  <AppButton
-                    label="Dar de baja"
-                    nativeID={`screens-admin-students-list-delete-button-${item.id}`}
-                    onPress={() => {
-                      setFeedbackMessage(null);
-                      setStudentToDelete(item);
-                    }}
-                    testID={`screens-admin-students-list-delete-button-${item.id}`}
-                    variant="danger"
-                  />
+                  {isDesktop ? (
+                    <>
+                      <StudentRowActionButton
+                        nativeID={`screens-admin-students-list-detail-button-${item.id}`}
+                        label="Ver detalle"
+                        onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                      />
+                      <StudentRowActionButton
+                        nativeID={`screens-admin-students-list-edit-button-${item.id}`}
+                        label="Editar"
+                        onPress={() => handleOpenEdit(item)}
+                      />
+                      <StudentRowActionButton
+                        nativeID={`screens-admin-students-list-delete-button-${item.id}`}
+                        label="Dar de baja"
+                        onPress={() => {
+                          setFeedbackMessage(null);
+                          setStudentToDelete(item);
+                        }}
+                        tone="danger"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <AppButton
+                        label="Ver detalle"
+                        nativeID={`screens-admin-students-list-detail-button-${item.id}`}
+                        onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                        testID={`screens-admin-students-list-detail-button-${item.id}`}
+                        variant="secondary"
+                      />
+                      <AppButton
+                        label="Editar"
+                        nativeID={`screens-admin-students-list-edit-button-${item.id}`}
+                        onPress={() => handleOpenEdit(item)}
+                        testID={`screens-admin-students-list-edit-button-${item.id}`}
+                        variant="secondary"
+                      />
+                      <AppButton
+                        label="Dar de baja"
+                        nativeID={`screens-admin-students-list-delete-button-${item.id}`}
+                        onPress={() => {
+                          setFeedbackMessage(null);
+                          setStudentToDelete(item);
+                        }}
+                        testID={`screens-admin-students-list-delete-button-${item.id}`}
+                        variant="danger"
+                      />
+                    </>
+                  )}
                 </View>
               </AppCard>
             )}
@@ -933,7 +958,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                       nativeID="screens-admin-students-list-form-notes-input"
                       numberOfLines={4}
                       onChangeText={(value) => handleUpdateField("notes", value)}
-                      placeholder="Observaciones relevantes para el gimnasio"
+                      placeholder="Observaciones relevantes para el dojo"
                       style={styles.notesInput}
                       testID="screens-admin-students-list-form-notes-input"
                       value={form.notes}
@@ -1058,6 +1083,41 @@ function SummaryRow({ label, value, idPrefix }: { label: string; value: string; 
   );
 }
 
+function StudentRowActionButton({
+  nativeID,
+  label,
+  onPress,
+  tone = "neutral",
+}: {
+  nativeID: string;
+  label: string;
+  onPress: () => void;
+  tone?: "neutral" | "danger";
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      nativeID={nativeID}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.compactActionButton,
+        tone === "danger" ? styles.compactActionButtonDanger : null,
+        pressed ? styles.compactActionButtonPressed : null,
+      ]}
+      testID={nativeID}
+    >
+      <Text
+        nativeID={`${nativeID}-label`}
+        style={[styles.compactActionLabel, tone === "danger" ? styles.compactActionLabelDanger : null]}
+        testID={`${nativeID}-label`}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   screenContent: {
     flexGrow: 1,
@@ -1065,6 +1125,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: spacing.lg,
+    minHeight: 0,
     width: "100%",
   },
   header: {
@@ -1175,18 +1236,23 @@ const styles = StyleSheet.create({
   errorBlock: {
     flex: 1,
   },
+  resultsList: {
+    flex: 1,
+    minHeight: 0,
+  },
   listContent: {
     gap: spacing.md,
     paddingBottom: spacing.xl,
   },
   studentCard: {
     borderRadius: radius.lg,
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.surface,
     borderColor: colors.border,
+    padding: spacing.md,
   },
   cardActions: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   studentTopRow: {
     alignItems: "flex-start",
@@ -1201,20 +1267,21 @@ const styles = StyleSheet.create({
   studentName: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
   },
   metaGrid: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   metaItem: {
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
-    gap: 4,
-    padding: spacing.md,
+    gap: 2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   metaLabel: {
     color: colors.textMuted,
@@ -1226,13 +1293,40 @@ const styles = StyleSheet.create({
   studentMeta: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
-    fontSize: 14,
+    fontSize: 13,
   },
   studentMetaStrong: {
     color: colors.text,
     fontFamily: typography.bodyFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
+  },
+  compactActionButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  compactActionButtonDanger: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: "#F0B6B6",
+  },
+  compactActionButtonPressed: {
+    opacity: 0.78,
+  },
+  compactActionLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  compactActionLabelDanger: {
+    color: colors.danger,
   },
   emptyState: {
     alignItems: "center",
@@ -1393,7 +1487,9 @@ const desktopStyles = StyleSheet.create({
     flexDirection: "row",
   },
   cardActions: {
+    alignItems: "center",
     flexDirection: "row",
+    flexWrap: "wrap",
   },
   formGrid: {
     flexDirection: "row",

@@ -79,7 +79,7 @@ export function AdminShell({
       {
         key: "dashboard",
         label: "Dashboard",
-        description: "Vista general del gimnasio",
+        description: "Vista general del dojo",
         icon: "grid",
         onPress: onGoDashboard,
       },
@@ -144,7 +144,7 @@ export function AdminShell({
                     ElDojo Admin
                   </Text>
                   <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
-                    Operación diaria del gimnasio
+                    Operación diaria del dojo
                   </Text>
                 </View>
               </View>
@@ -255,7 +255,7 @@ export function AdminShell({
           <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
             <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
               <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
-                Admin operativo
+                Centro de Operaciones
               </Text>
             </View>
             <Text

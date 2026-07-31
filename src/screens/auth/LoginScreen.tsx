@@ -584,9 +584,9 @@ export function LoginScreen() {
 
                   {mode === "academy" ? (
                     <>
-                      <Text nativeID="screens-auth-login-register-form-title" style={styles.formTitle} testID="screens-auth-login-register-form-title">Abre tu academia</Text>
+                      <Text nativeID="screens-auth-login-register-form-title" style={styles.formTitle} testID="screens-auth-login-register-form-title">Registra tu academia</Text>
                       <Text nativeID="screens-auth-login-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-login-register-form-subtitle">
-                        Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo.
+                        Registra tu academia y crea la cuenta para administrarla hoy mismo.
                       </Text>
                       <AppInput
                         label="Academia"

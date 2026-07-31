@@ -156,11 +156,11 @@ const FIRST_TIME_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "hero",
     title: "Bienvenido a tu panel",
-    description: "Aqui veras el estado general del gimnasio y los accesos principales para arrancar rapido.",
+    description: "Aqui veras el estado general del dojo y los accesos principales para arrancar rapido.",
   },
   {
     id: "crud",
-    title: "Este es tu centro operativo",
+    title: "Administración General",
     description: "Desde este bloque puedes dar de alta alumnos, sucursales, clases, pagos y asistencias sin cambiar de vista.",
   },
   {
@@ -701,6 +701,20 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const activeTutorialStep = tutorialActive ? FIRST_TIME_TUTORIAL_STEPS[tutorialStepIndex] ?? null : null;
 
   useEffect(() => {
+    if (feedback?.message !== "Tutorial cerrado. Ya puedes usar el panel libremente.") {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setFeedback((current) =>
+        current?.message === "Tutorial cerrado. Ya puedes usar el panel libremente." ? null : current
+      );
+    }, 3500);
+
+    return () => clearTimeout(timeoutId);
+  }, [feedback]);
+
+  useEffect(() => {
     if (tutorialActive) {
       setTutorialStepIndex(0);
       setTutorialBusy(false);
@@ -797,7 +811,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
     mutationFn: (payload: OrganizationUpdatePayload) => organizationsApi.update(organizationId as number, payload),
     onSuccess: async () => {
       await invalidateOperationalQueries();
-      setFeedback({ tone: "success", message: "Los datos del gimnasio se actualizaron correctamente." });
+      setFeedback({ tone: "success", message: "Los datos del dojo se actualizaron correctamente." });
       setOrganizationModalVisible(false);
       setOrganizationErrors({});
     },
@@ -1113,7 +1127,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const activeClasses = visibleClasses.filter((item) => item.is_active).length;
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
-  const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu gimnasio";
+  const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu dojo";
 
   const copyPublicAttendanceUrl = async (url: string) => {
     if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -1617,8 +1631,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
-        subtitle="Gestiona tu gimnasio, con sus clases y alumnos."
-        title="Resumen del gimnasio"
+        subtitle="Gestiona tu dojo, con sus clases y alumnos."
+        title="Resumen del dojo"
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
           <AnimatedSurface delay={40}>
@@ -1652,7 +1666,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     {heroTitle}
                   </Text>
                   <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
-                    Visualiza lo esencial y opera tu gimnasio desde un solo lugar.
+                    Opera tu Dojo desde un solo lugar
                   </Text>
                 </View>
                 <View
@@ -1668,7 +1682,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   />
                   {canManageOrganization && organization ? (
                     <AppButton
-                      label="Editar gimnasio"
+                      label="Editar dojo"
                       nativeID="screens-admin-dashboard-edit-organization-button"
                       onPress={openOrganizationModal}
                       testID="screens-admin-dashboard-edit-organization-button"
@@ -1678,22 +1692,6 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 </View>
               </View>
 
-              {isDesktop ? (
-                <View nativeID="screens-admin-dashboard-scope-row" style={[styles.scopeRow, desktopStyles.scopeRow]} testID="screens-admin-dashboard-scope-row">
-                  <View nativeID="screens-admin-dashboard-scope-channel" style={styles.scopeItem} testID="screens-admin-dashboard-scope-channel">
-                    <Text nativeID="screens-admin-dashboard-scope-channel-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-channel-label">Canal actual</Text>
-                    <Text nativeID="screens-admin-dashboard-scope-channel-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-channel-value">Web responsive</Text>
-                  </View>
-                  <View nativeID="screens-admin-dashboard-scope-role" style={styles.scopeItem} testID="screens-admin-dashboard-scope-role">
-                    <Text nativeID="screens-admin-dashboard-scope-role-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-role-label">Rol activo</Text>
-                    <Text nativeID="screens-admin-dashboard-scope-role-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-role-value">{user?.role === "org_admin" ? "Org admin" : "Branch admin"}</Text>
-                  </View>
-                  <View nativeID="screens-admin-dashboard-scope-scope" style={styles.scopeItem} testID="screens-admin-dashboard-scope-scope">
-                    <Text nativeID="screens-admin-dashboard-scope-scope-label" style={styles.scopeLabel} testID="screens-admin-dashboard-scope-scope-label">Alcance</Text>
-                    <Text nativeID="screens-admin-dashboard-scope-scope-value" style={styles.scopeValue} testID="screens-admin-dashboard-scope-scope-value">{scopedBranchId ? "Sucursal" : "Organizacion"}</Text>
-                  </View>
-                </View>
-              ) : null}
               </AppCard>
             </View>
           </AnimatedSurface>
@@ -1764,7 +1762,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     testID="screens-admin-dashboard-crud-tutorial-anchor"
                   >
                     <AppCard nativeID="screens-admin-dashboard-crud-card" style={styles.panelCard} testID="screens-admin-dashboard-crud-card">
-                    <Text style={styles.sectionTitle}>Centro CRUD</Text>
+                    <Text nativeID="screens-admin-dashboard-crud-title" style={styles.sectionTitle} testID="screens-admin-dashboard-crud-title">Administración General</Text>
                     <QuickAction
                       description="Administra alumnos. Crea, edita, agrega."
                       idPrefix="screens-admin-dashboard-manage-students-action"
@@ -1782,11 +1780,11 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     <QuickAction
                       description={
                         canManageOrganization
-                          ? "Edita datos de tu gimnasio."
+                          ? "Edita datos de tu dojo."
                           : "Disponible solo para org admin. Tu rol si puede operar la sucursal asignada."
                       }
                       idPrefix="screens-admin-dashboard-edit-organization-action"
-                      label="Editar gimnasio"
+                      label="Editar dojo"
                       onPress={openOrganizationModal}
                       disabled={!canManageOrganization || !organization}
                       tone="neutral"
@@ -1846,7 +1844,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 <AnimatedSurface delay={300}>
                   <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
                   <View nativeID="screens-admin-dashboard-organization-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-organization-header">
-                    <Text style={styles.sectionTitle}>Gimnasio-academia</Text>
+                    <Text nativeID="screens-admin-dashboard-organization-title" style={styles.sectionTitle} testID="screens-admin-dashboard-organization-title">Dojo</Text>
                     <AppBadge label={organization?.is_active ? "Activa" : "Inactiva"} tone={organization?.is_active ? "success" : "warning"} />
                   </View>
                   {organization ? (
@@ -1854,17 +1852,17 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       <EntityField label="Nombre" value={organization.name} />
                       <EntityField label="Sufijo" value={organization.slug} />
                       {canManageOrganization ? (
-                        <AppButton label="Editar datos del gimnasio" onPress={openOrganizationModal} variant="secondary" />
+                        <AppButton label="Editar datos del dojo" onPress={openOrganizationModal} variant="secondary" />
                       ) : (
-                        <Text style={styles.helperText}>
-                          Tu rol puede operar la sucursal asignada, pero no editar la configuracion global del gimnasio.
+                        <Text nativeID="screens-admin-dashboard-organization-helper-text" style={styles.helperText} testID="screens-admin-dashboard-organization-helper-text">
+                          Tu rol puede operar la sucursal asignada, pero no editar la configuracion global del dojo.
                         </Text>
                       )}
                     </>
                   ) : (
-                    <View style={styles.emptyBlock}>
-                      <Text style={styles.emptyTitle}>Sin organizacion cargada</Text>
-                      <Text style={styles.emptyDescription}>
+                    <View nativeID="screens-admin-dashboard-organization-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-organization-empty-block">
+                      <Text nativeID="screens-admin-dashboard-organization-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-organization-empty-title">Sin organizacion cargada</Text>
+                      <Text nativeID="screens-admin-dashboard-organization-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-organization-empty-description">
                         Cuando la API devuelva la organizacion asignada, podras editarla desde este panel.
                       </Text>
                     </View>
@@ -1889,7 +1887,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   >
                     <AppCard nativeID="screens-admin-dashboard-branches-card" style={styles.panelCard} testID="screens-admin-dashboard-branches-card">
                     <View nativeID="screens-admin-dashboard-branches-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-branches-header">
-                      <Text style={styles.sectionTitle}>Sucursales</Text>
+                      <Text nativeID="screens-admin-dashboard-branches-title" style={styles.sectionTitle} testID="screens-admin-dashboard-branches-title">Sucursales</Text>
                       {canCreateBranches ? (
                         <View style={isDesktop ? styles.headerButtonStack : null}>
                           <AppButton label="Agregar sucursal" onPress={openCreateBranchModal} />
@@ -1940,9 +1938,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         </View>
                       ))
                     ) : (
-                      <View style={styles.emptyBlock}>
-                        <Text style={styles.emptyTitle}>Sin sucursales registradas</Text>
-                        <Text style={styles.emptyDescription}>
+                      <View nativeID="screens-admin-dashboard-branches-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-branches-empty-block">
+                        <Text nativeID="screens-admin-dashboard-branches-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-branches-empty-title">Sin sucursales registradas</Text>
+                        <Text nativeID="screens-admin-dashboard-branches-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-branches-empty-description">
                           Da de alta tu primera sucursal para poder operar alumnos, clases y asistencia en este panel.
                         </Text>
                       </View>
@@ -1968,7 +1966,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   >
                     <AppCard nativeID="screens-admin-dashboard-attendance-card" style={styles.panelCard} testID="screens-admin-dashboard-attendance-card">
                     <View nativeID="screens-admin-dashboard-attendance-header" style={[styles.cardHeaderRow, isDesktop ? styles.cardHeaderColumn : null]} testID="screens-admin-dashboard-attendance-header">
-                      <Text style={styles.sectionTitle}>Asistencias</Text>
+                      <Text nativeID="screens-admin-dashboard-attendance-title" style={styles.sectionTitle} testID="screens-admin-dashboard-attendance-title">Asistencias</Text>
                       <View style={isDesktop ? styles.headerButtonStack : null}>
                         <AppButton
                           label="Agregar asistencia"
@@ -2024,8 +2022,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
                         );
                       })
                     ) : (
-                      <View style={styles.emptyBlock}>
-                        <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
+                      <View nativeID="screens-admin-dashboard-attendance-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-attendance-empty-block">
+                        <Text nativeID="screens-admin-dashboard-attendance-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-attendance-empty-title">Sin asistencias registradas</Text>
                       </View>
                     )}
                     </AppCard>
@@ -2035,7 +2033,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 <AnimatedSurface delay={390}>
                   <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
                   <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
-                    <Text style={styles.sectionTitle}>Pagos</Text>
+                    <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">Pagos</Text>
                     <AppButton
                       label="Agregar pago"
                       onPress={openCreatePaymentModal}
@@ -2099,9 +2097,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       );
                     })
                   ) : (
-                    <View style={styles.emptyBlock}>
-                      <Text style={styles.emptyTitle}>Sin pagos registrados</Text>
-                      <Text style={styles.emptyDescription}>
+                    <View nativeID="screens-admin-dashboard-payments-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-empty-block">
+                      <Text nativeID="screens-admin-dashboard-payments-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-empty-title">Sin pagos registrados</Text>
+                      <Text nativeID="screens-admin-dashboard-payments-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-empty-description">
                         Registra el primer pago del periodo para que el dashboard empiece a mostrar historial financiero.
                       </Text>
                     </View>
@@ -2112,7 +2110,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 <AnimatedSurface delay={420}>
                   <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
                   <View nativeID="screens-admin-dashboard-classes-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-classes-header">
-                    <Text style={styles.sectionTitle}>Clases</Text>
+                    <Text nativeID="screens-admin-dashboard-classes-title" style={styles.sectionTitle} testID="screens-admin-dashboard-classes-title">Clases</Text>
                     <AppButton
                       label="Agregar clase"
                       onPress={openCreateClassModal}
@@ -2120,7 +2118,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     />
                   </View>
                   {ensureDisciplinesMutation.isPending ? (
-                    <Text style={styles.helperText}>Preparando clases para esta organizacion.</Text>
+                    <Text nativeID="screens-admin-dashboard-classes-helper-text" style={styles.helperText} testID="screens-admin-dashboard-classes-helper-text">Preparando clases para esta organizacion.</Text>
                   ) : null}
                   {visibleClasses.length > 0 ? (
                     visibleClasses.map((classItem) => {
@@ -2164,9 +2162,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                       );
                     })
                   ) : (
-                    <View style={styles.emptyBlock}>
-                      <Text style={styles.emptyTitle}>Sin clases registradas</Text>
-                      <Text style={styles.emptyDescription}>
+                    <View nativeID="screens-admin-dashboard-classes-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-classes-empty-block">
+                      <Text nativeID="screens-admin-dashboard-classes-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-classes-empty-title">Sin clases registradas</Text>
+                      <Text nativeID="screens-admin-dashboard-classes-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-classes-empty-description">
                         Crea tu primera clase desde aqui para empezar a operar.
                       </Text>
                     </View>
@@ -2210,7 +2208,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
 
       <AppModal
         visible={organizationModalVisible}
-        title="Editar gimnasio-academia"
+        title="Editar dojo"
         description="Actualiza la configuracion general visible para la organizacion completa."
         onClose={() => {
           if (!organizationBusy) {
@@ -2220,7 +2218,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       >
         <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
           <AppInput
-            label="Nombre del gimnasio"
+            label="Nombre del dojo"
             value={organizationForm.name}
             onChangeText={(value) => setOrganizationForm((current) => ({ ...current, name: value }))}
             error={organizationErrors.name}

@@ -11,5 +11,5 @@ export function isGymAdminUser(user: User | null | undefined): user is User {
 }
 
 export function getGymAdminAccessMessage(): string {
-  return "Este acceso está reservado para administradores de gimnasio. Los accesos de alumnos y super admins llegarán en interfaces separadas.";
+  return "Este acceso está reservado para administradores de dojo. Los accesos de alumnos y super admins llegarán en interfaces separadas.";
 }
