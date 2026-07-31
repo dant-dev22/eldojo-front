@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 
+import { authApi } from "@/api/authApi";
 import { getErrorMessage } from "@/api/http";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
@@ -26,6 +27,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { PUBLIC_PAGE_META, PUBLIC_PAGE_TO_SCREEN, type PublicPageKey } from "@/navigation/publicRoutes";
 import type { AuthStackParamList } from "@/navigation/types";
+import type { PendingAcademyRegistration } from "@/types/api";
+import {
+  clearPendingAcademyRegistration,
+  getPendingAcademyRegistration,
+  savePendingAcademyRegistration,
+} from "@/utils/storage";
 
 type AuthMode = "login" | "academy";
 type SectionKey = "about" | "events" | "stores";
@@ -59,6 +66,7 @@ function isSectionKey(value: string): value is SectionKey {
 
 const PUBLIC_SCROLL_TARGET_KEY = "eldojo-public-scroll-target";
 const PUBLIC_WEB_STYLE_TAG_ID = "eldojo-public-web-desktop-styles";
+const MASKED_REGISTERED_PASSWORD = "********";
 
 function updateDocumentMeta(name: string, content: string, property?: boolean) {
   if (Platform.OS !== "web" || typeof document === "undefined") {
@@ -273,6 +281,18 @@ function formatAuthError(error: unknown): string {
   }
 
   return message.endsWith(".") ? message : `${message}.`;
+}
+
+function isPendingSessionBlockingError(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("ya no es válida") ||
+    normalized.includes("ya no es valida") ||
+    normalized.includes("expiró") ||
+    normalized.includes("expiro") ||
+    normalized.includes("consumida")
+  );
 }
 
 function isConfirmationPendingMessage(message: string | null): boolean {
@@ -525,7 +545,7 @@ function renderStoresSection(
 
 export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const { resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
+  const { redeemPendingAcademySession, resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
   const scrollRef = useRef<ScrollView>(null);
   const pendingScrollTargetRef = useRef<SectionKey | null>(null);
@@ -550,6 +570,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formFeedback, setFormFeedback] = useState<string | null>(null);
+  const [pendingRegistration, setPendingRegistration] = useState<PendingAcademyRegistration | null>(null);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
@@ -565,7 +586,20 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
       setFormFeedback(null);
       setFormError(formatAuthError(error));
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
+      const nextPendingRegistration: PendingAcademyRegistration = {
+        academyName: academyName.trim(),
+        adminFirstName: adminFirstName.trim(),
+        adminLastName: adminLastName.trim(),
+        email: response.email,
+        pendingSessionTicket: response.pending_session_ticket,
+        pendingSessionExpiresInHours: response.pending_session_expires_in_hours,
+        pollingIntervalSeconds: response.polling_interval_seconds,
+        verificationExpiresInHours: response.verification_expires_in_hours,
+      };
+
+      await savePendingAcademyRegistration(nextPendingRegistration);
+      setPendingRegistration(nextPendingRegistration);
       setFormError(null);
       setFormFeedback(response.message);
       setPassword("");
@@ -585,11 +619,144 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
     },
   });
 
+  const redeemPendingSessionMutation = useMutation({
+    mutationFn: redeemPendingAcademySession,
+    onError: async (error) => {
+      await clearPendingAcademyRegistration();
+      setPendingRegistration(null);
+      setFormFeedback(null);
+      setFormError(formatAuthError(error));
+    },
+  });
+
   const content = PAGE_COPY[page];
   const isAuthPage = page === "createAccount" || page === "signIn";
   const isWebDesktop = Platform.OS === "web" && isDesktop;
   const showHeroCopy = !(isWebDesktop && isAuthPage);
   const mode: AuthMode = page === "createAccount" ? "academy" : "login";
+  const isAwaitingConfirmation = mode === "academy" && pendingRegistration !== null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (Platform.OS !== "web" || page !== "createAccount") {
+      setPendingRegistration(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const restorePendingRegistration = async () => {
+      const storedPendingRegistration = await getPendingAcademyRegistration();
+      if (!isMounted || !storedPendingRegistration) {
+        return;
+      }
+
+      setPendingRegistration(storedPendingRegistration);
+      setAcademyName(storedPendingRegistration.academyName);
+      setAdminFirstName(storedPendingRegistration.adminFirstName);
+      setAdminLastName(storedPendingRegistration.adminLastName);
+      setEmail(storedPendingRegistration.email);
+      setPassword("");
+      setShowRegisterPassword(false);
+      setFormError(null);
+      setFormFeedback("Seguimos esperando que confirmes tu correo para activar tu cuenta.");
+    };
+
+    void restorePendingRegistration();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [page]);
+
+  useEffect(() => {
+    if (
+      Platform.OS !== "web" ||
+      page !== "createAccount" ||
+      !pendingRegistration ||
+      redeemPendingSessionMutation.isPending ||
+      redeemPendingSessionMutation.isSuccess
+    ) {
+      return;
+    }
+
+    let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleNextPoll = () => {
+      timeoutId = setTimeout(() => {
+        void pollPendingRegistration();
+      }, pendingRegistration.pollingIntervalSeconds * 1000);
+    };
+
+    const clearPendingRegistrationState = async (message: string) => {
+      await clearPendingAcademyRegistration();
+      if (isCancelled) {
+        return;
+      }
+
+      setPendingRegistration(null);
+      setFormFeedback(null);
+      setFormError(message);
+    };
+
+    const pollPendingRegistration = async () => {
+      try {
+        const response = await authApi.getAcademyPendingSessionStatus({
+          ticket: pendingRegistration.pendingSessionTicket,
+        });
+        if (isCancelled) {
+          return;
+        }
+
+        if (response.status === "ready") {
+          redeemPendingSessionMutation.mutate(pendingRegistration);
+          return;
+        }
+
+        if (response.status === "expired" || response.status === "used") {
+          await clearPendingRegistrationState(response.message);
+          return;
+        }
+
+        setFormError(null);
+        setFormFeedback(response.message);
+      } catch (error) {
+        const message = formatAuthError(error);
+        if (isCancelled) {
+          return;
+        }
+
+        if (isPendingSessionBlockingError(message)) {
+          await clearPendingRegistrationState(message);
+          return;
+        }
+
+        setFormError(null);
+        setFormFeedback("Seguimos esperando la confirmación del correo. Reintentaremos en unos segundos.");
+      }
+
+      if (!isCancelled) {
+        scheduleNextPoll();
+      }
+    };
+
+    void pollPendingRegistration();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [
+    page,
+    pendingRegistration,
+    redeemPendingSessionMutation.isPending,
+    redeemPendingSessionMutation.isSuccess,
+    redeemPendingSessionMutation.mutate,
+  ]);
 
   useEffect(() => {
     if (page === "about") {
@@ -827,6 +994,10 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   };
 
   const handleAcademySubmit = () => {
+    if (pendingRegistration) {
+      return;
+    }
+
     if (
       !academyName.trim() ||
       !adminFirstName.trim() ||
@@ -869,6 +1040,15 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
     setFormError(null);
     setFormFeedback(null);
     resendMutation.mutate(email.trim().toLowerCase());
+  };
+
+  const handleResetPendingRegistration = () => {
+    void clearPendingAcademyRegistration();
+    setPendingRegistration(null);
+    setFormError(null);
+    setFormFeedback(null);
+    setPassword("");
+    setShowRegisterPassword(false);
   };
 
   return (
@@ -1309,14 +1489,44 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                   {mode === "academy" ? (
                     <>
                       <Text nativeID="screens-auth-public-register-form-title" style={styles.formTitle} testID="screens-auth-public-register-form-title">
-                        {formFeedback ? "Revisa tu correo" : "Abre tu academia"}
+                        {isAwaitingConfirmation ? "Esperando confirmación" : "Abre tu academia"}
                       </Text>
                       <Text nativeID="screens-auth-public-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-register-form-subtitle">
-                        {formFeedback
-                          ? "Tu cuenta quedó pendiente de confirmación. Cuando abras el enlace del correo, activaremos tu panel automáticamente."
+                        {isAwaitingConfirmation
+                          ? "Tu cuenta quedó pendiente de confirmación. Puedes abrir el enlace desde cualquier navegador o dispositivo y esta página entrará sola en cuanto detecte la confirmación."
                           : "Registra tu academia y crea la cuenta administradora principal para empezar a operar hoy mismo."}
                       </Text>
+                      {isAwaitingConfirmation ? (
+                        <View nativeID="screens-auth-public-register-pending-state" style={styles.pendingConfirmationCard} testID="screens-auth-public-register-pending-state">
+                          <View nativeID="screens-auth-public-register-pending-indicator" style={styles.pendingConfirmationIndicator} testID="screens-auth-public-register-pending-indicator" />
+                          <View
+                            nativeID="screens-auth-public-register-pending-copy"
+                            style={styles.pendingConfirmationCopy}
+                            testID="screens-auth-public-register-pending-copy"
+                          >
+                            <Text
+                              nativeID="screens-auth-public-register-pending-title"
+                              style={styles.pendingConfirmationTitle}
+                              testID="screens-auth-public-register-pending-title"
+                            >
+                              {redeemPendingSessionMutation.isPending
+                                ? "Correo confirmado. Entrando a tu panel..."
+                                : "Esperando confirmación de correo"}
+                            </Text>
+                            <Text
+                              nativeID="screens-auth-public-register-pending-description"
+                              style={styles.pendingConfirmationDescription}
+                              testID="screens-auth-public-register-pending-description"
+                            >
+                              {redeemPendingSessionMutation.isPending
+                                ? "Ya detectamos la confirmación y estamos abriendo tu sesión."
+                                : "Mantén esta página abierta. El sistema revisará automáticamente el estado de tu cuenta."}
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
                       <AppInput
+                        editable={!isAwaitingConfirmation}
                         label="Academia"
                         nativeID="screens-auth-public-register-academy-input"
                         onChangeText={setAcademyName}
@@ -1325,6 +1535,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         value={academyName}
                       />
                       <AppInput
+                        editable={!isAwaitingConfirmation}
                         label="Nombre"
                         nativeID="screens-auth-public-register-first-name-input"
                         onChangeText={setAdminFirstName}
@@ -1333,6 +1544,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         value={adminFirstName}
                       />
                       <AppInput
+                        editable={!isAwaitingConfirmation}
                         label="Apellidos"
                         nativeID="screens-auth-public-register-last-name-input"
                         onChangeText={setAdminLastName}
@@ -1343,6 +1555,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                       <AppInput
                         autoCapitalize="none"
                         autoComplete="email"
+                        editable={!isAwaitingConfirmation}
                         keyboardType="email-address"
                         label="Correo"
                         nativeID="screens-auth-public-register-email-input"
@@ -1351,7 +1564,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                         testID="screens-auth-public-register-email-input"
                         value={email}
                       />
-                      {!formFeedback ? (
+                      {!isAwaitingConfirmation ? (
                         <AppInput
                           autoComplete="new-password"
                           label="Contrasena"
@@ -1374,15 +1587,24 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                           testID="screens-auth-public-register-password-input"
                           value={password}
                         />
-                      ) : null}
+                      ) : (
+                        <AppInput
+                          editable={false}
+                          label="Contrasena"
+                          nativeID="screens-auth-public-register-password-input"
+                          secureTextEntry
+                          testID="screens-auth-public-register-password-input"
+                          value={MASKED_REGISTERED_PASSWORD}
+                        />
+                      )}
                       <Text nativeID="screens-auth-public-register-helper" style={styles.helper} testID="screens-auth-public-register-helper">
-                        {formFeedback
-                          ? "Si no te llegó el mensaje, puedes reenviar el enlace con el mismo correo."
+                        {isAwaitingConfirmation
+                          ? "Los datos quedaron bloqueados para evitar cambios mientras esperamos la confirmación. Si necesitas corregir algo, usa otro correo."
                           : "El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre."}
                       </Text>
                       {formError ? <Text nativeID="screens-auth-public-register-error" style={styles.error} testID="screens-auth-public-register-error">{formError}</Text> : null}
                       {formFeedback ? <Text nativeID="screens-auth-public-register-feedback" style={styles.success} testID="screens-auth-public-register-feedback">{formFeedback}</Text> : null}
-                      {formFeedback ? (
+                      {isAwaitingConfirmation ? (
                         <View nativeID="screens-auth-public-register-actions" style={styles.formActions} testID="screens-auth-public-register-actions">
                           <AppButton
                             label="Reenviar enlace"
@@ -1392,12 +1614,9 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                             testID="screens-auth-public-register-resend-button"
                           />
                           <AppButton
-                            label="Corregir correo"
+                            label="Usar otro correo"
                             nativeID="screens-auth-public-register-reset-feedback-button"
-                            onPress={() => {
-                              setFormError(null);
-                              setFormFeedback(null);
-                            }}
+                            onPress={handleResetPendingRegistration}
                             testID="screens-auth-public-register-reset-feedback-button"
                             variant="secondary"
                           />
@@ -1405,6 +1624,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
                       ) : (
                         <AppButton
                           label="Crear academia"
+                          disabled={isAwaitingConfirmation}
                           loading={registerMutation.isPending}
                           nativeID="screens-auth-public-register-submit-button"
                           onPress={handleAcademySubmit}
@@ -2051,6 +2271,40 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 20,
+  },
+  pendingConfirmationCard: {
+    alignItems: "flex-start",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  pendingConfirmationIndicator: {
+    backgroundColor: colors.action,
+    borderRadius: radius.pill,
+    height: 12,
+    marginTop: 4,
+    width: 12,
+  },
+  pendingConfirmationCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  pendingConfirmationTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  pendingConfirmationDescription: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
   },
   formActions: {
     gap: spacing.xs,

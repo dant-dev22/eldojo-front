@@ -1,11 +1,12 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-import type { AuthTokens, User } from "@/types/api";
+import type { AuthTokens, PendingAcademyRegistration, User } from "@/types/api";
 
 const ACCESS_TOKEN_KEY = "eldojo.access_token";
 const REFRESH_TOKEN_KEY = "eldojo.refresh_token";
 const USER_KEY = "eldojo.user";
+const PENDING_ACADEMY_REGISTRATION_KEY = "eldojo.pending_academy_registration";
 
 function isWebPlatform(): boolean {
   return Platform.OS === "web";
@@ -72,4 +73,33 @@ export async function clearSession(): Promise<void> {
     deleteItem(REFRESH_TOKEN_KEY),
     deleteItem(USER_KEY),
   ]);
+}
+
+export async function savePendingAcademyRegistration(
+  pendingRegistration: PendingAcademyRegistration
+): Promise<void> {
+  if (!isWebPlatform()) {
+    return;
+  }
+
+  await setItem(PENDING_ACADEMY_REGISTRATION_KEY, JSON.stringify(pendingRegistration));
+}
+
+export async function getPendingAcademyRegistration(): Promise<PendingAcademyRegistration | null> {
+  if (!isWebPlatform()) {
+    return null;
+  }
+
+  const rawPendingRegistration = await getItem(PENDING_ACADEMY_REGISTRATION_KEY);
+  return rawPendingRegistration
+    ? (JSON.parse(rawPendingRegistration) as PendingAcademyRegistration)
+    : null;
+}
+
+export async function clearPendingAcademyRegistration(): Promise<void> {
+  if (!isWebPlatform()) {
+    return;
+  }
+
+  await deleteItem(PENDING_ACADEMY_REGISTRATION_KEY);
 }

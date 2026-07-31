@@ -1,6 +1,8 @@
 import { http } from "@/api/http";
 import type {
   AcademyConfirmPayload,
+  AcademyPendingSessionPayload,
+  AcademyPendingSessionStatusResponse,
   AcademyRegisterPayload,
   AcademyRegisterResponse,
   AcademyResendConfirmationPayload,
@@ -154,6 +156,41 @@ export const authApi = {
       "/auth/academy/resend-confirmation",
       payload
     );
+    return data;
+  },
+
+  async getAcademyPendingSessionStatus(
+    payload: AcademyPendingSessionPayload
+  ): Promise<AcademyPendingSessionStatusResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<AcademyPendingSessionStatusResponse>("/auth/academy/pending-session/status", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<AcademyPendingSessionStatusResponse>(
+      "/auth/academy/pending-session/status",
+      payload
+    );
+    return data;
+  },
+
+  async redeemAcademyPendingSession(payload: AcademyPendingSessionPayload): Promise<LoginResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/academy/pending-session/redeem", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/academy/pending-session/redeem", payload);
     return data;
   },
 

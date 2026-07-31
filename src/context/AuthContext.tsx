@@ -7,9 +7,17 @@ import type {
   AcademyRegisterResponse,
   AuthTokens,
   LoginPayload,
+  PendingAcademyRegistration,
   User,
 } from "@/types/api";
-import { clearSession, getAccessToken, getRefreshToken, getStoredUser, saveSession } from "@/utils/storage";
+import {
+  clearPendingAcademyRegistration,
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  getStoredUser,
+  saveSession,
+} from "@/utils/storage";
 import { getGymAdminAccessMessage, isGymAdminUser } from "@/utils/roles";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -20,6 +28,7 @@ interface AuthContextValue {
   signIn: (payload: LoginPayload) => Promise<void>;
   registerAcademy: (payload: AcademyRegisterPayload) => Promise<AcademyRegisterResponse>;
   confirmAcademyAccount: (token: string) => Promise<void>;
+  redeemPendingAcademySession: (pendingRegistration: PendingAcademyRegistration) => Promise<void>;
   resendAcademyConfirmation: (email: string) => Promise<AcademyRegisterResponse>;
   signOut: () => Promise<void>;
   completeFirstTimeTutorial: () => Promise<void>;
@@ -117,6 +126,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
+        await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
         setShowPostConfirmation(false);
@@ -131,9 +141,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
+        await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
         setShowPostConfirmation(true);
+        setStatus("authenticated");
+      },
+      redeemPendingAcademySession: async (pendingRegistration) => {
+        const response = await authApi.redeemAcademyPendingSession({
+          ticket: pendingRegistration.pendingSessionTicket,
+        });
+        if (!isGymAdminUser(response.user)) {
+          await clearSession();
+          throw new Error(getGymAdminAccessMessage());
+        }
+        await clearPendingAcademyRegistration();
+        await saveSession(mapTokens(response), response.user);
+        setUser(response.user);
+        setShowPostConfirmation(false);
         setStatus("authenticated");
       },
       resendAcademyConfirmation: async (email) =>
@@ -146,6 +171,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             // El cierre de sesión no debe bloquearse si la sincronización falla.
           }
         }
+        await clearPendingAcademyRegistration();
         await clearSession();
         setUser(null);
         setShowPostConfirmation(false);

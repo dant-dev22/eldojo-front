@@ -55,6 +55,9 @@ export interface AcademyRegisterResponse {
   email_sent: boolean;
   message: string;
   verification_expires_in_hours: number;
+  pending_session_ticket: string;
+  pending_session_expires_in_hours: number;
+  polling_interval_seconds: number;
 }
 
 export interface StudentRegisterPayload {
@@ -77,6 +80,26 @@ export interface AcademyConfirmPayload {
 
 export interface AcademyResendConfirmationPayload {
   email: string;
+}
+
+export interface AcademyPendingSessionPayload {
+  ticket: string;
+}
+
+export interface AcademyPendingSessionStatusResponse {
+  status: "pending_confirmation" | "ready" | "expired" | "used";
+  message: string;
+}
+
+export interface PendingAcademyRegistration {
+  academyName: string;
+  adminFirstName: string;
+  adminLastName: string;
+  email: string;
+  pendingSessionTicket: string;
+  pendingSessionExpiresInHours: number;
+  pollingIntervalSeconds: number;
+  verificationExpiresInHours: number;
 }
 
 export interface LoginPayload {
