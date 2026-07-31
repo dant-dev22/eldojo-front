@@ -126,16 +126,6 @@ export function AdminShell({
     [user?.email, user?.first_name, user?.last_name]
   );
   const assignmentCount = user?.admin_assignments.length ?? 0;
-  const academySummary = useMemo(
-    () => [
-      { key: "name", label: "Academia", value: sidebarSummary?.organizationName ?? "No disponible" },
-      { key: "branch", label: "Sede principal", value: sidebarSummary?.branchName ?? "No disponible" },
-      { key: "location", label: "Ubicacion", value: sidebarSummary?.location ?? "No disponible" },
-      { key: "schedule", label: "Horario principal", value: sidebarSummary?.mainSchedule ?? "No disponible" },
-      { key: "suffix", label: "Sufijo", value: sidebarSummary?.suffix ?? "No disponible" },
-    ],
-    [sidebarSummary]
-  );
 
   const requestSignOut = () => {
     setShowSignOutConfirm(true);
@@ -177,31 +167,6 @@ export function AdminShell({
             </Text>
           </View>
         </View>
-        <View nativeID="components-admin-shell-academy-summary" style={styles.summaryBlock} testID="components-admin-shell-academy-summary">
-          {academySummary.map((item) => (
-            <View
-              key={item.key}
-              nativeID={`components-admin-shell-academy-summary-${item.key}`}
-              style={styles.summaryRow}
-              testID={`components-admin-shell-academy-summary-${item.key}`}
-            >
-              <Text
-                nativeID={`components-admin-shell-academy-summary-${item.key}-label`}
-                style={styles.summaryLabel}
-                testID={`components-admin-shell-academy-summary-${item.key}-label`}
-              >
-                {item.label}
-              </Text>
-              <Text
-                nativeID={`components-admin-shell-academy-summary-${item.key}-value`}
-                style={styles.summaryValue}
-                testID={`components-admin-shell-academy-summary-${item.key}-value`}
-              >
-                {item.value}
-              </Text>
-            </View>
-          ))}
-        </View>
       </View>
 
       <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
@@ -224,7 +189,7 @@ export function AdminShell({
             }}
           >
             <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
-              <Feather color={item.key === activeSection ? colors.sidebarText : colors.sidebarMuted} name={item.icon} size={16} />
+              <Feather color={item.key === activeSection ? colors.text : colors.sidebarMuted} name={item.icon} size={16} />
             </View>
             <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
               <Text
@@ -237,7 +202,16 @@ export function AdminShell({
               >
                 {item.label}
               </Text>
-              <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
+              <Text
+                nativeID={`components-admin-shell-nav-item-description-${item.key}`}
+                style={[
+                  styles.navItemDescription,
+                  item.key === activeSection ? styles.navItemDescriptionActive : null,
+                ]}
+                testID={`components-admin-shell-nav-item-description-${item.key}`}
+              >
+                {item.description}
+              </Text>
             </View>
           </Pressable>
         ))}
@@ -453,34 +427,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  summaryBlock: {
-    backgroundColor: colors.sidebarSoft,
-    borderColor: colors.sidebarBorder,
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  summaryRow: {
-    borderBottomColor: colors.sidebarBorder,
-    borderBottomWidth: 1,
-    gap: 4,
-    paddingBottom: spacing.sm,
-  },
-  summaryLabel: {
-    color: colors.sidebarMuted,
-    fontFamily: typography.headingFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  summaryValue: {
-    color: colors.sidebarText,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
   navBlock: {
     gap: spacing.xs,
   },
@@ -495,8 +441,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: colors.sidebarSoft,
-    borderColor: colors.sidebarBorder,
+    backgroundColor: "#D9DEE5",
+    borderColor: "#C4CBD4",
   },
   navItemHovered: {
     backgroundColor: "rgba(255, 255, 255, 0.04)",
@@ -514,13 +460,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   navItemLabelActive: {
-    color: colors.sidebarText,
+    color: colors.text,
   },
   navItemDescription: {
     color: colors.sidebarMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
+  },
+  navItemDescriptionActive: {
+    color: colors.text,
   },
   navItemIconWrap: {
     alignItems: "center",
@@ -531,7 +480,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   navItemIconWrapActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(17, 24, 26, 0.08)",
   },
   navItemCopy: {
     flex: 1,

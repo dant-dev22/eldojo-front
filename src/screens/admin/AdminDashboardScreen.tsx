@@ -1159,16 +1159,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           : visibleBranches.length === 1
             ? `Resumen operativo de ${visibleBranches[0]?.name ?? "tu sucursal"} con métricas y gráficas de seguimiento.`
             : "Vista consolidada de la academia con métricas, gráficas y accesos rápidos para la operación diaria.";
+  const inactiveStudents = Math.max(visibleStudents.length - activeStudents, 0);
+  const inactiveBranches = Math.max(visibleBranches.length - activeBranches, 0);
+  const inactiveClasses = Math.max(visibleClasses.length - activeClasses, 0);
   const overviewGraphData = [
-    { key: "students", label: "Alumnos activos", value: activeStudents, tone: colors.success },
-    { key: "branches", label: "Sucursales activas", value: activeBranches, tone: colors.info },
-    { key: "classes", label: "Clases activas", value: activeClasses, tone: colors.action },
-    { key: "attendance", label: "Asistencias hoy", value: todayAttendanceCount, tone: colors.warning },
+    { key: "students-active", label: "Alumnos activos", value: activeStudents, tone: colors.success },
+    { key: "students-inactive", label: "Alumnos inactivos", value: inactiveStudents, tone: colors.warning },
   ];
-  const paymentGraphData = [
-    { key: "paid", label: "Pagos al corriente", value: Math.max(visibleStudents.length - latePayments, 0), tone: colors.success },
-    { key: "pending", label: "Pagos pendientes", value: pendingPayments, tone: colors.warning },
-    { key: "late", label: "Pagos vencidos", value: latePayments, tone: colors.danger },
+  const structureGraphData = [
+    { key: "branches-active", label: "Sucursales activas", value: activeBranches, tone: colors.info },
+    { key: "branches-inactive", label: "Sucursales inactivas", value: inactiveBranches, tone: colors.textMuted },
+    { key: "classes-active", label: "Clases activas", value: activeClasses, tone: colors.action },
+    { key: "classes-inactive", label: "Clases inactivas", value: inactiveClasses, tone: colors.danger },
   ];
 
   const copyPublicAttendanceUrl = async (url: string) => {
@@ -1638,90 +1640,74 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     }
   };
 
-  const dashboardHeaderActions = (
-    <View
-      nativeID="screens-admin-dashboard-header-actions"
-      style={[styles.headerActionGroup, isDesktop ? desktopStyles.headerActionGroup : mobileStyles.headerActionGroup]}
-      testID="screens-admin-dashboard-header-actions"
-    >
-      {focusedSection === "branches" ? (
-        <>
-          {canCreateBranches ? (
+  const dashboardHeaderActions = focusedSection === "overview"
+    ? null
+    : (
+      <View
+        nativeID="screens-admin-dashboard-header-actions"
+        style={[styles.headerActionGroup, isDesktop ? desktopStyles.headerActionGroup : mobileStyles.headerActionGroup]}
+        testID="screens-admin-dashboard-header-actions"
+      >
+        {focusedSection === "branches" ? (
+          <>
+            {canCreateBranches ? (
+              <AppButton
+                label="Nueva sucursal"
+                nativeID="screens-admin-dashboard-new-branch-button"
+                onPress={openCreateBranchModal}
+                testID="screens-admin-dashboard-new-branch-button"
+              />
+            ) : null}
             <AppButton
-              label="Nueva sucursal"
-              nativeID="screens-admin-dashboard-new-branch-button"
-              onPress={openCreateBranchModal}
-              testID="screens-admin-dashboard-new-branch-button"
-            />
-          ) : null}
-          <AppButton
-            label="Resumen"
-            nativeID="screens-admin-dashboard-branches-summary-button"
-            onPress={() => navigation.navigate("AdminHome")}
-            testID="screens-admin-dashboard-branches-summary-button"
-            variant="secondary"
-          />
-        </>
-      ) : focusedSection === "operations" ? (
-        <>
-          <AppButton
-            label="Registrar asistencia"
-            nativeID="screens-admin-dashboard-operations-new-attendance-button"
-            onPress={openCreateAttendanceModal}
-            testID="screens-admin-dashboard-operations-new-attendance-button"
-            variant="success"
-            disabled={visibleStudents.length === 0}
-          />
-          <AppButton
-            label="Nueva clase"
-            nativeID="screens-admin-dashboard-operations-new-class-button"
-            onPress={openCreateClassModal}
-            testID="screens-admin-dashboard-operations-new-class-button"
-            disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
-          />
-        </>
-      ) : focusedSection === "dojo" ? (
-        <>
-          {canManageOrganization && organization ? (
-            <AppButton
-              label="Editar dojo"
-              nativeID="screens-admin-dashboard-edit-organization-button"
-              onPress={openOrganizationModal}
-              testID="screens-admin-dashboard-edit-organization-button"
+              label="Resumen"
+              nativeID="screens-admin-dashboard-branches-summary-button"
+              onPress={() => navigation.navigate("AdminHome")}
+              testID="screens-admin-dashboard-branches-summary-button"
               variant="secondary"
             />
-          ) : null}
-          {currentBranch ? (
+          </>
+        ) : focusedSection === "operations" ? (
+          <>
             <AppButton
-              label="Editar sucursal"
-              nativeID="screens-admin-dashboard-dojo-edit-branch-button"
-              onPress={() => openEditBranchModal(currentBranch)}
-              testID="screens-admin-dashboard-dojo-edit-branch-button"
-              variant="secondary"
+              label="Registrar asistencia"
+              nativeID="screens-admin-dashboard-operations-new-attendance-button"
+              onPress={openCreateAttendanceModal}
+              testID="screens-admin-dashboard-operations-new-attendance-button"
+              variant="success"
+              disabled={visibleStudents.length === 0}
             />
-          ) : null}
-        </>
-      ) : (
-        <>
-          {canCreateBranches ? (
             <AppButton
-              label="Nueva sucursal"
-              nativeID="screens-admin-dashboard-new-branch-button"
-              onPress={openCreateBranchModal}
-              testID="screens-admin-dashboard-new-branch-button"
+              label="Nueva clase"
+              nativeID="screens-admin-dashboard-operations-new-class-button"
+              onPress={openCreateClassModal}
+              testID="screens-admin-dashboard-operations-new-class-button"
+              disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
             />
-          ) : null}
-          <AppButton
-            label="Ver alumnos"
-            nativeID="screens-admin-dashboard-view-students-button"
-            onPress={() => navigation.navigate("StudentsList")}
-            testID="screens-admin-dashboard-view-students-button"
-            variant="secondary"
-          />
-        </>
-      )}
-    </View>
-  );
+          </>
+        ) : (
+          <>
+            {canManageOrganization && organization ? (
+              <AppButton
+                label="Editar dojo"
+                nativeID="screens-admin-dashboard-edit-organization-button"
+                onPress={openOrganizationModal}
+                testID="screens-admin-dashboard-edit-organization-button"
+                variant="secondary"
+              />
+            ) : null}
+            {currentBranch ? (
+              <AppButton
+                label="Editar sucursal"
+                nativeID="screens-admin-dashboard-dojo-edit-branch-button"
+                onPress={() => openEditBranchModal(currentBranch)}
+                testID="screens-admin-dashboard-dojo-edit-branch-button"
+                variant="secondary"
+              />
+            ) : null}
+          </>
+        )}
+      </View>
+    );
 
   return (
     <Screen
@@ -1764,7 +1750,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
                 testID="screens-admin-dashboard-hero-card"
               >
-              <View nativeID="screens-admin-dashboard-hero-top" style={[styles.heroTop, isDesktop ? desktopStyles.heroTop : mobileStyles.heroTop]} testID="screens-admin-dashboard-hero-top">
+              <View nativeID="screens-admin-dashboard-hero-top" style={styles.heroTop} testID="screens-admin-dashboard-hero-top">
                 <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
                   <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
                   <Text
@@ -1775,29 +1761,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     {heroTitle}
                   </Text>
                   <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
-                    Opera tu Dojo desde un solo lugar
+                    Vista general del dojo con indicadores visuales y sin acciones operativas.
                   </Text>
-                </View>
-                <View
-                  nativeID="screens-admin-dashboard-hero-actions"
-                  style={[styles.heroActions, isDesktop ? desktopStyles.heroActions : mobileStyles.heroActions]}
-                  testID="screens-admin-dashboard-hero-actions"
-                >
-                  <AppButton
-                    label="Nuevo alumno"
-                    nativeID="screens-admin-dashboard-new-student-button"
-                    onPress={() => navigation.navigate("StudentsList", { openCreate: true })}
-                    testID="screens-admin-dashboard-new-student-button"
-                  />
-                  {canManageOrganization && organization ? (
-                    <AppButton
-                      label="Editar dojo"
-                      nativeID="screens-admin-dashboard-edit-organization-button"
-                      onPress={openOrganizationModal}
-                      testID="screens-admin-dashboard-edit-organization-button"
-                      variant="secondary"
-                    />
-                  ) : null}
                 </View>
               </View>
 
@@ -1806,7 +1771,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             </AnimatedSurface>
           ) : null}
 
-          {feedback ? (
+          {feedback && !isOverviewSection ? (
             <AnimatedSurface
               delay={90}
               nativeID="screens-admin-dashboard-feedback-banner"
@@ -1849,28 +1814,20 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             <>
               {isOverviewSection ? (
                 <>
-                  <View nativeID="screens-admin-dashboard-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-dashboard-metrics-grid">
-                    <MetricCard delay={120} label="Alumnos activos" value={String(activeStudents)} tone="success" />
-                    <MetricCard delay={150} label="Sucursales activas" value={String(activeBranches)} tone="info" />
-                    <MetricCard delay={180} label="Clases activas" value={String(activeClasses)} tone="neutral" />
-                    <MetricCard delay={210} label="Pagos vencidos" value={String(latePayments)} tone={latePayments > 0 ? "danger" : "neutral"} />
-                    <MetricCard delay={240} label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
-                  </View>
-
                   <View nativeID="screens-admin-dashboard-chart-grid" style={[styles.chartGrid, isDesktop ? desktopStyles.chartGrid : mobileStyles.chartGrid]} testID="screens-admin-dashboard-chart-grid">
                     <OverviewGraphCard
-                      delay={255}
-                      idPrefix="screens-admin-dashboard-operation-graph"
+                      delay={120}
+                      idPrefix="screens-admin-dashboard-students-graph"
                       items={overviewGraphData}
-                      subtitle={visibleBranches.length === 1 ? "Actividad principal de tu sucursal actual." : "Comparativo base de la operación visible."}
-                      title="Movimiento operativo"
+                      subtitle="Distribución actual del alumnado visible en el resumen."
+                      title="Estado del alumnado"
                     />
                     <OverviewGraphCard
-                      delay={270}
-                      idPrefix="screens-admin-dashboard-payments-graph"
-                      items={paymentGraphData}
-                      subtitle="Pulso rápido de cobranza para tomar acción desde el panel."
-                      title="Estado de cobranza"
+                      delay={150}
+                      idPrefix="screens-admin-dashboard-structure-graph"
+                      items={structureGraphData}
+                      subtitle={visibleBranches.length === 1 ? "Estructura actual de tu sucursal visible." : "Panorama general de sucursales y clases activas del dojo."}
+                      title="Estructura operativa"
                     />
                   </View>
                 </>
@@ -1983,6 +1940,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
               )}
 
+              {!isOverviewSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
@@ -2422,6 +2380,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
               </View>
+              ) : null}
             </>
           )}
         </View>
