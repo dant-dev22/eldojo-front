@@ -1,14 +1,20 @@
+import { useNavigation } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
+import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { getErrorMessage } from "@/api/http";
 import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import { PUBLIC_PAGE_TO_SCREEN, type PublicPageKey } from "@/navigation/publicRoutes";
+import type { AuthStackParamList } from "@/navigation/types";
+
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 function getTokenFromUrl(): string {
   if (typeof window === "undefined") {
@@ -38,6 +44,7 @@ function formatConfirmationError(error: unknown): string {
 }
 
 export function ConfirmAccountScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { confirmAcademyAccount, resendAcademyConfirmation } = useAuth();
   const token = useMemo(() => getTokenFromUrl(), []);
   const [hasAttemptedConfirmation, setHasAttemptedConfirmation] = useState(false);
@@ -70,33 +77,73 @@ export function ConfirmAccountScreen() {
   const confirmationError = confirmMutation.error
     ? formatConfirmationError(confirmMutation.error)
     : null;
+  const navigateToPage = (page: PublicPageKey) => {
+    navigation.navigate(PUBLIC_PAGE_TO_SCREEN[page]);
+  };
 
   if (token && confirmMutation.isPending) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <PublicPageChrome
+        actionItems={[
+          { key: "create-account", label: "Crear cuenta", onPress: () => navigateToPage("createAccount"), variant: "primary" },
+          { key: "sign-in", label: "Iniciar sesion", onPress: () => navigateToPage("signIn"), variant: "secondary" },
+        ]}
+        idPrefix="screens-auth-confirm-account"
+        navItems={[
+          { key: "home", label: "Inicio", onPress: () => navigateToPage("home") },
+          { key: "about", label: "Acerca", onPress: () => navigateToPage("about") },
+          { key: "events", label: "Eventos", onPress: () => navigateToPage("events") },
+        ]}
+        onBrandPress={() => navigateToPage("home")}
+      >
         <StatusView
           description="Estamos validando tu enlace y activando tu cuenta."
           loading
           title="Confirmando cuenta"
         />
-      </SafeAreaView>
+      </PublicPageChrome>
     );
   }
 
   if (token && confirmMutation.isSuccess) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <PublicPageChrome
+        actionItems={[
+          { key: "create-account", label: "Crear cuenta", onPress: () => navigateToPage("createAccount"), variant: "primary" },
+          { key: "sign-in", label: "Iniciar sesion", onPress: () => navigateToPage("signIn"), variant: "secondary" },
+        ]}
+        idPrefix="screens-auth-confirm-account"
+        navItems={[
+          { key: "home", label: "Inicio", onPress: () => navigateToPage("home") },
+          { key: "about", label: "Acerca", onPress: () => navigateToPage("about") },
+          { key: "events", label: "Eventos", onPress: () => navigateToPage("events") },
+        ]}
+        onBrandPress={() => navigateToPage("home")}
+      >
         <StatusView
           description="Tu cuenta ya fue activada. Te estamos llevando al panel."
           loading
           title="Cuenta confirmada"
         />
-      </SafeAreaView>
+      </PublicPageChrome>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <PublicPageChrome
+      actionItems={[
+        { key: "create-account", label: "Crear cuenta", onPress: () => navigateToPage("createAccount"), variant: "primary" },
+        { key: "sign-in", label: "Iniciar sesion", onPress: () => navigateToPage("signIn"), variant: "secondary" },
+      ]}
+      contentContainerStyle={styles.pageContent}
+      idPrefix="screens-auth-confirm-account"
+      navItems={[
+        { key: "home", label: "Inicio", onPress: () => navigateToPage("home") },
+        { key: "about", label: "Acerca", onPress: () => navigateToPage("about") },
+        { key: "events", label: "Eventos", onPress: () => navigateToPage("events") },
+      ]}
+      onBrandPress={() => navigateToPage("home")}
+    >
       <View style={styles.container}>
         <AppCard style={styles.card}>
           <Text style={styles.eyebrow}>Confirmación de cuenta</Text>
@@ -133,18 +180,16 @@ export function ConfirmAccountScreen() {
           </View>
         </AppCard>
       </View>
-    </SafeAreaView>
+    </PublicPageChrome>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.background,
-    flex: 1,
+  pageContent: {
+    minHeight: "60%",
   },
   container: {
     alignItems: "center",
-    flex: 1,
     justifyContent: "center",
     padding: spacing.lg,
   },

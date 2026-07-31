@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DimensionValue,
   Image,
@@ -162,6 +162,7 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
@@ -178,6 +179,12 @@ export function LoginScreen() {
     setFormError(null);
     setIsAuthVisible(true);
   };
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileMenuVisible(false);
+    }
+  }, [isMobile]);
 
   const heroHeight = useMemo(() => {
     if (isDesktop) {
@@ -346,52 +353,63 @@ export function LoginScreen() {
               </View>
             ) : null}
 
-            <View
-              nativeID="screens-auth-login-navbar-auth-actions"
-              style={[styles.navbarAuthActions, isMobile ? styles.navbarAuthActionsMobile : null]}
-              testID="screens-auth-login-navbar-auth-actions"
-            >
-              <Pressable
-                accessibilityRole="button"
-                nativeID="screens-auth-login-navbar-register-button"
-                onPress={() => handleModeChange("academy")}
-                style={({ pressed }) => [
-                  styles.navbarAuthButton,
-                  styles.navbarAuthButtonPrimary,
-                  isMobile ? styles.navbarAuthButtonMobile : null,
-                  pressed ? styles.navbarLinkPressed : null,
-                ]}
-                testID="screens-auth-login-navbar-register-button"
+            {!isMobile ? (
+              <View
+                nativeID="screens-auth-login-navbar-auth-actions"
+                style={styles.navbarAuthActions}
+                testID="screens-auth-login-navbar-auth-actions"
               >
-                <Text
-                  nativeID="screens-auth-login-navbar-register-label"
-                  style={[styles.navbarAuthButtonLabel, styles.navbarAuthButtonLabelPrimary]}
-                  testID="screens-auth-login-navbar-register-label"
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID="screens-auth-login-navbar-register-button"
+                  onPress={() => handleModeChange("academy")}
+                  style={({ pressed }) => [
+                    styles.navbarAuthButton,
+                    styles.navbarAuthButtonPrimary,
+                    pressed ? styles.navbarLinkPressed : null,
+                  ]}
+                  testID="screens-auth-login-navbar-register-button"
                 >
-                  Crear cuenta
-                </Text>
-              </Pressable>
+                  <Text
+                    nativeID="screens-auth-login-navbar-register-label"
+                    style={[styles.navbarAuthButtonLabel, styles.navbarAuthButtonLabelPrimary]}
+                    testID="screens-auth-login-navbar-register-label"
+                  >
+                    Crear cuenta
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID="screens-auth-login-navbar-login-button"
+                  onPress={() => handleModeChange("login")}
+                  style={({ pressed }) => [
+                    styles.navbarAuthButton,
+                    styles.navbarAuthButtonSecondary,
+                    pressed ? styles.navbarLinkPressed : null,
+                  ]}
+                  testID="screens-auth-login-navbar-login-button"
+                >
+                  <Text
+                    nativeID="screens-auth-login-navbar-login-label"
+                    style={styles.navbarAuthButtonLabel}
+                    testID="screens-auth-login-navbar-login-label"
+                  >
+                    Iniciar sesion
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
               <Pressable
+                accessibilityLabel="Abrir menu"
                 accessibilityRole="button"
-                nativeID="screens-auth-login-navbar-login-button"
-                onPress={() => handleModeChange("login")}
-                style={({ pressed }) => [
-                  styles.navbarAuthButton,
-                  styles.navbarAuthButtonSecondary,
-                  isMobile ? styles.navbarAuthButtonMobile : null,
-                  pressed ? styles.navbarLinkPressed : null,
-                ]}
-                testID="screens-auth-login-navbar-login-button"
+                nativeID="screens-auth-login-mobile-menu-trigger"
+                onPress={() => setIsMobileMenuVisible(true)}
+                style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.navbarLinkPressed : null]}
+                testID="screens-auth-login-mobile-menu-trigger"
               >
-                <Text
-                  nativeID="screens-auth-login-navbar-login-label"
-                  style={styles.navbarAuthButtonLabel}
-                  testID="screens-auth-login-navbar-login-label"
-                >
-                  Iniciar sesion
-                </Text>
+                <Feather color={colors.text} name="menu" size={18} />
               </Pressable>
-            </View>
+            )}
           </View>
         </View>
 
@@ -961,6 +979,50 @@ export function LoginScreen() {
         </ScrollView>
 
         <AppModal
+          description="Navega entre las secciones publicas y accesos principales."
+          nativeID="screens-auth-login-mobile-menu-modal"
+          onClose={() => setIsMobileMenuVisible(false)}
+          testID="screens-auth-login-mobile-menu-modal"
+          title="Menu"
+          visible={isMobileMenuVisible}
+        >
+          <View nativeID="screens-auth-login-mobile-menu-content" style={styles.mobileMenuContent} testID="screens-auth-login-mobile-menu-content">
+            {SECTION_ITEMS.map((item) => (
+              <AppButton
+                key={item.key}
+                label={item.label}
+                nativeID={`screens-auth-login-mobile-menu-item-${item.key}`}
+                onPress={() => {
+                  setIsMobileMenuVisible(false);
+                  scrollToSection(item.key);
+                }}
+                testID={`screens-auth-login-mobile-menu-item-${item.key}`}
+                variant="secondary"
+              />
+            ))}
+            <AppButton
+              label="Crear cuenta"
+              nativeID="screens-auth-login-mobile-menu-register-button"
+              onPress={() => {
+                setIsMobileMenuVisible(false);
+                handleModeChange("academy");
+              }}
+              testID="screens-auth-login-mobile-menu-register-button"
+            />
+            <AppButton
+              label="Iniciar sesion"
+              nativeID="screens-auth-login-mobile-menu-signin-button"
+              onPress={() => {
+                setIsMobileMenuVisible(false);
+                handleModeChange("login");
+              }}
+              testID="screens-auth-login-mobile-menu-signin-button"
+              variant="secondary"
+            />
+          </View>
+        </AppModal>
+
+        <AppModal
           description={selectedShowcaseItem?.title}
           nativeID="screens-auth-login-showcase-modal"
           onClose={() => setSelectedShowcaseItem(null)}
@@ -1077,6 +1139,19 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "flex-end",
+  },
+  mobileMenuTrigger: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  mobileMenuContent: {
+    gap: spacing.sm,
   },
   navbarAuthActionsMobile: {
     width: "100%",

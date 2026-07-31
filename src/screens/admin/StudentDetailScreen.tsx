@@ -131,7 +131,10 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         <AdminShell
           activeSection="students"
           headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-loading-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-loading-back-button" variant="secondary" />}
+          onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
           onGoDashboard={() => navigation.navigate("AdminHome")}
+          onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
+          onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="Preparando la ficha principal y el historial financiero del alumno."
           title="Detalle de alumno"
@@ -155,7 +158,10 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         <AdminShell
           activeSection="students"
           headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-error-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-back-button" variant="secondary" />}
+          onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
           onGoDashboard={() => navigation.navigate("AdminHome")}
+          onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
+          onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="No fue posible cargar la informacion del alumno."
           title="Detalle de alumno"
@@ -214,7 +220,10 @@ export function StudentDetailScreen({ navigation, route }: Props) {
             variant="secondary"
           />
         }
+        onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
+        onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
+        onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
         subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}

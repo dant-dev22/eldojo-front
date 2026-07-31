@@ -571,6 +571,7 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [formFeedback, setFormFeedback] = useState<string | null>(null);
   const [pendingRegistration, setPendingRegistration] = useState<PendingAcademyRegistration | null>(null);
+  const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
@@ -635,6 +636,12 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
   const showHeroCopy = !(isWebDesktop && isAuthPage);
   const mode: AuthMode = page === "createAccount" ? "academy" : "login";
   const isAwaitingConfirmation = mode === "academy" && pendingRegistration !== null;
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileMenuVisible(false);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1177,84 +1184,95 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
               </View>
             ) : null}
 
-            <View
-              style={[styles.navbarAuthActions, isMobile ? styles.navbarAuthActionsMobile : null]}
-              {...getWebClassNameProps("screens-auth-public-navbar-auth-actions")}
-            >
-              <Pressable
-                accessibilityRole="link"
-                nativeID="screens-auth-public-navbar-create-account-button"
-                onPress={() => navigateToPage("createAccount")}
-                style={(state) => {
-                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-
-                  return [
-                    styles.navbarAuthButton,
-                    styles.navbarAuthButtonPrimary,
-                    isMobile ? styles.navbarAuthButtonMobile : null,
-                    hovered ? styles.navbarAuthButtonPrimaryHover : null,
-                    state.pressed ? styles.navbarLinkPressed : null,
-                  ];
-                }}
-                testID="screens-auth-public-navbar-create-account-button"
-                {...getWebClassNameProps("screens-auth-public-navbar-create-account-button eldojo-public-desktop-hover-target")}
+            {!isMobile ? (
+              <View
+                style={styles.navbarAuthActions}
+                {...getWebClassNameProps("screens-auth-public-navbar-auth-actions")}
               >
-                {(state) => {
-                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                <Pressable
+                  accessibilityRole="link"
+                  nativeID="screens-auth-public-navbar-create-account-button"
+                  onPress={() => navigateToPage("createAccount")}
+                  style={(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
 
-                  return (
-                    <Text
-                      nativeID="screens-auth-public-navbar-create-account-label"
-                      style={[
-                        styles.navbarAuthButtonLabel,
-                        styles.navbarAuthButtonLabelPrimary,
-                      hovered ? styles.navbarAuthButtonLabelPrimaryHover : null,
-                      ]}
-                      testID="screens-auth-public-navbar-create-account-label"
-                      {...getWebClassNameProps("screens-auth-public-navbar-create-account-label")}
-                    >
-                      Crear cuenta
-                    </Text>
-                  );
-                }}
-              </Pressable>
+                    return [
+                      styles.navbarAuthButton,
+                      styles.navbarAuthButtonPrimary,
+                      hovered ? styles.navbarAuthButtonPrimaryHover : null,
+                      state.pressed ? styles.navbarLinkPressed : null,
+                    ];
+                  }}
+                  testID="screens-auth-public-navbar-create-account-button"
+                  {...getWebClassNameProps("screens-auth-public-navbar-create-account-button eldojo-public-desktop-hover-target")}
+                >
+                  {(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+                    return (
+                      <Text
+                        nativeID="screens-auth-public-navbar-create-account-label"
+                        style={[
+                          styles.navbarAuthButtonLabel,
+                          styles.navbarAuthButtonLabelPrimary,
+                          hovered ? styles.navbarAuthButtonLabelPrimaryHover : null,
+                        ]}
+                        testID="screens-auth-public-navbar-create-account-label"
+                        {...getWebClassNameProps("screens-auth-public-navbar-create-account-label")}
+                      >
+                        Crear cuenta
+                      </Text>
+                    );
+                  }}
+                </Pressable>
+                <Pressable
+                  accessibilityRole="link"
+                  nativeID="screens-auth-public-navbar-signin-button"
+                  onPress={() => navigateToPage("signIn")}
+                  style={(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+                    return [
+                      styles.navbarAuthButton,
+                      styles.navbarAuthButtonSecondary,
+                      hovered ? styles.navbarAuthButtonSecondaryHover : null,
+                      state.pressed ? styles.navbarLinkPressed : null,
+                    ];
+                  }}
+                  testID="screens-auth-public-navbar-signin-button"
+                  {...getWebClassNameProps("screens-auth-public-navbar-signin-button eldojo-public-desktop-hover-target")}
+                >
+                  {(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+                    return (
+                      <Text
+                        nativeID="screens-auth-public-navbar-signin-label"
+                        style={[
+                          styles.navbarAuthButtonLabel,
+                          hovered ? styles.navbarAuthButtonLabelSecondaryHover : null,
+                        ]}
+                        testID="screens-auth-public-navbar-signin-label"
+                        {...getWebClassNameProps("screens-auth-public-navbar-signin-label")}
+                      >
+                        Iniciar sesion
+                      </Text>
+                    );
+                  }}
+                </Pressable>
+              </View>
+            ) : (
               <Pressable
-                accessibilityRole="link"
-                nativeID="screens-auth-public-navbar-signin-button"
-                onPress={() => navigateToPage("signIn")}
-                style={(state) => {
-                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-
-                  return [
-                    styles.navbarAuthButton,
-                    styles.navbarAuthButtonSecondary,
-                    isMobile ? styles.navbarAuthButtonMobile : null,
-                    hovered ? styles.navbarAuthButtonSecondaryHover : null,
-                    state.pressed ? styles.navbarLinkPressed : null,
-                  ];
-                }}
-                testID="screens-auth-public-navbar-signin-button"
-                {...getWebClassNameProps("screens-auth-public-navbar-signin-button eldojo-public-desktop-hover-target")}
+                accessibilityLabel="Abrir menu"
+                accessibilityRole="button"
+                nativeID="screens-auth-public-mobile-menu-trigger"
+                onPress={() => setIsMobileMenuVisible(true)}
+                style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.navbarLinkPressed : null]}
+                testID="screens-auth-public-mobile-menu-trigger"
               >
-                {(state) => {
-                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-
-                  return (
-                    <Text
-                      nativeID="screens-auth-public-navbar-signin-label"
-                      style={[
-                        styles.navbarAuthButtonLabel,
-                      hovered ? styles.navbarAuthButtonLabelSecondaryHover : null,
-                      ]}
-                      testID="screens-auth-public-navbar-signin-label"
-                      {...getWebClassNameProps("screens-auth-public-navbar-signin-label")}
-                    >
-                      Iniciar sesion
-                    </Text>
-                  );
-                }}
+                <Feather color={colors.text} name="menu" size={18} />
               </Pressable>
-            </View>
+            )}
           </View>
         </View>
 
@@ -1813,6 +1831,50 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
         </ScrollView>
 
         <AppModal
+          description="Navega entre las secciones publicas y accesos principales."
+          nativeID="screens-auth-public-mobile-menu-modal"
+          onClose={() => setIsMobileMenuVisible(false)}
+          testID="screens-auth-public-mobile-menu-modal"
+          title="Menu"
+          visible={isMobileMenuVisible}
+        >
+          <View nativeID="screens-auth-public-mobile-menu-content" style={styles.mobileMenuContent} testID="screens-auth-public-mobile-menu-content">
+            {MOBILE_SECTION_NAV_ITEMS.map((item) => (
+              <AppButton
+                key={item.key}
+                label={item.label}
+                nativeID={`screens-auth-public-mobile-menu-item-${item.key}`}
+                onPress={() => {
+                  setIsMobileMenuVisible(false);
+                  navigateToPage(item.page);
+                }}
+                testID={`screens-auth-public-mobile-menu-item-${item.key}`}
+                variant="secondary"
+              />
+            ))}
+            <AppButton
+              label="Crear cuenta"
+              nativeID="screens-auth-public-mobile-menu-create-account-button"
+              onPress={() => {
+                setIsMobileMenuVisible(false);
+                navigateToPage("createAccount");
+              }}
+              testID="screens-auth-public-mobile-menu-create-account-button"
+            />
+            <AppButton
+              label="Iniciar sesion"
+              nativeID="screens-auth-public-mobile-menu-signin-button"
+              onPress={() => {
+                setIsMobileMenuVisible(false);
+                navigateToPage("signIn");
+              }}
+              testID="screens-auth-public-mobile-menu-signin-button"
+              variant="secondary"
+            />
+          </View>
+        </AppModal>
+
+        <AppModal
           description={selectedShowcaseItem?.title}
           nativeID="screens-auth-public-showcase-modal"
           onClose={() => setSelectedShowcaseItem(null)}
@@ -1978,6 +2040,19 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
     justifyContent: "flex-end",
+  },
+  mobileMenuTrigger: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  mobileMenuContent: {
+    gap: spacing.sm,
   },
   navbarAuthActionsMobile: {
     width: "100%",

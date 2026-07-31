@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
 import { publicAttendanceApi } from "@/api/publicAttendanceApi";
@@ -8,11 +8,12 @@ import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
+import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { AppSelect } from "@/components/AppSelect";
-import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
+import { PUBLIC_PAGE_META, type PublicPageKey } from "@/navigation/publicRoutes";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 
 import type {
@@ -28,6 +29,12 @@ interface PublicAttendanceScreenProps {
 
 function formatRouteLabel(routeParams: PublicAttendanceRouteParams) {
   return `${routeParams.organizationSlug} / ${routeParams.branchSlug}`;
+}
+
+function navigateToPublicPage(page: PublicPageKey) {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    window.location.assign(PUBLIC_PAGE_META[page].path);
+  }
 }
 
 const WEEKDAY_TO_INDEX: Record<string, number> = {
@@ -363,11 +370,20 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
   }
 
   return (
-    <Screen
-      scrollable
-      contentStyle={[styles.screenContent, { alignItems: "center" }]}
-      nativeID="screens-public-attendance-screen"
-      testID="screens-public-attendance-screen"
+    <PublicPageChrome
+      actionItems={[
+        { key: "create-account", label: "Crear cuenta", onPress: () => navigateToPublicPage("createAccount"), variant: "primary" },
+        { key: "sign-in", label: "Iniciar sesion", onPress: () => navigateToPublicPage("signIn"), variant: "secondary" },
+      ]}
+      contentContainerStyle={[styles.screenContent, { alignItems: "center" }]}
+      contentMaxWidth={contentMaxWidth}
+      idPrefix="screens-public-attendance"
+      navItems={[
+        { key: "home", label: "Inicio", onPress: () => navigateToPublicPage("home") },
+        { key: "about", label: "Acerca", onPress: () => navigateToPublicPage("about") },
+        { key: "events", label: "Eventos", onPress: () => navigateToPublicPage("events") },
+      ]}
+      onBrandPress={() => navigateToPublicPage("home")}
     >
       <View nativeID="screens-public-attendance-layout" style={[styles.layout, { maxWidth: contentMaxWidth }]} testID="screens-public-attendance-layout">
         <View nativeID="screens-public-attendance-main-column" style={styles.mainColumn} testID="screens-public-attendance-main-column">
@@ -458,7 +474,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           )}
         </View>
       </View>
-    </Screen>
+    </PublicPageChrome>
   );
 }
 

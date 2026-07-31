@@ -612,7 +612,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
             testID="screens-admin-students-list-new-button"
           />
         }
+        onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
+        onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
+        onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
         subtitle="consulta y administra el estado del alumnado de tu Dojo"

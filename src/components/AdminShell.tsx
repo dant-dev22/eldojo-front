@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
@@ -9,7 +9,7 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
-type AdminSection = "dashboard" | "students";
+type AdminSection = "dashboard" | "students" | "branches" | "operations" | "dojo";
 
 interface AdminShellProps extends PropsWithChildren {
   title: string;
@@ -17,6 +17,9 @@ interface AdminShellProps extends PropsWithChildren {
   activeSection: AdminSection;
   onGoDashboard: () => void;
   onGoStudents: () => void;
+  onGoBranches: () => void;
+  onGoOperations: () => void;
+  onGoDojo: () => void;
   headerActions?: ReactNode;
   sidebarSummary?: {
     organizationName?: string | null;
@@ -65,21 +68,24 @@ export function AdminShell({
   activeSection,
   onGoDashboard,
   onGoStudents,
+  onGoBranches,
+  onGoOperations,
+  onGoDojo,
   headerActions,
   sidebarSummary,
   children,
 }: AdminShellProps) {
   const { user, signOut } = useAuth();
-  const { contentMaxWidth, isDesktop, isTablet, width } = useResponsiveLayout();
+  const { contentMaxWidth, isDesktop, isTablet } = useResponsiveLayout();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  const isCompact = width < 480;
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const navItems = useMemo<NavItem[]>(
     () => [
       {
         key: "dashboard",
-        label: "Dashboard",
-        description: "Vista general del dojo",
+        label: "Resumen general",
+        description: "Vista global y gráficas de tu academia",
         icon: "grid",
         onPress: onGoDashboard,
       },
@@ -90,8 +96,29 @@ export function AdminShell({
         icon: "users",
         onPress: onGoStudents,
       },
+      {
+        key: "branches",
+        label: "Sucursales",
+        description: "Alta y edición de sedes",
+        icon: "map-pin",
+        onPress: onGoBranches,
+      },
+      {
+        key: "operations",
+        label: "Asistencia y clases",
+        description: "Registro diario y operación de clases",
+        icon: "clipboard",
+        onPress: onGoOperations,
+      },
+      {
+        key: "dojo",
+        label: "Mi Dojo",
+        description: "Datos de tu dojo y ajustes rápidos",
+        icon: "home",
+        onPress: onGoDojo,
+      },
     ],
-    [onGoDashboard, onGoStudents],
+    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoStudents],
   );
 
   const displayName = useMemo(
@@ -123,6 +150,127 @@ export function AdminShell({
     void signOut();
   };
 
+  const handleMobileNavigation = (item: NavItem) => {
+    setShowMobileMenu(false);
+    item.onPress();
+  };
+
+  const renderSidebarContent = (mode: "desktop" | "mobile") => (
+    <View
+      nativeID={mode === "desktop" ? "components-admin-shell-sidebar-card" : "components-admin-shell-mobile-menu-card"}
+      style={styles.sidebarCard}
+      testID={mode === "desktop" ? "components-admin-shell-sidebar-card" : "components-admin-shell-mobile-menu-card"}
+    >
+      <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
+        <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
+          <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
+            <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
+              EL
+            </Text>
+          </View>
+          <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
+            <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
+              ElDojo Admin
+            </Text>
+            <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
+              Operación diaria del dojo
+            </Text>
+          </View>
+        </View>
+        <View nativeID="components-admin-shell-academy-summary" style={styles.summaryBlock} testID="components-admin-shell-academy-summary">
+          {academySummary.map((item) => (
+            <View
+              key={item.key}
+              nativeID={`components-admin-shell-academy-summary-${item.key}`}
+              style={styles.summaryRow}
+              testID={`components-admin-shell-academy-summary-${item.key}`}
+            >
+              <Text
+                nativeID={`components-admin-shell-academy-summary-${item.key}-label`}
+                style={styles.summaryLabel}
+                testID={`components-admin-shell-academy-summary-${item.key}-label`}
+              >
+                {item.label}
+              </Text>
+              <Text
+                nativeID={`components-admin-shell-academy-summary-${item.key}-value`}
+                style={styles.summaryValue}
+                testID={`components-admin-shell-academy-summary-${item.key}-value`}
+              >
+                {item.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
+        {navItems.map((item) => (
+          <Pressable
+            key={item.key}
+            accessibilityRole="button"
+            nativeID={`components-admin-shell-nav-item-${item.key}`}
+            onPress={() => (mode === "desktop" ? item.onPress() : handleMobileNavigation(item))}
+            testID={`components-admin-shell-nav-item-${item.key}`}
+            style={(state) => {
+              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+
+              return [
+                styles.navItem,
+                item.key === activeSection ? styles.navItemActive : null,
+                hovered ? styles.navItemHovered : null,
+                state.pressed ? styles.navItemPressed : null,
+              ];
+            }}
+          >
+            <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
+              <Feather color={item.key === activeSection ? colors.sidebarText : colors.sidebarMuted} name={item.icon} size={16} />
+            </View>
+            <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
+              <Text
+                nativeID={`components-admin-shell-nav-item-label-${item.key}`}
+                style={[
+                  styles.navItemLabel,
+                  item.key === activeSection ? styles.navItemLabelActive : null,
+                ]}
+                testID={`components-admin-shell-nav-item-label-${item.key}`}
+              >
+                {item.label}
+              </Text>
+              <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
+
+      <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
+        <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
+          <View nativeID="components-admin-shell-profile-top" style={styles.profileTop} testID="components-admin-shell-profile-top">
+            <View nativeID="components-admin-shell-profile-avatar" style={styles.profileAvatar} testID="components-admin-shell-profile-avatar">
+              <Text nativeID="components-admin-shell-profile-avatar-label" style={styles.profileAvatarLabel} testID="components-admin-shell-profile-avatar-label">
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View nativeID="components-admin-shell-profile-copy" style={styles.profileCopy} testID="components-admin-shell-profile-copy">
+              <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
+              <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
+            </View>
+          </View>
+          <Text nativeID="components-admin-shell-profile-assignments" style={styles.profileMeta} testID="components-admin-shell-profile-assignments">
+            {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
+          </Text>
+        </View>
+        <AppButton
+          label="Cerrar sesion"
+          nativeID="components-admin-shell-logout-button"
+          onPress={requestSignOut}
+          testID="components-admin-shell-logout-button"
+          variant="secondary"
+        />
+      </View>
+    </View>
+  );
+
   return (
     <View
       nativeID="components-admin-shell-shell"
@@ -131,115 +279,7 @@ export function AdminShell({
     >
       {isDesktop ? (
         <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
-          <View nativeID="components-admin-shell-sidebar-card" style={styles.sidebarCard} testID="components-admin-shell-sidebar-card">
-            <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
-              <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
-                <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
-                  <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
-                    EL
-                  </Text>
-                </View>
-                <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
-                  <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
-                    ElDojo Admin
-                  </Text>
-                  <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
-                    Operación diaria del dojo
-                  </Text>
-                </View>
-              </View>
-              <View nativeID="components-admin-shell-academy-summary" style={styles.summaryBlock} testID="components-admin-shell-academy-summary">
-                {academySummary.map((item) => (
-                  <View
-                    key={item.key}
-                    nativeID={`components-admin-shell-academy-summary-${item.key}`}
-                    style={styles.summaryRow}
-                    testID={`components-admin-shell-academy-summary-${item.key}`}
-                  >
-                    <Text
-                      nativeID={`components-admin-shell-academy-summary-${item.key}-label`}
-                      style={styles.summaryLabel}
-                      testID={`components-admin-shell-academy-summary-${item.key}-label`}
-                    >
-                      {item.label}
-                    </Text>
-                    <Text
-                      nativeID={`components-admin-shell-academy-summary-${item.key}-value`}
-                      style={styles.summaryValue}
-                      testID={`components-admin-shell-academy-summary-${item.key}-value`}
-                    >
-                      {item.value}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
-              {navItems.map((item) => (
-                <Pressable
-                  key={item.key}
-                  accessibilityRole="button"
-                  nativeID={`components-admin-shell-nav-item-${item.key}`}
-                  onPress={item.onPress}
-                  testID={`components-admin-shell-nav-item-${item.key}`}
-                  style={(state) => {
-                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-
-                    return [
-                      styles.navItem,
-                      item.key === activeSection ? styles.navItemActive : null,
-                      hovered ? styles.navItemHovered : null,
-                      state.pressed ? styles.navItemPressed : null,
-                    ];
-                  }}
-                >
-                  <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
-                    <Feather color={item.key === activeSection ? colors.sidebarText : colors.sidebarMuted} name={item.icon} size={16} />
-                  </View>
-                  <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
-                    <Text
-                      nativeID={`components-admin-shell-nav-item-label-${item.key}`}
-                      style={[
-                        styles.navItemLabel,
-                        item.key === activeSection ? styles.navItemLabelActive : null,
-                      ]}
-                      testID={`components-admin-shell-nav-item-label-${item.key}`}
-                    >
-                      {item.label}
-                    </Text>
-                    <Text nativeID={`components-admin-shell-nav-item-description-${item.key}`} style={styles.navItemDescription} testID={`components-admin-shell-nav-item-description-${item.key}`}>{item.description}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-
-            <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
-              <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
-                <View nativeID="components-admin-shell-profile-top" style={styles.profileTop} testID="components-admin-shell-profile-top">
-                  <View nativeID="components-admin-shell-profile-avatar" style={styles.profileAvatar} testID="components-admin-shell-profile-avatar">
-                    <Text nativeID="components-admin-shell-profile-avatar-label" style={styles.profileAvatarLabel} testID="components-admin-shell-profile-avatar-label">
-                      {displayName.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View nativeID="components-admin-shell-profile-copy" style={styles.profileCopy} testID="components-admin-shell-profile-copy">
-                    <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
-                    <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
-                  </View>
-                </View>
-                <Text nativeID="components-admin-shell-profile-assignments" style={styles.profileMeta} testID="components-admin-shell-profile-assignments">
-                  {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
-                </Text>
-              </View>
-              <AppButton
-                label="Cerrar sesion"
-                nativeID="components-admin-shell-logout-button"
-                onPress={requestSignOut}
-                testID="components-admin-shell-logout-button"
-                variant="secondary"
-              />
-            </View>
-          </View>
+          {renderSidebarContent("desktop")}
         </View>
       ) : null}
 
@@ -279,115 +319,32 @@ export function AdminShell({
             ]}
             testID="components-admin-shell-header-actions"
           >
-            {headerActions}
             {!isDesktop ? (
-              <AdminUserMenu
-                actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
-                user={user}
-              />
+              <View nativeID="components-admin-shell-mobile-header-topbar" style={styles.mobileHeaderTopBar} testID="components-admin-shell-mobile-header-topbar">
+                <Pressable
+                  accessibilityLabel="Abrir secciones del administrador"
+                  accessibilityRole="button"
+                  nativeID="components-admin-shell-mobile-menu-trigger"
+                  onPress={() => setShowMobileMenu(true)}
+                  testID="components-admin-shell-mobile-menu-trigger"
+                  style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.mobileMenuTriggerPressed : null]}
+                >
+                  <View nativeID="components-admin-shell-mobile-menu-trigger-icon" style={styles.mobileMenuTriggerIconWrap} testID="components-admin-shell-mobile-menu-trigger-icon">
+                    <Feather color={colors.text} name="menu" size={18} />
+                  </View>
+                  <Text nativeID="components-admin-shell-mobile-menu-trigger-label" style={styles.mobileMenuTriggerLabel} testID="components-admin-shell-mobile-menu-trigger-label">
+                    Secciones
+                  </Text>
+                </Pressable>
+                <AdminUserMenu
+                  actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
+                  user={user}
+                />
+              </View>
             ) : null}
+            {headerActions}
           </View>
         </View>
-
-        {!isDesktop ? (
-          <View
-            nativeID="components-admin-shell-compact-utilities"
-            style={[
-              styles.utilityStack,
-              isTablet ? tabletStyles.utilityStack : mobileStyles.utilityStack,
-            ]}
-            testID="components-admin-shell-compact-utilities"
-          >
-            <View nativeID="components-admin-shell-compact-nav-card" style={styles.compactCard} testID="components-admin-shell-compact-nav-card">
-              <Text nativeID="components-admin-shell-compact-nav-title" style={styles.compactCardTitle} testID="components-admin-shell-compact-nav-title">
-                Navegacion
-              </Text>
-              <View
-                nativeID="components-admin-shell-compact-nav-grid"
-                style={[
-                  styles.compactNavGrid,
-                  isTablet ? tabletStyles.compactNavGrid : mobileStyles.compactNavGrid,
-                ]}
-                testID="components-admin-shell-compact-nav-grid"
-              >
-                {navItems.map((item) => (
-                  <Pressable
-                    key={item.key}
-                    accessibilityRole="button"
-                    nativeID={`components-admin-shell-compact-nav-item-${item.key}`}
-                    onPress={item.onPress}
-                    testID={`components-admin-shell-compact-nav-item-${item.key}`}
-                    style={(state) => [
-                      styles.navItem,
-                      styles.compactNavItem,
-                      item.key === activeSection ? styles.navItemActive : null,
-                      state.pressed ? styles.navItemPressed : null,
-                    ]}
-                  >
-                    <Text
-                      nativeID={`components-admin-shell-compact-nav-item-label-${item.key}`}
-                      style={[
-                        styles.navItemLabel,
-                        item.key === activeSection ? styles.navItemLabelActive : null,
-                      ]}
-                      testID={`components-admin-shell-compact-nav-item-label-${item.key}`}
-                    >
-                      {item.label}
-                    </Text>
-                    <Text
-                      nativeID={`components-admin-shell-compact-nav-item-description-${item.key}`}
-                      style={styles.navItemDescription}
-                      testID={`components-admin-shell-compact-nav-item-description-${item.key}`}
-                    >
-                      {item.description}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View nativeID="components-admin-shell-compact-summary-card" style={styles.compactCard} testID="components-admin-shell-compact-summary-card">
-              <Text nativeID="components-admin-shell-compact-summary-title" style={styles.compactCardTitle} testID="components-admin-shell-compact-summary-title">
-                Academia
-              </Text>
-              <View
-                nativeID="components-admin-shell-compact-summary-grid"
-                style={[
-                  styles.compactSummaryGrid,
-                  isTablet ? tabletStyles.compactSummaryGrid : mobileStyles.compactSummaryGrid,
-                ]}
-                testID="components-admin-shell-compact-summary-grid"
-              >
-                {academySummary.map((item) => (
-                  <View
-                    key={item.key}
-                    nativeID={`components-admin-shell-compact-summary-${item.key}`}
-                    style={[
-                      styles.compactSummaryItem,
-                      isCompact ? mobileStyles.compactSummaryItemCompact : null,
-                    ]}
-                    testID={`components-admin-shell-compact-summary-${item.key}`}
-                  >
-                    <Text
-                      nativeID={`components-admin-shell-compact-summary-${item.key}-label`}
-                      style={styles.compactSummaryLabel}
-                      testID={`components-admin-shell-compact-summary-${item.key}-label`}
-                    >
-                      {item.label}
-                    </Text>
-                    <Text
-                      nativeID={`components-admin-shell-compact-summary-${item.key}-value`}
-                      style={styles.compactSummaryValue}
-                      testID={`components-admin-shell-compact-summary-${item.key}-value`}
-                    >
-                      {item.value}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         <View
           nativeID="components-admin-shell-content-wrap"
@@ -400,6 +357,26 @@ export function AdminShell({
           {children}
         </View>
       </View>
+      <Modal animationType="slide" onRequestClose={() => setShowMobileMenu(false)} transparent visible={showMobileMenu}>
+        <View nativeID="components-admin-shell-mobile-menu-overlay" style={styles.mobileMenuOverlay} testID="components-admin-shell-mobile-menu-overlay">
+          <Pressable
+            nativeID="components-admin-shell-mobile-menu-backdrop"
+            onPress={() => setShowMobileMenu(false)}
+            style={styles.mobileMenuBackdrop}
+            testID="components-admin-shell-mobile-menu-backdrop"
+          />
+          <View nativeID="components-admin-shell-mobile-menu-sheet-wrap" style={styles.mobileMenuSheetWrap} testID="components-admin-shell-mobile-menu-sheet-wrap">
+            <ScrollView
+              contentContainerStyle={styles.mobileMenuScrollContent}
+              nativeID="components-admin-shell-mobile-menu-scroll"
+              showsVerticalScrollIndicator={false}
+              testID="components-admin-shell-mobile-menu-scroll"
+            >
+              {renderSidebarContent("mobile")}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <ConfirmActionModal
         confirmLabel="Si, cerrar sesion"
         idPrefix="components-admin-shell-signout-confirm"
@@ -608,6 +585,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  mobileHeaderTopBar: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  mobileMenuTrigger: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
+  },
+  mobileMenuTriggerPressed: {
+    opacity: 0.84,
+  },
+  mobileMenuTriggerIconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mobileMenuTriggerLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   header: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -658,6 +666,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flex: 1,
     width: "100%",
+  },
+  mobileMenuOverlay: {
+    backgroundColor: colors.overlay,
+    flex: 1,
+    flexDirection: "row",
+  },
+  mobileMenuBackdrop: {
+    flex: 1,
+  },
+  mobileMenuSheetWrap: {
+    maxWidth: 360,
+    padding: spacing.sm,
+    width: "88%",
+  },
+  mobileMenuScrollContent: {
+    flexGrow: 1,
   },
   utilityStack: {
     gap: spacing.md,

@@ -1,3 +1,5 @@
+export type AdminDashboardSection = "overview" | "branches" | "operations" | "dojo";
+
 export type AuthStackParamList = {
   Home: undefined;
   About: undefined;
@@ -9,7 +11,7 @@ export type AuthStackParamList = {
 };
 
 export type AdminStackParamList = {
-  AdminHome: undefined;
+  AdminHome: { section?: AdminDashboardSection } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
   StudentDetail: { studentId: number };
 };

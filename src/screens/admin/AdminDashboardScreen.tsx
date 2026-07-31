@@ -22,13 +22,13 @@ import { AppSelect } from "@/components/AppSelect";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, spacing, typography } from "@/constants/theme";
+import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus } from "@/utils/format";
 import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
 
-import type { AdminStackParamList } from "@/navigation/types";
+import type { AdminDashboardSection, AdminStackParamList } from "@/navigation/types";
 import type {
   Attendance,
   AttendanceCreatePayload,
@@ -592,7 +592,7 @@ function formatAttendanceMethod(method: AttendanceMethod): string {
   }
 }
 
-export function AdminDashboardScreen({ navigation }: Props) {
+export function AdminDashboardScreen({ navigation, route }: Props) {
   const { isDesktop, width } = useResponsiveLayout();
   const { height: windowHeight } = useWindowDimensions();
   const isCompact = width < 480;
@@ -1128,6 +1128,48 @@ export function AdminDashboardScreen({ navigation }: Props) {
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
   const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu dojo";
+  const focusedSection: AdminDashboardSection = route.params?.section ?? "overview";
+  const isOverviewSection = focusedSection === "overview";
+  const isBranchesSection = focusedSection === "branches";
+  const isOperationsSection = focusedSection === "operations";
+  const isDojoSection = focusedSection === "dojo";
+  const activeShellSection =
+    focusedSection === "branches"
+      ? "branches"
+      : focusedSection === "operations"
+        ? "operations"
+        : focusedSection === "dojo"
+          ? "dojo"
+          : "dashboard";
+  const pageTitle =
+    focusedSection === "branches"
+      ? "Sucursales"
+      : focusedSection === "operations"
+        ? "Asistencia y clases"
+        : focusedSection === "dojo"
+          ? "Mi Dojo"
+          : "Resumen general";
+  const pageSubtitle =
+    focusedSection === "branches"
+      ? "Administra sedes, comparte la liga pública de asistencia y mantén al día la operación de cada sucursal."
+      : focusedSection === "operations"
+        ? "Controla las asistencias del día, abre el registro público y gestiona las clases activas desde un solo lugar."
+        : focusedSection === "dojo"
+          ? "Consulta los datos principales de tu dojo y edita cada bloque disponible desde esta misma vista."
+          : visibleBranches.length === 1
+            ? `Resumen operativo de ${visibleBranches[0]?.name ?? "tu sucursal"} con métricas y gráficas de seguimiento.`
+            : "Vista consolidada de la academia con métricas, gráficas y accesos rápidos para la operación diaria.";
+  const overviewGraphData = [
+    { key: "students", label: "Alumnos activos", value: activeStudents, tone: colors.success },
+    { key: "branches", label: "Sucursales activas", value: activeBranches, tone: colors.info },
+    { key: "classes", label: "Clases activas", value: activeClasses, tone: colors.action },
+    { key: "attendance", label: "Asistencias hoy", value: todayAttendanceCount, tone: colors.warning },
+  ];
+  const paymentGraphData = [
+    { key: "paid", label: "Pagos al corriente", value: Math.max(visibleStudents.length - latePayments, 0), tone: colors.success },
+    { key: "pending", label: "Pagos pendientes", value: pendingPayments, tone: colors.warning },
+    { key: "late", label: "Pagos vencidos", value: latePayments, tone: colors.danger },
+  ];
 
   const copyPublicAttendanceUrl = async (url: string) => {
     if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -1596,6 +1638,91 @@ export function AdminDashboardScreen({ navigation }: Props) {
     }
   };
 
+  const dashboardHeaderActions = (
+    <View
+      nativeID="screens-admin-dashboard-header-actions"
+      style={[styles.headerActionGroup, isDesktop ? desktopStyles.headerActionGroup : mobileStyles.headerActionGroup]}
+      testID="screens-admin-dashboard-header-actions"
+    >
+      {focusedSection === "branches" ? (
+        <>
+          {canCreateBranches ? (
+            <AppButton
+              label="Nueva sucursal"
+              nativeID="screens-admin-dashboard-new-branch-button"
+              onPress={openCreateBranchModal}
+              testID="screens-admin-dashboard-new-branch-button"
+            />
+          ) : null}
+          <AppButton
+            label="Resumen"
+            nativeID="screens-admin-dashboard-branches-summary-button"
+            onPress={() => navigation.navigate("AdminHome")}
+            testID="screens-admin-dashboard-branches-summary-button"
+            variant="secondary"
+          />
+        </>
+      ) : focusedSection === "operations" ? (
+        <>
+          <AppButton
+            label="Registrar asistencia"
+            nativeID="screens-admin-dashboard-operations-new-attendance-button"
+            onPress={openCreateAttendanceModal}
+            testID="screens-admin-dashboard-operations-new-attendance-button"
+            variant="success"
+            disabled={visibleStudents.length === 0}
+          />
+          <AppButton
+            label="Nueva clase"
+            nativeID="screens-admin-dashboard-operations-new-class-button"
+            onPress={openCreateClassModal}
+            testID="screens-admin-dashboard-operations-new-class-button"
+            disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
+          />
+        </>
+      ) : focusedSection === "dojo" ? (
+        <>
+          {canManageOrganization && organization ? (
+            <AppButton
+              label="Editar dojo"
+              nativeID="screens-admin-dashboard-edit-organization-button"
+              onPress={openOrganizationModal}
+              testID="screens-admin-dashboard-edit-organization-button"
+              variant="secondary"
+            />
+          ) : null}
+          {currentBranch ? (
+            <AppButton
+              label="Editar sucursal"
+              nativeID="screens-admin-dashboard-dojo-edit-branch-button"
+              onPress={() => openEditBranchModal(currentBranch)}
+              testID="screens-admin-dashboard-dojo-edit-branch-button"
+              variant="secondary"
+            />
+          ) : null}
+        </>
+      ) : (
+        <>
+          {canCreateBranches ? (
+            <AppButton
+              label="Nueva sucursal"
+              nativeID="screens-admin-dashboard-new-branch-button"
+              onPress={openCreateBranchModal}
+              testID="screens-admin-dashboard-new-branch-button"
+            />
+          ) : null}
+          <AppButton
+            label="Ver alumnos"
+            nativeID="screens-admin-dashboard-view-students-button"
+            onPress={() => navigation.navigate("StudentsList")}
+            testID="screens-admin-dashboard-view-students-button"
+            variant="secondary"
+          />
+        </>
+      )}
+    </View>
+  );
+
   return (
     <Screen
       scrollable
@@ -1604,38 +1731,20 @@ export function AdminDashboardScreen({ navigation }: Props) {
       testID="screens-admin-dashboard-screen"
     >
       <AdminShell
-        activeSection="dashboard"
-        headerActions={
-          <View
-            nativeID="screens-admin-dashboard-header-actions"
-            style={[styles.headerActionGroup, isDesktop ? desktopStyles.headerActionGroup : mobileStyles.headerActionGroup]}
-            testID="screens-admin-dashboard-header-actions"
-          >
-            {canCreateBranches ? (
-              <AppButton
-                label="Nueva sucursal"
-                nativeID="screens-admin-dashboard-new-branch-button"
-                onPress={openCreateBranchModal}
-                testID="screens-admin-dashboard-new-branch-button"
-              />
-            ) : null}
-            <AppButton
-              label="Ver alumnos"
-              nativeID="screens-admin-dashboard-view-students-button"
-              onPress={() => navigation.navigate("StudentsList")}
-              testID="screens-admin-dashboard-view-students-button"
-              variant="secondary"
-            />
-          </View>
-        }
+        activeSection={activeShellSection}
+        headerActions={dashboardHeaderActions}
+        onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
+        onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
+        onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
-        subtitle="Gestiona tu dojo, con sus clases y alumnos."
-        title="Resumen del dojo"
+        subtitle={pageSubtitle}
+        title={pageTitle}
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
-          <AnimatedSurface delay={40}>
+          {isOverviewSection ? (
+            <AnimatedSurface delay={40}>
             <View
               collapsable={false}
               nativeID="screens-admin-dashboard-hero-tutorial-anchor"
@@ -1694,7 +1803,8 @@ export function AdminDashboardScreen({ navigation }: Props) {
 
               </AppCard>
             </View>
-          </AnimatedSurface>
+            </AnimatedSurface>
+          ) : null}
 
           {feedback ? (
             <AnimatedSurface
@@ -1737,15 +1847,144 @@ export function AdminDashboardScreen({ navigation }: Props) {
             </AnimatedSurface>
           ) : (
             <>
-              <View nativeID="screens-admin-dashboard-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-dashboard-metrics-grid">
-                <MetricCard delay={120} label="Alumnos activos" value={String(activeStudents)} tone="success" />
-                <MetricCard delay={150} label="Sucursales activas" value={String(activeBranches)} tone="info" />
-                <MetricCard delay={180} label="Clases activas" value={String(activeClasses)} tone="neutral" />
-                <MetricCard delay={210} label="Pagos vencidos" value={String(latePayments)} tone={latePayments > 0 ? "danger" : "neutral"} />
-                <MetricCard delay={240} label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
-              </View>
+              {isOverviewSection ? (
+                <>
+                  <View nativeID="screens-admin-dashboard-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-dashboard-metrics-grid">
+                    <MetricCard delay={120} label="Alumnos activos" value={String(activeStudents)} tone="success" />
+                    <MetricCard delay={150} label="Sucursales activas" value={String(activeBranches)} tone="info" />
+                    <MetricCard delay={180} label="Clases activas" value={String(activeClasses)} tone="neutral" />
+                    <MetricCard delay={210} label="Pagos vencidos" value={String(latePayments)} tone={latePayments > 0 ? "danger" : "neutral"} />
+                    <MetricCard delay={240} label="Asistencias hoy" value={String(todayAttendanceCount)} tone="info" />
+                  </View>
+
+                  <View nativeID="screens-admin-dashboard-chart-grid" style={[styles.chartGrid, isDesktop ? desktopStyles.chartGrid : mobileStyles.chartGrid]} testID="screens-admin-dashboard-chart-grid">
+                    <OverviewGraphCard
+                      delay={255}
+                      idPrefix="screens-admin-dashboard-operation-graph"
+                      items={overviewGraphData}
+                      subtitle={visibleBranches.length === 1 ? "Actividad principal de tu sucursal actual." : "Comparativo base de la operación visible."}
+                      title="Movimiento operativo"
+                    />
+                    <OverviewGraphCard
+                      delay={270}
+                      idPrefix="screens-admin-dashboard-payments-graph"
+                      items={paymentGraphData}
+                      subtitle="Pulso rápido de cobranza para tomar acción desde el panel."
+                      title="Estado de cobranza"
+                    />
+                  </View>
+                </>
+              ) : (
+                <AnimatedSurface delay={120}>
+                  <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
+                    <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
+                      <Text nativeID="screens-admin-dashboard-section-focus-title" style={styles.sectionTitle} testID="screens-admin-dashboard-section-focus-title">
+                        {pageTitle}
+                      </Text>
+                      <AppBadge
+                        label={
+                          isBranchesSection
+                            ? `${visibleBranches.length} sedes`
+                            : isOperationsSection
+                              ? `${visibleAttendanceRecords.length} asistencias`
+                              : `${activeBranches} sucursales activas`
+                        }
+                        tone={isOperationsSection ? "info" : "neutral"}
+                      />
+                    </View>
+                    <Text nativeID="screens-admin-dashboard-section-focus-description" style={styles.helperText} testID="screens-admin-dashboard-section-focus-description">
+                      {pageSubtitle}
+                    </Text>
+                    {isBranchesSection ? (
+                      <>
+                        <QuickAction
+                          description="Crea una nueva sede para ampliar la operación del dojo."
+                          idPrefix="screens-admin-dashboard-focus-new-branch-action"
+                          label="Nueva sucursal"
+                          onPress={openCreateBranchModal}
+                          disabled={!canCreateBranches || !organizationId}
+                          tone="primary"
+                        />
+                        <QuickAction
+                          description="Ajusta los datos de la sucursal que estás operando ahora."
+                          idPrefix="screens-admin-dashboard-focus-edit-branch-action"
+                          label="Editar sucursal"
+                          onPress={() => {
+                            if (currentBranch) {
+                              openEditBranchModal(currentBranch);
+                            }
+                          }}
+                          disabled={!currentBranch || !canEditVisibleBranches}
+                        />
+                      </>
+                    ) : isOperationsSection ? (
+                      <>
+                        <QuickAction
+                          description="Registra una asistencia manual en segundos."
+                          idPrefix="screens-admin-dashboard-focus-new-attendance-action"
+                          label="Registrar asistencia"
+                          onPress={openCreateAttendanceModal}
+                          disabled={visibleStudents.length === 0}
+                          tone="success"
+                        />
+                        <QuickAction
+                          description="Abre la liga pública para capturar asistencia desde recepción."
+                          idPrefix="screens-admin-dashboard-focus-open-attendance-action"
+                          label="Abrir registro de asistencias"
+                          onPress={() => {
+                            if (organization && currentBranch) {
+                              void openPublicAttendancePage(organization.slug, currentBranch.name);
+                            }
+                          }}
+                          disabled={!organization || !currentBranch || !currentBranch.is_active}
+                        />
+                        <QuickAction
+                          description="Da de alta una clase nueva en la sucursal visible."
+                          idPrefix="screens-admin-dashboard-focus-new-class-action"
+                          label="Nueva clase"
+                          onPress={openCreateClassModal}
+                          disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
+                          tone="primary"
+                        />
+                      </>
+                    ) : (
+                      <View nativeID="screens-admin-dashboard-focus-dojo-actions" style={styles.detailList} testID="screens-admin-dashboard-focus-dojo-actions">
+                        <EditableDetailRow
+                          idPrefix="screens-admin-dashboard-dojo-name-row"
+                          label="Nombre del dojo"
+                          value={organization?.name ?? "Sin definir"}
+                          onPress={canManageOrganization && organization ? openOrganizationModal : undefined}
+                        />
+                        <EditableDetailRow
+                          idPrefix="screens-admin-dashboard-dojo-suffix-row"
+                          label="Sufijo"
+                          value={organization?.slug ?? "Sin definir"}
+                          onPress={canManageOrganization && organization ? openOrganizationModal : undefined}
+                        />
+                        <EditableDetailRow
+                          idPrefix="screens-admin-dashboard-dojo-branch-row"
+                          label="Sucursal visible"
+                          value={currentBranch?.name ?? "Sin sucursal asignada"}
+                          onPress={currentBranch ? () => openEditBranchModal(currentBranch) : undefined}
+                        />
+                        <EditableDetailRow
+                          idPrefix="screens-admin-dashboard-dojo-location-row"
+                          label="Ubicación"
+                          value={
+                            currentBranch
+                              ? [currentBranch.city, currentBranch.state, currentBranch.country].filter(Boolean).join(", ") || currentBranch.address
+                              : "Sin ubicación disponible"
+                          }
+                          onPress={currentBranch ? () => openEditBranchModal(currentBranch) : undefined}
+                        />
+                      </View>
+                    )}
+                  </AppCard>
+                </AnimatedSurface>
+              )}
 
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
+                {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
                   <View
                     collapsable={false}
@@ -1840,7 +2079,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     </AppCard>
                   </View>
                 </AnimatedSurface>
+                ) : null}
 
+                {isOverviewSection || isDojoSection ? (
                 <AnimatedSurface delay={300}>
                   <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
                   <View nativeID="screens-admin-dashboard-organization-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-organization-header">
@@ -1869,7 +2110,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                   </AppCard>
                 </AnimatedSurface>
+                ) : null}
 
+                {isOverviewSection || isBranchesSection ? (
                 <AnimatedSurface delay={330}>
                   <View
                     collapsable={false}
@@ -1948,7 +2191,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     </AppCard>
                   </View>
                 </AnimatedSurface>
+                ) : null}
 
+                {isOverviewSection || isOperationsSection ? (
                 <AnimatedSurface delay={360}>
                   <View
                     collapsable={false}
@@ -2029,7 +2274,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                     </AppCard>
                   </View>
                 </AnimatedSurface>
+                ) : null}
 
+                {isOverviewSection ? (
                 <AnimatedSurface delay={390}>
                   <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
                   <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
@@ -2106,7 +2353,9 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                   </AppCard>
                 </AnimatedSurface>
+                ) : null}
 
+                {isOverviewSection || isOperationsSection ? (
                 <AnimatedSurface delay={420}>
                   <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
                   <View nativeID="screens-admin-dashboard-classes-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-classes-header">
@@ -2171,6 +2420,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                   )}
                   </AppCard>
                 </AnimatedSurface>
+                ) : null}
               </View>
             </>
           )}
@@ -2768,6 +3018,89 @@ function EntityField({ label, value, idPrefix }: { label: string; value: string;
   );
 }
 
+function EditableDetailRow({
+  label,
+  value,
+  onPress,
+  idPrefix,
+}: {
+  label: string;
+  value: string;
+  onPress?: (() => void) | undefined;
+  idPrefix: string;
+}) {
+  return (
+    <View nativeID={idPrefix} style={styles.editableDetailRow} testID={idPrefix}>
+      <View nativeID={`${idPrefix}-copy`} style={styles.editableDetailCopy} testID={`${idPrefix}-copy`}>
+        <Text nativeID={`${idPrefix}-label`} style={styles.editableDetailLabel} testID={`${idPrefix}-label`}>{label}</Text>
+        <Text nativeID={`${idPrefix}-value`} style={styles.editableDetailValue} testID={`${idPrefix}-value`}>{value}</Text>
+      </View>
+      {onPress ? (
+        <Pressable
+          accessibilityLabel={`Editar ${label}`}
+          accessibilityRole="button"
+          nativeID={`${idPrefix}-edit-button`}
+          onPress={onPress}
+          style={({ pressed }) => [styles.editIconButton, pressed ? styles.editIconButtonPressed : null]}
+          testID={`${idPrefix}-edit-button`}
+        >
+          <Feather color={colors.info} name="edit-2" size={16} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function OverviewGraphCard({
+  delay,
+  idPrefix,
+  items,
+  subtitle,
+  title,
+}: {
+  delay: number;
+  idPrefix: string;
+  items: Array<{ key: string; label: string; value: number; tone: string }>;
+  subtitle: string;
+  title: string;
+}) {
+  const maxValue = Math.max(...items.map((item) => item.value), 1);
+
+  return (
+    <AnimatedSurface delay={delay}>
+      <AppCard nativeID={idPrefix} style={styles.graphCard} testID={idPrefix}>
+        <View nativeID={`${idPrefix}-header`} style={styles.graphCardHeader} testID={`${idPrefix}-header`}>
+          <Text nativeID={`${idPrefix}-title`} style={styles.sectionTitle} testID={`${idPrefix}-title`}>{title}</Text>
+          <Text nativeID={`${idPrefix}-subtitle`} style={styles.helperText} testID={`${idPrefix}-subtitle`}>{subtitle}</Text>
+        </View>
+        <View nativeID={`${idPrefix}-rows`} style={styles.graphRows} testID={`${idPrefix}-rows`}>
+          {items.map((item) => (
+            <View key={item.key} nativeID={`${idPrefix}-row-${item.key}`} style={styles.graphRow} testID={`${idPrefix}-row-${item.key}`}>
+              <View nativeID={`${idPrefix}-copy-${item.key}`} style={styles.graphRowCopy} testID={`${idPrefix}-copy-${item.key}`}>
+                <Text nativeID={`${idPrefix}-label-${item.key}`} style={styles.graphLabel} testID={`${idPrefix}-label-${item.key}`}>{item.label}</Text>
+                <Text nativeID={`${idPrefix}-value-${item.key}`} style={styles.graphValue} testID={`${idPrefix}-value-${item.key}`}>{item.value}</Text>
+              </View>
+              <View nativeID={`${idPrefix}-track-${item.key}`} style={styles.graphTrack} testID={`${idPrefix}-track-${item.key}`}>
+                <View
+                  nativeID={`${idPrefix}-fill-${item.key}`}
+                  style={[
+                    styles.graphFill,
+                    {
+                      backgroundColor: item.tone,
+                      width: `${Math.max((item.value / maxValue) * 100, item.value > 0 ? 12 : 4)}%`,
+                    },
+                  ]}
+                  testID={`${idPrefix}-fill-${item.key}`}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      </AppCard>
+    </AnimatedSurface>
+  );
+}
+
 function QuickAction({
   label,
   description,
@@ -3095,6 +3428,9 @@ const styles = StyleSheet.create({
   metricsGrid: {
     gap: spacing.md,
   },
+  chartGrid: {
+    gap: spacing.md,
+  },
   metricCard: {
     borderColor: "transparent",
     borderRadius: 22,
@@ -3128,7 +3464,58 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 20,
   },
+  graphCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 24,
+    flex: 1,
+    gap: spacing.md,
+    minWidth: 0,
+  },
+  graphCardHeader: {
+    gap: spacing.xs,
+  },
+  graphRows: {
+    gap: spacing.sm,
+  },
+  graphRow: {
+    gap: spacing.xs,
+  },
+  graphRowCopy: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  graphLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  graphValue: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  graphTrack: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    height: 10,
+    overflow: "hidden",
+  },
+  graphFill: {
+    borderRadius: radius.pill,
+    height: "100%",
+    minWidth: 6,
+  },
   contentGrid: {
+    gap: spacing.md,
+  },
+  sectionFocusCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 28,
     gap: spacing.md,
   },
   panelCard: {
@@ -3261,6 +3648,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     lineHeight: 22,
+  },
+  detailList: {
+    gap: spacing.sm,
+  },
+  editableDetailRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    padding: spacing.md,
+  },
+  editableDetailCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  editableDetailLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  editableDetailValue: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 21,
+  },
+  editIconButton: {
+    alignItems: "center",
+    backgroundColor: colors.infoSoft,
+    borderRadius: radius.pill,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  editIconButtonPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.96 }],
   },
   branchRow: {
     backgroundColor: colors.surfaceAlt,
@@ -3498,6 +3930,9 @@ const mobileStyles = StyleSheet.create({
   metricsGrid: {
     flexDirection: "column",
   },
+  chartGrid: {
+    flexDirection: "column",
+  },
   contentGrid: {
     flexDirection: "column",
   },
@@ -3529,6 +3964,10 @@ const desktopStyles = StyleSheet.create({
     flexDirection: "row",
   },
   metricsGrid: {
+    flexDirection: "row",
+  },
+  chartGrid: {
+    alignItems: "stretch",
     flexDirection: "row",
   },
   contentGrid: {

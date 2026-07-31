@@ -1,12 +1,22 @@
 import { useEffect } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { AppButton } from "@/components/AppButton";
+import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import { PUBLIC_PAGE_META, type PublicPageKey } from "@/navigation/publicRoutes";
 
 export function AccountConfirmedScreen() {
   const { dismissPostConfirmation, user } = useAuth();
+  const navigateToPage = (page: PublicPageKey) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.location.assign(PUBLIC_PAGE_META[page].path);
+      return;
+    }
+
+    dismissPostConfirmation();
+  };
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -17,7 +27,19 @@ export function AccountConfirmedScreen() {
   }, [dismissPostConfirmation]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <PublicPageChrome
+      actionItems={[
+        { key: "open-panel", label: "Entrar al panel", onPress: dismissPostConfirmation, variant: "primary" },
+      ]}
+      contentContainerStyle={styles.pageContent}
+      idPrefix="screens-auth-account-confirmed"
+      navItems={[
+        { key: "home", label: "Inicio", onPress: () => navigateToPage("home") },
+        { key: "about", label: "Acerca", onPress: () => navigateToPage("about") },
+        { key: "events", label: "Eventos", onPress: () => navigateToPage("events") },
+      ]}
+      onBrandPress={() => navigateToPage("home")}
+    >
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.eyebrow}>Cuenta activada</Text>
@@ -30,18 +52,16 @@ export function AccountConfirmedScreen() {
           <AppButton label="Entrar al panel" onPress={dismissPostConfirmation} />
         </View>
       </View>
-    </SafeAreaView>
+    </PublicPageChrome>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.background,
-    flex: 1,
+  pageContent: {
+    minHeight: "60%",
   },
   container: {
     alignItems: "center",
-    flex: 1,
     justifyContent: "center",
     padding: spacing.lg,
   },
