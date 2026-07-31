@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
@@ -107,6 +107,8 @@ const FORM_PAGES: FormPage[] = [
     fields: ["nextPaymentDate", "guardianName", "guardianPhone", "notes"],
   },
 ];
+
+const STUDENTS_PER_PAGE = 10;
 
 function createEmptyForm(defaultBranchId?: number | null): StudentFormState {
   return {
@@ -307,6 +309,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [form, setForm] = useState<StudentFormState>(() => createEmptyForm());
   const [currentFormPage, setCurrentFormPage] = useState(0);
+  const [currentStudentsPage, setCurrentStudentsPage] = useState(1);
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -370,6 +373,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const inactiveStudentsCount = useMemo(
     () => students.filter((student) => student.status !== "active").length,
     [students],
+  );
+  const totalStudentsPages = Math.max(1, Math.ceil(students.length / STUDENTS_PER_PAGE));
+  const currentStudentsPageStart = students.length === 0 ? 0 : (currentStudentsPage - 1) * STUDENTS_PER_PAGE + 1;
+  const currentStudentsPageEnd = Math.min(currentStudentsPage * STUDENTS_PER_PAGE, students.length);
+  const paginatedStudents = useMemo(
+    () =>
+      students.slice(
+        (currentStudentsPage - 1) * STUDENTS_PER_PAGE,
+        currentStudentsPage * STUDENTS_PER_PAGE,
+      ),
+    [currentStudentsPage, students],
   );
 
   const branchOptions = useMemo(
@@ -455,6 +469,14 @@ export function StudentsListScreen({ navigation, route }: Props) {
       navigation.setParams({ openCreate: undefined });
     }
   }, [navigation, route.params?.openCreate]);
+
+  useEffect(() => {
+    setCurrentStudentsPage(1);
+  }, [debouncedSearch, students.length]);
+
+  useEffect(() => {
+    setCurrentStudentsPage((current) => Math.min(current, totalStudentsPages));
+  }, [totalStudentsPages]);
 
   function handleCloseFormDialog() {
     setIsFormDialogVisible(false);
@@ -723,6 +745,11 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
                     : `Mostrando ${students.length} alumnos disponibles en una sola vista.`}
                 </Text>
+                {students.length > 0 ? (
+                  <Text nativeID="screens-admin-students-list-results-meta" style={styles.resultsMeta} testID="screens-admin-students-list-results-meta">
+                    Mostrando {currentStudentsPageStart}-{currentStudentsPageEnd} de {students.length}
+                  </Text>
+                ) : null}
               </View>
               {studentsQuery.isRefetching ? (
                 <AppBadge
@@ -747,8 +774,15 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   </View>
                 ) : null}
 
-                <View nativeID="screens-admin-students-list-table-body" style={styles.tableBody} testID="screens-admin-students-list-table-body">
-                  {students.map((item) => (
+                <ScrollView
+                  contentContainerStyle={styles.tableBody}
+                  nativeID="screens-admin-students-list-table-scroll"
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  style={[styles.tableScroll, isDesktop ? desktopStyles.tableScroll : mobileStyles.tableScroll]}
+                  testID="screens-admin-students-list-table-scroll"
+                >
+                  {paginatedStudents.map((item) => (
                     <StudentListRow
                       key={item.id}
                       isDesktop={isDesktop}
@@ -766,7 +800,31 @@ export function StudentsListScreen({ navigation, route }: Props) {
                       branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
                     />
                   ))}
-                </View>
+                </ScrollView>
+
+                {totalStudentsPages > 1 ? (
+                  <View nativeID="screens-admin-students-list-pagination" style={[styles.pagination, isDesktop ? desktopStyles.pagination : mobileStyles.pagination]} testID="screens-admin-students-list-pagination">
+                    <AppButton
+                      disabled={currentStudentsPage === 1}
+                      label="Anterior"
+                      nativeID="screens-admin-students-list-pagination-prev-button"
+                      onPress={() => setCurrentStudentsPage((current) => Math.max(1, current - 1))}
+                      testID="screens-admin-students-list-pagination-prev-button"
+                      variant="secondary"
+                    />
+                    <Text nativeID="screens-admin-students-list-pagination-label" style={styles.paginationLabel} testID="screens-admin-students-list-pagination-label">
+                      Página {currentStudentsPage} de {totalStudentsPages}
+                    </Text>
+                    <AppButton
+                      disabled={currentStudentsPage === totalStudentsPages}
+                      label="Siguiente"
+                      nativeID="screens-admin-students-list-pagination-next-button"
+                      onPress={() => setCurrentStudentsPage((current) => Math.min(totalStudentsPages, current + 1))}
+                      testID="screens-admin-students-list-pagination-next-button"
+                      variant="secondary"
+                    />
+                  </View>
+                ) : null}
               </View>
             ) : (
               <View nativeID="screens-admin-students-list-empty-state" style={styles.emptyState} testID="screens-admin-students-list-empty-state">
@@ -1475,23 +1533,35 @@ const styles = StyleSheet.create({
   resultsHeader: {
     alignItems: "center",
     gap: spacing.sm,
-    justifyContent: "space-between",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   resultsHeaderCopy: {
-    flex: 1,
+    alignItems: "center",
     gap: 4,
+    maxWidth: 680,
   },
   resultsTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "800",
+    textAlign: "center",
   },
   resultsDescription: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
+    textAlign: "center",
+  },
+  resultsMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
   },
   resultsPanel: {
     gap: spacing.md,
@@ -1501,6 +1571,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   table: {
+    width: "100%",
+  },
+  tableScroll: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     width: "100%",
   },
   tableHead: {
@@ -1626,6 +1701,20 @@ const styles = StyleSheet.create({
   },
   mobileRowActions: {
     gap: spacing.xs,
+  },
+  pagination: {
+    alignItems: "center",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  paginationLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
   },
   compactActionButton: {
     alignItems: "center",
@@ -1782,7 +1871,13 @@ const mobileStyles = StyleSheet.create({
   },
   resultsHeader: {
     flexDirection: "column",
-    alignItems: "flex-start",
+    alignItems: "center",
+  },
+  tableScroll: {
+    maxHeight: 520,
+  },
+  pagination: {
+    flexDirection: "column",
   },
   formGrid: {
     flexDirection: "column",
@@ -1806,7 +1901,14 @@ const desktopStyles = StyleSheet.create({
     flexWrap: "wrap",
   },
   resultsHeader: {
+    flexDirection: "column",
+  },
+  tableScroll: {
+    maxHeight: 620,
+  },
+  pagination: {
     flexDirection: "row",
+    justifyContent: "space-between",
   },
   formGrid: {
     flexDirection: "row",
