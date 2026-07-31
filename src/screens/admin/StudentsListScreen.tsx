@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
@@ -22,7 +22,7 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { formatDate, formatPaymentStatus } from "@/utils/format";
+import { formatCurrency, formatDate, formatPaymentStatus } from "@/utils/format";
 
 import type { AdminStackParamList } from "@/navigation/types";
 import type {
@@ -197,7 +197,7 @@ function formatStudentFee(student: Student): string {
     return "Sin definir";
   }
 
-  return `${student.monthly_fee} ${student.currency}`;
+  return formatCurrency(student.monthly_fee, student.currency);
 }
 
 function buildStudentPayload(
@@ -579,7 +579,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const selectedClass = classes.find((classItem) => String(classItem.id) === form.primaryClassId) ?? null;
 
   return (
-    <Screen contentStyle={styles.screenContent} nativeID="screens-admin-students-list-screen" testID="screens-admin-students-list-screen">
+    <Screen scrollable contentStyle={styles.screenContent} nativeID="screens-admin-students-list-screen" testID="screens-admin-students-list-screen">
       <AdminShell
         activeSection="students"
         headerActions={
@@ -714,139 +714,61 @@ export function StudentsListScreen({ navigation, route }: Props) {
             <AppButton label="Reintentar" nativeID="screens-admin-students-list-retry-button" onPress={() => studentsQuery.refetch()} testID="screens-admin-students-list-retry-button" />
           </View>
         ) : (
-          <FlatList
-            style={styles.resultsList}
-            contentContainerStyle={styles.listContent}
-            data={students}
-            keyExtractor={(item) => String(item.id)}
-            nativeID="screens-admin-students-list-results"
-            ListHeaderComponent={
-              <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
-                <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
-                  <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Resultados</Text>
-                  <Text nativeID="screens-admin-students-list-results-description" style={styles.resultsDescription} testID="screens-admin-students-list-results-description">
-                    {hasActiveSearch
-                      ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
-                      : `Mostrando ${students.length} alumnos disponibles en esta vista.`}
-                  </Text>
-                </View>
-                {studentsQuery.isRefetching ? (
-                  <AppBadge
-                    label="Actualizando"
-                    nativeID="screens-admin-students-list-results-refresh-badge"
-                    testID="screens-admin-students-list-results-refresh-badge"
-                    tone="info"
-                  />
-                ) : null}
+          <AppCard nativeID="screens-admin-students-list-results-panel" style={styles.resultsPanel} testID="screens-admin-students-list-results-panel">
+            <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
+              <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
+                <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Listado de alumnos</Text>
+                <Text nativeID="screens-admin-students-list-results-description" style={styles.resultsDescription} testID="screens-admin-students-list-results-description">
+                  {hasActiveSearch
+                    ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
+                    : `Mostrando ${students.length} alumnos disponibles en una sola vista.`}
+                </Text>
               </View>
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={studentsQuery.isRefetching}
-                onRefresh={studentsQuery.refetch}
-              />
-            }
-            renderItem={({ item }) => (
-              <AppCard
-                nativeID={`screens-admin-students-list-card-${item.id}`}
-                style={styles.studentCard}
-                testID={`screens-admin-students-list-card-${item.id}`}
-              >
-                <View nativeID={`screens-admin-students-list-card-top-${item.id}`} style={styles.studentTopRow} testID={`screens-admin-students-list-card-top-${item.id}`}>
-                  <View nativeID={`screens-admin-students-list-card-title-block-${item.id}`} style={styles.studentTitleBlock} testID={`screens-admin-students-list-card-title-block-${item.id}`}>
-                      <View nativeID={`screens-admin-students-list-card-title-row-${item.id}`} style={[styles.studentTitleRow, isDesktop ? desktopStyles.studentTitleRow : mobileStyles.studentTitleRow]} testID={`screens-admin-students-list-card-title-row-${item.id}`}>
-                        <Text nativeID={`screens-admin-students-list-card-name-${item.id}`} style={styles.studentName} testID={`screens-admin-students-list-card-name-${item.id}`}>
-                          {item.first_name} {item.last_name}
-                        </Text>
-                        <AppBadge
-                          label={getStudentStatusLabel(item.status)}
-                          nativeID={`screens-admin-students-list-card-status-badge-${item.id}`}
-                          testID={`screens-admin-students-list-card-status-badge-${item.id}`}
-                          tone={getStudentStatusTone(item.status)}
-                        />
-                      </View>
-                      <Text nativeID={`screens-admin-students-list-card-code-${item.id}`} style={styles.studentMeta} testID={`screens-admin-students-list-card-code-${item.id}`}>
-                        Código {item.unique_code} · {studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
-                      </Text>
+              {studentsQuery.isRefetching ? (
+                <AppBadge
+                  label="Actualizando"
+                  nativeID="screens-admin-students-list-results-refresh-badge"
+                  testID="screens-admin-students-list-results-refresh-badge"
+                  tone="info"
+                />
+              ) : null}
+            </View>
+
+            {students.length > 0 ? (
+              <View nativeID="screens-admin-students-list-table" style={styles.table} testID="screens-admin-students-list-table">
+                {isDesktop ? (
+                  <View nativeID="screens-admin-students-list-table-head" style={styles.tableHead} testID="screens-admin-students-list-table-head">
+                    <Text nativeID="screens-admin-students-list-table-head-student" style={[styles.tableHeadCell, styles.studentColumn]} testID="screens-admin-students-list-table-head-student">Alumno</Text>
+                    <Text nativeID="screens-admin-students-list-table-head-branch" style={[styles.tableHeadCell, styles.branchColumn]} testID="screens-admin-students-list-table-head-branch">Sede</Text>
+                    <Text nativeID="screens-admin-students-list-table-head-payment" style={[styles.tableHeadCell, styles.paymentColumn]} testID="screens-admin-students-list-table-head-payment">Próximo pago</Text>
+                    <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
+                    <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
+                    <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
                   </View>
-                    <View nativeID={`screens-admin-students-list-card-badges-${item.id}`} style={styles.studentBadges} testID={`screens-admin-students-list-card-badges-${item.id}`}>
-                      <AppBadge
-                        label={formatPaymentStatus(item.payment_status)}
-                        nativeID={`screens-admin-students-list-card-payment-badge-${item.id}`}
-                        testID={`screens-admin-students-list-card-payment-badge-${item.id}`}
-                        tone={getPaymentTone(item.payment_status)}
-                      />
-                    </View>
+                ) : null}
+
+                <View nativeID="screens-admin-students-list-table-body" style={styles.tableBody} testID="screens-admin-students-list-table-body">
+                  {students.map((item) => (
+                    <StudentListRow
+                      key={item.id}
+                      isDesktop={isDesktop}
+                      onDelete={() => {
+                        setFeedbackMessage(null);
+                        setStudentToDelete(item);
+                      }}
+                      onEdit={() => handleOpenEdit(item)}
+                      onViewDetail={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                      student={item}
+                      studentStatusLabel={getStudentStatusLabel(item.status)}
+                      studentStatusTone={getStudentStatusTone(item.status)}
+                      paymentLabel={formatPaymentStatus(item.payment_status)}
+                      paymentTone={getPaymentTone(item.payment_status)}
+                      branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
+                    />
+                  ))}
                 </View>
-                <View nativeID={`screens-admin-students-list-card-meta-grid-${item.id}`} style={[styles.metaGrid, isDesktop ? desktopStyles.metaGrid : mobileStyles.metaGrid]} testID={`screens-admin-students-list-card-meta-grid-${item.id}`}>
-                  <View nativeID={`screens-admin-students-list-card-next-payment-${item.id}`} style={styles.metaItem} testID={`screens-admin-students-list-card-next-payment-${item.id}`}>
-                    <Text nativeID={`screens-admin-students-list-card-next-payment-label-${item.id}`} style={styles.metaLabel} testID={`screens-admin-students-list-card-next-payment-label-${item.id}`}>Próximo pago</Text>
-                    <Text nativeID={`screens-admin-students-list-card-next-payment-value-${item.id}`} style={styles.studentMetaStrong} testID={`screens-admin-students-list-card-next-payment-value-${item.id}`}>{formatDate(item.next_payment_date)}</Text>
-                  </View>
-                  <View nativeID={`screens-admin-students-list-card-fee-${item.id}`} style={styles.metaItem} testID={`screens-admin-students-list-card-fee-${item.id}`}>
-                    <Text nativeID={`screens-admin-students-list-card-fee-label-${item.id}`} style={styles.metaLabel} testID={`screens-admin-students-list-card-fee-label-${item.id}`}>Mensualidad</Text>
-                    <Text nativeID={`screens-admin-students-list-card-fee-value-${item.id}`} style={styles.studentMetaStrong} testID={`screens-admin-students-list-card-fee-value-${item.id}`}>{formatStudentFee(item)}</Text>
-                  </View>
-                  <View nativeID={`screens-admin-students-list-card-enrollment-${item.id}`} style={styles.metaItem} testID={`screens-admin-students-list-card-enrollment-${item.id}`}>
-                    <Text nativeID={`screens-admin-students-list-card-enrollment-label-${item.id}`} style={styles.metaLabel} testID={`screens-admin-students-list-card-enrollment-label-${item.id}`}>Alta</Text>
-                    <Text nativeID={`screens-admin-students-list-card-enrollment-value-${item.id}`} style={styles.studentMetaStrong} testID={`screens-admin-students-list-card-enrollment-value-${item.id}`}>{formatDate(item.enrollment_date)}</Text>
-                  </View>
-                </View>
-                <View nativeID={`screens-admin-students-list-card-actions-${item.id}`} style={[styles.cardActions, isDesktop ? desktopStyles.cardActions : mobileStyles.cardActions]} testID={`screens-admin-students-list-card-actions-${item.id}`}>
-                  {isDesktop ? (
-                    <>
-                      <StudentRowActionButton
-                        nativeID={`screens-admin-students-list-detail-button-${item.id}`}
-                        label="Ver detalle"
-                        onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
-                      />
-                      <StudentRowActionButton
-                        nativeID={`screens-admin-students-list-edit-button-${item.id}`}
-                        label="Editar"
-                        onPress={() => handleOpenEdit(item)}
-                      />
-                      <StudentRowActionButton
-                        nativeID={`screens-admin-students-list-delete-button-${item.id}`}
-                        label="Dar de baja"
-                        onPress={() => {
-                          setFeedbackMessage(null);
-                          setStudentToDelete(item);
-                        }}
-                        tone="danger"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <AppButton
-                        label="Ver detalle"
-                        nativeID={`screens-admin-students-list-detail-button-${item.id}`}
-                        onPress={() => navigation.navigate("StudentDetail", { studentId: item.id })}
-                        testID={`screens-admin-students-list-detail-button-${item.id}`}
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="Editar"
-                        nativeID={`screens-admin-students-list-edit-button-${item.id}`}
-                        onPress={() => handleOpenEdit(item)}
-                        testID={`screens-admin-students-list-edit-button-${item.id}`}
-                        variant="secondary"
-                      />
-                      <AppButton
-                        label="Dar de baja"
-                        nativeID={`screens-admin-students-list-delete-button-${item.id}`}
-                        onPress={() => {
-                          setFeedbackMessage(null);
-                          setStudentToDelete(item);
-                        }}
-                        testID={`screens-admin-students-list-delete-button-${item.id}`}
-                        variant="danger"
-                      />
-                    </>
-                  )}
-                </View>
-              </AppCard>
-            )}
-            ListEmptyComponent={
+              </View>
+            ) : (
               <View nativeID="screens-admin-students-list-empty-state" style={styles.emptyState} testID="screens-admin-students-list-empty-state">
                 <Text nativeID="screens-admin-students-list-empty-title" style={styles.emptyTitle} testID="screens-admin-students-list-empty-title">No hay alumnos para mostrar</Text>
                 <Text nativeID="screens-admin-students-list-empty-description" style={styles.emptyDescription} testID="screens-admin-students-list-empty-description">
@@ -855,9 +777,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     : "Aún no hay alumnos disponibles en esta organización o sucursal."}
                 </Text>
               </View>
-            }
-            showsVerticalScrollIndicator={false}
-          />
+            )}
+          </AppCard>
         )}
       </View>
       </AdminShell>
@@ -1252,6 +1173,132 @@ function DashboardMetricCard({
   );
 }
 
+function StudentListRow({
+  student,
+  branchName,
+  paymentLabel,
+  paymentTone,
+  studentStatusLabel,
+  studentStatusTone,
+  isDesktop,
+  onViewDetail,
+  onEdit,
+  onDelete,
+}: {
+  student: Student;
+  branchName: string;
+  paymentLabel: string;
+  paymentTone: "success" | "warning" | "danger" | "neutral";
+  studentStatusLabel: string;
+  studentStatusTone: "success" | "warning" | "neutral";
+  isDesktop: boolean;
+  onViewDetail: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  if (isDesktop) {
+    return (
+      <View nativeID={`screens-admin-students-list-row-${student.id}`} style={styles.tableRow} testID={`screens-admin-students-list-row-${student.id}`}>
+        <View nativeID={`screens-admin-students-list-row-student-${student.id}`} style={[styles.tableCell, styles.studentColumn]} testID={`screens-admin-students-list-row-student-${student.id}`}>
+          <Text nativeID={`screens-admin-students-list-row-name-${student.id}`} style={styles.tableStudentName} testID={`screens-admin-students-list-row-name-${student.id}`}>
+            {student.first_name} {student.last_name}
+          </Text>
+          <Text nativeID={`screens-admin-students-list-row-code-${student.id}`} style={styles.tableStudentMeta} testID={`screens-admin-students-list-row-code-${student.id}`}>
+            Código {student.unique_code}
+          </Text>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-branch-${student.id}`} style={[styles.tableCell, styles.branchColumn]} testID={`screens-admin-students-list-row-branch-${student.id}`}>
+          <Text nativeID={`screens-admin-students-list-row-branch-value-${student.id}`} style={styles.tableCellValue} testID={`screens-admin-students-list-row-branch-value-${student.id}`}>{branchName}</Text>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-payment-date-${student.id}`} style={[styles.tableCell, styles.paymentColumn]} testID={`screens-admin-students-list-row-payment-date-${student.id}`}>
+          <Text nativeID={`screens-admin-students-list-row-payment-date-value-${student.id}`} style={styles.tableCellValue} testID={`screens-admin-students-list-row-payment-date-value-${student.id}`}>
+            {formatDate(student.next_payment_date)}
+          </Text>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-fee-${student.id}`} style={[styles.tableCell, styles.feeColumn]} testID={`screens-admin-students-list-row-fee-${student.id}`}>
+          <Text nativeID={`screens-admin-students-list-row-fee-value-${student.id}`} style={styles.tableCellValue} testID={`screens-admin-students-list-row-fee-value-${student.id}`}>{formatStudentFee(student)}</Text>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-status-${student.id}`} style={[styles.tableCell, styles.statusColumn]} testID={`screens-admin-students-list-row-status-${student.id}`}>
+          <View nativeID={`screens-admin-students-list-row-badges-${student.id}`} style={styles.tableBadges} testID={`screens-admin-students-list-row-badges-${student.id}`}>
+            <AppBadge
+              label={studentStatusLabel}
+              nativeID={`screens-admin-students-list-row-status-badge-${student.id}`}
+              testID={`screens-admin-students-list-row-status-badge-${student.id}`}
+              tone={studentStatusTone}
+            />
+            <AppBadge
+              label={paymentLabel}
+              nativeID={`screens-admin-students-list-row-payment-badge-${student.id}`}
+              testID={`screens-admin-students-list-row-payment-badge-${student.id}`}
+              tone={paymentTone}
+            />
+          </View>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-actions-${student.id}`} style={[styles.tableCell, styles.actionsColumn, styles.tableActions]} testID={`screens-admin-students-list-row-actions-${student.id}`}>
+          <StudentRowActionButton nativeID={`screens-admin-students-list-detail-button-${student.id}`} label="Ver detalle" onPress={onViewDetail} />
+          <StudentRowActionButton nativeID={`screens-admin-students-list-edit-button-${student.id}`} label="Editar" onPress={onEdit} />
+          <StudentRowActionButton nativeID={`screens-admin-students-list-delete-button-${student.id}`} label="Dar de baja" onPress={onDelete} tone="danger" />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View nativeID={`screens-admin-students-list-row-mobile-${student.id}`} style={styles.mobileRow} testID={`screens-admin-students-list-row-mobile-${student.id}`}>
+      <View nativeID={`screens-admin-students-list-row-mobile-top-${student.id}`} style={styles.mobileRowTop} testID={`screens-admin-students-list-row-mobile-top-${student.id}`}>
+        <View nativeID={`screens-admin-students-list-row-mobile-copy-${student.id}`} style={styles.mobileRowCopy} testID={`screens-admin-students-list-row-mobile-copy-${student.id}`}>
+          <Text nativeID={`screens-admin-students-list-row-mobile-name-${student.id}`} style={styles.tableStudentName} testID={`screens-admin-students-list-row-mobile-name-${student.id}`}>
+            {student.first_name} {student.last_name}
+          </Text>
+          <Text nativeID={`screens-admin-students-list-row-mobile-code-${student.id}`} style={styles.tableStudentMeta} testID={`screens-admin-students-list-row-mobile-code-${student.id}`}>
+            Código {student.unique_code} · {branchName}
+          </Text>
+        </View>
+        <View nativeID={`screens-admin-students-list-row-mobile-badges-${student.id}`} style={styles.mobileRowBadges} testID={`screens-admin-students-list-row-mobile-badges-${student.id}`}>
+          <AppBadge
+            label={studentStatusLabel}
+            nativeID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`}
+            testID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`}
+            tone={studentStatusTone}
+          />
+          <AppBadge
+            label={paymentLabel}
+            nativeID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`}
+            testID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`}
+            tone={paymentTone}
+          />
+        </View>
+      </View>
+
+      <View nativeID={`screens-admin-students-list-row-mobile-meta-${student.id}`} style={styles.mobileMetaGrid} testID={`screens-admin-students-list-row-mobile-meta-${student.id}`}>
+        <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-payment-date-${student.id}`} label="Próximo pago" value={formatDate(student.next_payment_date)} />
+        <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-fee-${student.id}`} label="Mensualidad" value={formatStudentFee(student)} />
+        <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-enrollment-${student.id}`} label="Alta" value={formatDate(student.enrollment_date)} />
+      </View>
+
+      <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
+        <AppButton label="Ver detalle" nativeID={`screens-admin-students-list-detail-button-${student.id}`} onPress={onViewDetail} testID={`screens-admin-students-list-detail-button-${student.id}`} variant="secondary" />
+        <AppButton label="Editar" nativeID={`screens-admin-students-list-edit-button-${student.id}`} onPress={onEdit} testID={`screens-admin-students-list-edit-button-${student.id}`} variant="secondary" />
+        <AppButton label="Dar de baja" nativeID={`screens-admin-students-list-delete-button-${student.id}`} onPress={onDelete} testID={`screens-admin-students-list-delete-button-${student.id}`} variant="danger" />
+      </View>
+    </View>
+  );
+}
+
+function MobileMetaItem({ idPrefix, label, value }: { idPrefix: string; label: string; value: string }) {
+  return (
+    <View nativeID={idPrefix} style={styles.mobileMetaItem} testID={idPrefix}>
+      <Text nativeID={`${idPrefix}-label`} style={styles.mobileMetaLabel} testID={`${idPrefix}-label`}>{label}</Text>
+      <Text nativeID={`${idPrefix}-value`} style={styles.mobileMetaValue} testID={`${idPrefix}-value`}>{value}</Text>
+    </View>
+  );
+}
+
 function StudentRowActionButton({
   nativeID,
   label,
@@ -1289,12 +1336,10 @@ function StudentRowActionButton({
 
 const styles = StyleSheet.create({
   screenContent: {
-    flexGrow: 1,
+    width: "100%",
   },
   container: {
-    flex: 1,
     gap: spacing.lg,
-    minHeight: 0,
     width: "100%",
   },
   feedbackCard: {
@@ -1431,7 +1476,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     justifyContent: "space-between",
-    marginBottom: spacing.xs,
   },
   resultsHeaderCopy: {
     flex: 1,
@@ -1449,81 +1493,139 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  resultsPanel: {
+    gap: spacing.md,
+    padding: 0,
+  },
   errorBlock: {
     flex: 1,
   },
-  resultsList: {
-    flex: 1,
-    minHeight: 0,
+  table: {
+    width: "100%",
   },
-  listContent: {
-    gap: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  studentCard: {
-    borderRadius: radius.lg,
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    padding: spacing.md,
-  },
-  cardActions: {
-    gap: spacing.xs,
-  },
-  studentTopRow: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  studentTitleBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  studentTitleRow: {
+  tableHead: {
     alignItems: "center",
-    gap: spacing.xs,
-  },
-  studentName: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  studentBadges: {
-    alignItems: "flex-end",
-    gap: spacing.xs,
-  },
-  metaGrid: {
-    gap: spacing.sm,
-  },
-  metaItem: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: 16,
-    borderWidth: 1,
-    flex: 1,
-    gap: 2,
-    paddingHorizontal: spacing.sm,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  metaLabel: {
+  tableHeadCell: {
     color: colors.textMuted,
     fontFamily: typography.headingFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
   },
-  studentMeta: {
+  tableBody: {
+    width: "100%",
+  },
+  tableRow: {
+    alignItems: "center",
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  tableCell: {
+    minWidth: 0,
+  },
+  studentColumn: {
+    flex: 2.2,
+  },
+  branchColumn: {
+    flex: 1.4,
+  },
+  paymentColumn: {
+    flex: 1.2,
+  },
+  feeColumn: {
+    flex: 1.1,
+  },
+  statusColumn: {
+    flex: 1.5,
+  },
+  actionsColumn: {
+    flex: 1.8,
+  },
+  tableStudentName: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  tableStudentMeta: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
+    lineHeight: 18,
   },
-  studentMetaStrong: {
+  tableCellValue: {
     color: colors.text,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
+    lineHeight: 20,
+  },
+  tableBadges: {
+    gap: spacing.xs,
+  },
+  tableActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    justifyContent: "flex-start",
+  },
+  mobileRow: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  mobileRowTop: {
+    gap: spacing.sm,
+  },
+  mobileRowCopy: {
+    gap: 4,
+  },
+  mobileRowBadges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  mobileMetaGrid: {
+    gap: spacing.sm,
+  },
+  mobileMetaItem: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: 2,
+    padding: spacing.sm,
+  },
+  mobileMetaLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  mobileMetaValue: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  mobileRowActions: {
+    gap: spacing.xs,
   },
   compactActionButton: {
     alignItems: "center",
@@ -1682,16 +1784,6 @@ const mobileStyles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "flex-start",
   },
-  metaGrid: {
-    flexDirection: "column",
-  },
-  studentTitleRow: {
-    alignItems: "flex-start",
-    flexDirection: "column",
-  },
-  cardActions: {
-    flexDirection: "column",
-  },
   formGrid: {
     flexDirection: "column",
   },
@@ -1715,17 +1807,6 @@ const desktopStyles = StyleSheet.create({
   },
   resultsHeader: {
     flexDirection: "row",
-  },
-  studentTitleRow: {
-    flexDirection: "row",
-  },
-  metaGrid: {
-    flexDirection: "row",
-  },
-  cardActions: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
   },
   formGrid: {
     flexDirection: "row",
