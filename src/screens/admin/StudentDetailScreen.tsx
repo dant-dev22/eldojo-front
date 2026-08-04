@@ -135,6 +135,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
           onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
+          onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="Preparando la ficha principal y el historial financiero del alumno."
           title="Detalle de alumno"
@@ -162,6 +163,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
           onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
+          onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
           subtitle="No fue posible cargar la informacion del alumno."
           title="Detalle de alumno"
@@ -224,6 +226,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
+        onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
         subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}

@@ -616,6 +616,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
+        onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
         subtitle="consulta y administra el estado del alumnado de tu Dojo"

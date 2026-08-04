@@ -9,7 +9,7 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
-type AdminSection = "dashboard" | "students" | "branches" | "operations" | "dojo";
+type AdminSection = "dashboard" | "students" | "branches" | "operations" | "payments" | "dojo";
 
 interface AdminShellProps extends PropsWithChildren {
   title: string;
@@ -19,6 +19,7 @@ interface AdminShellProps extends PropsWithChildren {
   onGoStudents: () => void;
   onGoBranches: () => void;
   onGoOperations: () => void;
+  onGoPayments: () => void;
   onGoDojo: () => void;
   headerActions?: ReactNode;
   sidebarSummary?: {
@@ -70,6 +71,7 @@ export function AdminShell({
   onGoStudents,
   onGoBranches,
   onGoOperations,
+  onGoPayments,
   onGoDojo,
   headerActions,
   sidebarSummary,
@@ -111,6 +113,13 @@ export function AdminShell({
         onPress: onGoOperations,
       },
       {
+        key: "payments",
+        label: "Pagos",
+        description: "Cobranza, historial y movimientos",
+        icon: "credit-card",
+        onPress: onGoPayments,
+      },
+      {
         key: "dojo",
         label: "Mi Dojo",
         description: "Datos de tu dojo y ajustes rápidos",
@@ -118,7 +127,7 @@ export function AdminShell({
         onPress: onGoDojo,
       },
     ],
-    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoStudents],
+    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoStudents],
   );
 
   const displayName = useMemo(

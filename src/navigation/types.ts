@@ -1,4 +1,4 @@
-export type AdminDashboardSection = "overview" | "branches" | "operations" | "dojo";
+export type AdminDashboardSection = "overview" | "branches" | "operations" | "payments" | "dojo";
 
 export type AuthStackParamList = {
   Home: undefined;

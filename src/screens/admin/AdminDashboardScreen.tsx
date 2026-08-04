@@ -635,6 +635,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(createEmptyPaymentForm());
   const [paymentErrors, setPaymentErrors] = useState<PaymentFormErrors>({});
+  const [paymentsBranchId, setPaymentsBranchId] = useState<string>(scopedBranchId ? String(scopedBranchId) : "");
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialBusy, setTutorialBusy] = useState(false);
   const [tutorialAnchorFrame, setTutorialAnchorFrame] = useState<TutorialAnchorFrame | null>(null);
@@ -1082,6 +1083,29 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       ),
     [payments, scopedBranchId, visibleStudents]
   );
+  const selectedPaymentsBranchId = scopedBranchId ?? (paymentsBranchId ? Number(paymentsBranchId) : null);
+  const selectedPaymentsBranch = useMemo(
+    () => visibleBranches.find((item) => item.id === selectedPaymentsBranchId) ?? null,
+    [selectedPaymentsBranchId, visibleBranches]
+  );
+  const paymentScopedStudents = useMemo(
+    () =>
+      selectedPaymentsBranchId
+        ? visibleStudents.filter((item) => item.branch_id === selectedPaymentsBranchId)
+        : [],
+    [selectedPaymentsBranchId, visibleStudents]
+  );
+  const paymentScopedPayments = useMemo(
+    () =>
+      selectedPaymentsBranchId
+        ? visiblePayments.filter((item) => item.branch_id === selectedPaymentsBranchId)
+        : [],
+    [selectedPaymentsBranchId, visiblePayments]
+  );
+  const paymentScopedPendingPayments = useMemo(
+    () => paymentScopedPayments.filter((item) => item.status === "pending").length,
+    [paymentScopedPayments]
+  );
   const visibleAttendanceRecords = useMemo(
     () =>
       attendanceRecords.filter(
@@ -1090,10 +1114,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           (!scopedBranchId || item.branch_id === scopedBranchId)
       ),
     [attendanceRecords, scopedBranchId, visibleStudents]
-  );
-  const selectedPaymentStudent = useMemo(
-    () => visibleStudents.find((item) => item.id === Number(paymentForm.studentId)) ?? null,
-    [paymentForm.studentId, visibleStudents]
   );
   const selectedAttendanceStudent = useMemo(
     () => visibleStudents.find((item) => item.id === Number(attendanceForm.studentId)) ?? null,
@@ -1132,12 +1152,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const isOverviewSection = focusedSection === "overview";
   const isBranchesSection = focusedSection === "branches";
   const isOperationsSection = focusedSection === "operations";
+  const isPaymentsSection = focusedSection === "payments";
   const isDojoSection = focusedSection === "dojo";
   const activeShellSection =
     focusedSection === "branches"
       ? "branches"
       : focusedSection === "operations"
         ? "operations"
+        : focusedSection === "payments"
+          ? "payments"
         : focusedSection === "dojo"
           ? "dojo"
           : "dashboard";
@@ -1146,6 +1169,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       ? "Sucursales"
       : focusedSection === "operations"
         ? "Asistencia y clases"
+        : focusedSection === "payments"
+          ? "Pagos"
         : focusedSection === "dojo"
           ? "Mi Dojo"
           : "Resumen general";
@@ -1154,11 +1179,29 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       ? "Administra sedes, comparte la liga pública de asistencia y mantén al día la operación de cada sucursal."
       : focusedSection === "operations"
         ? "Controla las asistencias del día, abre el registro público y gestiona las clases activas desde un solo lugar."
+        : focusedSection === "payments"
+          ? "Selecciona una sucursal para revisar cobranza, registrar movimientos y mantener el historial financiero al día."
         : focusedSection === "dojo"
           ? "Consulta los datos principales de tu dojo y edita cada bloque disponible desde esta misma vista."
           : visibleBranches.length === 1
             ? `Resumen operativo de ${visibleBranches[0]?.name ?? "tu sucursal"} con métricas y gráficas de seguimiento.`
             : "Vista consolidada de la academia con métricas, gráficas y accesos rápidos para la operación diaria.";
+  const availablePaymentStudents = isPaymentsSection ? paymentScopedStudents : visibleStudents;
+  const paymentStudentOptions = useMemo(
+    () =>
+      availablePaymentStudents.map((item) => {
+        const branchName = visibleBranches.find((branch) => branch.id === item.branch_id)?.name ?? `Sucursal ${item.branch_id}`;
+        return {
+          label: `${item.first_name} ${item.last_name} · ${item.unique_code} · ${branchName}`,
+          value: String(item.id),
+        };
+      }),
+    [availablePaymentStudents, visibleBranches]
+  );
+  const selectedPaymentStudent = useMemo(
+    () => availablePaymentStudents.find((item) => item.id === Number(paymentForm.studentId)) ?? null,
+    [availablePaymentStudents, paymentForm.studentId]
+  );
   const inactiveStudents = Math.max(visibleStudents.length - activeStudents, 0);
   const inactiveBranches = Math.max(visibleBranches.length - activeBranches, 0);
   const inactiveClasses = Math.max(visibleClasses.length - activeClasses, 0);
@@ -1227,6 +1270,17 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   ]);
 
   useEffect(() => {
+    if (scopedBranchId) {
+      setPaymentsBranchId(String(scopedBranchId));
+      return;
+    }
+
+    setPaymentsBranchId((current) =>
+      current && visibleBranches.some((item) => String(item.id) === current) ? current : ""
+    );
+  }, [scopedBranchId, visibleBranches]);
+
+  useEffect(() => {
     if (!selectedPaymentStudent) {
       return;
     }
@@ -1239,6 +1293,21 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       periodEnd: current.periodEnd || selectedPaymentStudent.next_payment_date || "",
     }));
   }, [selectedPaymentStudent]);
+
+  useEffect(() => {
+    if (!isPaymentsSection || !paymentForm.studentId) {
+      return;
+    }
+
+    if (availablePaymentStudents.some((item) => String(item.id) === paymentForm.studentId)) {
+      return;
+    }
+
+    setPaymentForm((current) => ({
+      ...current,
+      studentId: "",
+    }));
+  }, [availablePaymentStudents, isPaymentsSection, paymentForm.studentId]);
 
   useEffect(() => {
     if (!selectedAttendanceStudent) {
@@ -1326,7 +1395,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   }
 
   function openCreatePaymentModal() {
-    const defaultStudent = visibleStudents[0] ?? null;
+    const defaultStudent = availablePaymentStudents[0] ?? null;
     setFeedback(null);
     setPaymentDialogMode("create");
     setEditingPayment(null);
@@ -1455,7 +1524,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   function handlePaymentSave() {
     const errors = validatePaymentForm(paymentForm);
 
-    const student = visibleStudents.find((item) => item.id === Number(paymentForm.studentId));
+    const student = availablePaymentStudents.find((item) => item.id === Number(paymentForm.studentId));
     if (!student) {
       errors.studentId = "Selecciona un alumno valido dentro del alcance actual.";
     }
@@ -1684,6 +1753,24 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
             />
           </>
+        ) : focusedSection === "payments" ? (
+          <>
+            <AppButton
+              label="Registrar pago"
+              nativeID="screens-admin-dashboard-payments-new-payment-button"
+              onPress={openCreatePaymentModal}
+              testID="screens-admin-dashboard-payments-new-payment-button"
+              variant="success"
+              disabled={!selectedPaymentsBranchId || availablePaymentStudents.length === 0}
+            />
+            <AppButton
+              label="Resumen"
+              nativeID="screens-admin-dashboard-payments-summary-button"
+              onPress={() => navigation.navigate("AdminHome")}
+              testID="screens-admin-dashboard-payments-summary-button"
+              variant="secondary"
+            />
+          </>
         ) : (
           <>
             {canManageOrganization && organization ? (
@@ -1723,6 +1810,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
+        onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
         sidebarSummary={sidebarSummary}
         subtitle={pageSubtitle}
@@ -1844,9 +1932,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                             ? `${visibleBranches.length} sedes`
                             : isOperationsSection
                               ? `${visibleAttendanceRecords.length} asistencias`
+                              : isPaymentsSection
+                                ? selectedPaymentsBranch
+                                  ? `${paymentScopedPayments.length} movimientos`
+                                  : "Selecciona sucursal"
                               : `${activeBranches} sucursales activas`
                         }
-                        tone={isOperationsSection ? "info" : "neutral"}
+                        tone={isOperationsSection ? "info" : isPaymentsSection ? "success" : "neutral"}
                       />
                     </View>
                     <Text nativeID="screens-admin-dashboard-section-focus-description" style={styles.helperText} testID="screens-admin-dashboard-section-focus-description">
@@ -1902,6 +1994,47 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                           onPress={openCreateClassModal}
                           disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
                           tone="primary"
+                        />
+                      </>
+                    ) : isPaymentsSection ? (
+                      <>
+                        <View nativeID="screens-admin-dashboard-focus-payments-branch-filter" style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]} testID="screens-admin-dashboard-focus-payments-branch-filter">
+                          <AppSelect
+                            label="Sucursal"
+                            value={paymentsBranchId}
+                            onValueChange={setPaymentsBranchId}
+                            items={branchOptions}
+                            placeholder={visibleBranches.length > 0 ? "Selecciona una sucursal" : "Sin sucursales disponibles"}
+                            enabled={!scopedBranchId && visibleBranches.length > 0}
+                            nativeID="screens-admin-dashboard-payments-branch-select"
+                            testID="screens-admin-dashboard-payments-branch-select"
+                          />
+                        </View>
+                        <View nativeID="screens-admin-dashboard-focus-payments-summary" style={styles.paymentSummaryRow} testID="screens-admin-dashboard-focus-payments-summary">
+                          <AppBadge
+                            label={`${paymentScopedStudents.length} alumnos`}
+                            nativeID="screens-admin-dashboard-focus-payments-students-badge"
+                            testID="screens-admin-dashboard-focus-payments-students-badge"
+                            tone="neutral"
+                          />
+                          <AppBadge
+                            label={`${paymentScopedPendingPayments} pendientes`}
+                            nativeID="screens-admin-dashboard-focus-payments-pending-badge"
+                            testID="screens-admin-dashboard-focus-payments-pending-badge"
+                            tone={paymentScopedPendingPayments > 0 ? "warning" : "success"}
+                          />
+                        </View>
+                        <QuickAction
+                          description={
+                            selectedPaymentsBranch
+                              ? `Registra un pago para los alumnos de ${selectedPaymentsBranch.name}.`
+                              : "Selecciona una sucursal para habilitar la gestión de pagos."
+                          }
+                          idPrefix="screens-admin-dashboard-focus-new-payment-action"
+                          label="Registrar pago"
+                          onPress={openCreatePaymentModal}
+                          disabled={!selectedPaymentsBranchId || availablePaymentStudents.length === 0}
+                          tone="success"
                         />
                       </>
                     ) : (
@@ -2234,29 +2367,41 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
 
-                {isOverviewSection ? (
+                {isOverviewSection || isPaymentsSection ? (
                 <AnimatedSurface delay={390}>
                   <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
                   <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
-                    <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">Pagos</Text>
+                    <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">
+                      {isPaymentsSection && selectedPaymentsBranch ? `Pagos · ${selectedPaymentsBranch.name}` : "Pagos"}
+                    </Text>
                     <AppButton
                       label="Agregar pago"
                       onPress={openCreatePaymentModal}
                       variant="success"
-                      disabled={visibleStudents.length === 0}
+                      disabled={isPaymentsSection ? !selectedPaymentsBranchId || availablePaymentStudents.length === 0 : visibleStudents.length === 0}
                     />
                   </View>
                   <View style={styles.paymentSummaryRow}>
-                    <AppBadge label={`${visiblePayments.length} movimientos`} tone="neutral" />
                     <AppBadge
-                      label={`${pendingPayments} pendientes`}
-                      tone={pendingPayments > 0 ? "warning" : "success"}
+                      label={`${isPaymentsSection ? paymentScopedPayments.length : visiblePayments.length} movimientos`}
+                      tone="neutral"
+                    />
+                    <AppBadge
+                      label={`${isPaymentsSection ? paymentScopedPendingPayments : pendingPayments} pendientes`}
+                      tone={(isPaymentsSection ? paymentScopedPendingPayments : pendingPayments) > 0 ? "warning" : "success"}
                     />
                   </View>
-                  {visiblePayments.length > 0 ? (
-                    visiblePayments.slice(0, 6).map((payment) => {
+                  {isPaymentsSection && !selectedPaymentsBranch ? (
+                    <View nativeID="screens-admin-dashboard-payments-select-branch-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-select-branch-block">
+                      <Text nativeID="screens-admin-dashboard-payments-select-branch-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-select-branch-title">Selecciona una sucursal</Text>
+                      <Text nativeID="screens-admin-dashboard-payments-select-branch-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-select-branch-description">
+                        Elige una sucursal desde la parte superior para cargar su alumnado y administrar la cobranza.
+                      </Text>
+                    </View>
+                  ) : (isPaymentsSection ? paymentScopedPayments : visiblePayments.slice(0, 6)).length > 0 ? (
+                    (isPaymentsSection ? paymentScopedPayments : visiblePayments.slice(0, 6)).map((payment) => {
                       const student =
-                        visibleStudents.find((item) => item.id === payment.student_id) ?? null;
+                        (isPaymentsSection ? paymentScopedStudents : visibleStudents).find((item) => item.id === payment.student_id) ?? null;
                       const branchName =
                         visibleBranches.find((branch) => branch.id === payment.branch_id)?.name ??
                         `Sucursal ${payment.branch_id}`;
@@ -2305,7 +2450,9 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     <View nativeID="screens-admin-dashboard-payments-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-empty-block">
                       <Text nativeID="screens-admin-dashboard-payments-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-empty-title">Sin pagos registrados</Text>
                       <Text nativeID="screens-admin-dashboard-payments-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-empty-description">
-                        Registra el primer pago del periodo para que el dashboard empiece a mostrar historial financiero.
+                        {isPaymentsSection && selectedPaymentsBranch
+                          ? `Todavía no hay movimientos registrados para ${selectedPaymentsBranch.name}.`
+                          : "Registra el primer pago del periodo para que el dashboard empiece a mostrar historial financiero."}
                       </Text>
                     </View>
                   )}
@@ -2774,9 +2921,9 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             label="Alumno"
             value={paymentForm.studentId}
             onValueChange={(value) => setPaymentForm((current) => ({ ...current, studentId: value }))}
-            items={studentOptions}
+            items={paymentStudentOptions}
             error={paymentErrors.studentId}
-            enabled={!paymentBusy}
+            enabled={!paymentBusy && paymentStudentOptions.length > 0}
           />
           <AppInput
             autoCapitalize="characters"
