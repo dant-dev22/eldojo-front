@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 export function slugifyRouteSegment(value: string): string {
   return value
     .normalize("NFD")
@@ -78,3 +80,23 @@ export const PUBLIC_PAGE_META: Record<
     title: "Iniciar sesion | ElDojo",
   },
 };
+
+export function navigateToPublicPageKey(page: PublicPageKey): void {
+  const meta = PUBLIC_PAGE_META[page];
+  if (!meta) {
+    return;
+  }
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const currentPath = window.location.pathname;
+    const targetPath = meta.path;
+
+    if (currentPath !== targetPath) {
+      window.location.assign(targetPath);
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+}

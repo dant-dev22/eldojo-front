@@ -1,6 +1,7 @@
+import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
 import { publicAttendanceApi } from "@/api/publicAttendanceApi";
@@ -11,9 +12,25 @@ import { AppInput } from "@/components/AppInput";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { AppSelect } from "@/components/AppSelect";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import {
+  agedWood as woodAged,
+  agedWoodSoft as woodSoftAccent,
+  colors,
+  goldenYellow as amber,
+  goldenYellowSoft as amberSoft,
+  indigoBlue as indigo,
+  indigoBlueSoft as indigoSoft,
+  judogiRed,
+  judogiRedSoft as judogiRedSoft,
+  radius,
+  shadows,
+  spacing,
+  tatamiGreen as matchaGreen,
+  tatamiGreenSoft as matchaGreenSoft,
+  typography,
+} from "@/constants/theme";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { PUBLIC_PAGE_META, type PublicPageKey } from "@/navigation/publicRoutes";
+import { navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 
 import type {
@@ -29,12 +46,6 @@ interface PublicAttendanceScreenProps {
 
 function formatRouteLabel(routeParams: PublicAttendanceRouteParams) {
   return `${routeParams.organizationSlug} / ${routeParams.branchSlug}`;
-}
-
-function navigateToPublicPage(page: PublicPageKey) {
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    window.location.assign(PUBLIC_PAGE_META[page].path);
-  }
 }
 
 const WEEKDAY_TO_INDEX: Record<string, number> = {
@@ -341,6 +352,8 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       ? `Alumno encontrado: ${resolvedStudent.student_name}`
       : null;
 
+  const { isDesktop } = useResponsiveLayout();
+
   if (!resolvedRoute) {
     return (
       <StatusView
@@ -350,125 +363,256 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     );
   }
 
-  if (contextQuery.isLoading) {
-    return (
-      <StatusView
-        title="Cargando asistencia"
-        description={`Preparando el acceso publico para ${formatRouteLabel(resolvedRoute)}.`}
-        loading
-      />
-    );
-  }
-
-  if (contextQuery.isError || !contextQuery.data) {
-    return (
-      <StatusView
-        title="No fue posible abrir la asistencia"
-        description={getErrorMessage(contextQuery.error)}
-      />
-    );
-  }
-
   return (
     <PublicPageChrome
-      actionItems={[
-        { key: "create-account", label: "Crear cuenta", onPress: () => navigateToPublicPage("createAccount"), variant: "primary" },
-        { key: "sign-in", label: "Iniciar sesion", onPress: () => navigateToPublicPage("signIn"), variant: "secondary" },
-      ]}
-      contentContainerStyle={[styles.screenContent, { alignItems: "center" }]}
-      contentMaxWidth={contentMaxWidth}
       idPrefix="screens-public-attendance"
       navItems={[
-        { key: "home", label: "Inicio", onPress: () => navigateToPublicPage("home") },
-        { key: "about", label: "Acerca", onPress: () => navigateToPublicPage("about") },
-        { key: "events", label: "Eventos", onPress: () => navigateToPublicPage("events") },
+        { key: "home", label: "Inicio", onPress: () => navigateToPublicPageKey("home") },
+        { key: "about", label: "Acerca de", onPress: () => navigateToPublicPageKey("about") },
+        { key: "events", label: "Eventos", onPress: () => navigateToPublicPageKey("events") },
+        { key: "stores", label: "Tiendas", onPress: () => navigateToPublicPageKey("stores") },
       ]}
-      onBrandPress={() => navigateToPublicPage("home")}
+      onBrandPress={() => navigateToPublicPageKey("home")}
+      onGoCreateAccount={() => navigateToPublicPageKey("createAccount")}
+      onGoSignIn={() => navigateToPublicPageKey("signIn")}
+      onGoDashboard={() => navigateToPublicPageKey("home")}
+      showAuthControls={true}
+      screenScrollable={true}
+      contentContainerStyle={[styles.screenContent, { alignItems: "center" }]}
+      contentMaxWidth={contentMaxWidth}
     >
-      <View nativeID="screens-public-attendance-layout" style={[styles.layout, { maxWidth: contentMaxWidth }]} testID="screens-public-attendance-layout">
+      <View nativeID="screens-public-attendance-layout" style={[styles.layout, { maxWidth: isDesktop ? 880 : contentMaxWidth }]} testID="screens-public-attendance-layout">
+        <View nativeID="screens-public-attendance-hero" style={styles.heroRow} testID="screens-public-attendance-hero">
+          <View nativeID="screens-public-attendance-hero-icon-wrap" style={styles.heroIconWrap} testID="screens-public-attendance-hero-icon-wrap">
+            <Text nativeID="screens-public-attendance-hero-glyph" style={styles.heroBrandGlyph} testID="screens-public-attendance-hero-glyph">弐</Text>
+          </View>
+          <View nativeID="screens-public-attendance-hero-copy" style={styles.heroCopy} testID="screens-public-attendance-hero-copy">
+            <View nativeID="screens-public-attendance-hero-tag" style={styles.heroTagPill} testID="screens-public-attendance-hero-tag">
+              <Feather name="clock" size={13} color={judogiRed} />
+              <Text style={styles.heroTagText}>Registro · Asistencia</Text>
+            </View>
+            {contextQuery.isSuccess && contextQuery.data ? (
+              <>
+                <Text nativeID="screens-public-attendance-hero-title" style={styles.heroTitle} testID="screens-public-attendance-hero-title">{contextQuery.data.organization_name}</Text>
+                <Text nativeID="screens-public-attendance-hero-subtitle" style={styles.heroSubtitle} testID="screens-public-attendance-hero-subtitle">
+                  {contextQuery.data.branch_name} · Sucursal activa
+                </Text>
+              </>
+            ) : contextQuery.isLoading ? (
+              <>
+                <View nativeID="screens-public-attendance-hero-skel-title" style={[styles.skeletonBlock, { width: 240, height: 28, marginTop: spacing.xs }]} testID="screens-public-attendance-hero-skel-title" />
+                <View nativeID="screens-public-attendance-hero-skel-sub" style={[styles.skeletonBlock, { width: 300, height: 16, marginTop: spacing.sm }]} testID="screens-public-attendance-hero-skel-sub" />
+              </>
+            ) : null}
+            <View nativeID="screens-public-attendance-hero-divider" style={styles.heroDivider} testID="screens-public-attendance-hero-divider" />
+            <Text nativeID="screens-public-attendance-hero-tagline" style={styles.heroTagline} testID="screens-public-attendance-hero-tagline">
+              Sencillez · Orden · Dojo
+            </Text>
+          </View>
+        </View>
+
         <View nativeID="screens-public-attendance-main-column" style={styles.mainColumn} testID="screens-public-attendance-main-column">
-          {result ? (
+          {contextQuery.isLoading ? (
+            <View nativeID="screens-public-attendance-skel-card" style={styles.formCard} testID="screens-public-attendance-skel-card">
+              <View nativeID="screens-public-attendance-skel-ctx" style={styles.skeletonContextBlock} testID="screens-public-attendance-skel-ctx">
+                <View style={[styles.skeletonBlock, { width: 140, height: 22 }]} />
+                <View style={[styles.skeletonBlock, { width: 220, height: 12, marginTop: spacing.md }]} />
+              </View>
+              <View style={[styles.skeletonBlock, { width: "100%", height: 52 }]} />
+              <View style={[styles.skeletonBlock, { width: "100%", height: 52 }]} />
+              <View style={[styles.skeletonBlock, { width: "100%", height: 48, borderRadius: radius.lg }]} />
+            </View>
+          ) : contextQuery.isError || !contextQuery.data ? (
+            <StatusView
+              title="No fue posible abrir la asistencia"
+              description={getErrorMessage(contextQuery.error)}
+            />
+          ) : result ? (
             <AppCard nativeID="screens-public-attendance-success-card" style={styles.successCard} testID="screens-public-attendance-success-card">
-              <AppBadge label="Asistencia registrada" nativeID="screens-public-attendance-success-badge" testID="screens-public-attendance-success-badge" tone="success" />
+              <View nativeID="screens-public-attendance-success-top" style={styles.successTopRow} testID="screens-public-attendance-success-top">
+                <View nativeID="screens-public-attendance-success-icon" style={styles.successIconWrap} testID="screens-public-attendance-success-icon">
+                  <Feather name="check-circle" size={22} color={matchaGreen} />
+                </View>
+                <AppBadge label="Asistencia registrada" nativeID="screens-public-attendance-success-badge" testID="screens-public-attendance-success-badge" tone="success" />
+              </View>
+              <View nativeID="screens-public-attendance-success-divider" style={styles.successDivider} testID="screens-public-attendance-success-divider" />
               <Text nativeID="screens-public-attendance-success-title" style={styles.successTitle} testID="screens-public-attendance-success-title">{result.message}</Text>
-              <Text nativeID="screens-public-attendance-success-student" style={styles.successText} testID="screens-public-attendance-success-student">Alumno: {result.student_name}</Text>
-              <Text nativeID="screens-public-attendance-success-class" style={styles.successText} testID="screens-public-attendance-success-class">
-                Clase: {result.class_name ?? selectedClassName ?? "Clase general"}
-              </Text>
-              <Text nativeID="screens-public-attendance-success-attendance-id" style={styles.successText} testID="screens-public-attendance-success-attendance-id">Folio: #{result.attendance_id}</Text>
+              <View nativeID="screens-public-attendance-success-meta" style={styles.successMetaGrid} testID="screens-public-attendance-success-meta">
+                <View style={styles.successMetaItem}>
+                  <Feather name="user" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Alumno</Text>
+                  <Text style={styles.successTextValue}>{result.student_name}</Text>
+                </View>
+                <View style={styles.successMetaItem}>
+                  <Feather name="calendar" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Clase</Text>
+                  <Text style={styles.successTextValue}>{result.class_name ?? selectedClassName ?? "Clase general"}</Text>
+                </View>
+                <View style={styles.successMetaItem}>
+                  <Feather name="hash" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Folio</Text>
+                  <Text style={styles.successTextValue}>#{result.attendance_id}</Text>
+                </View>
+              </View>
               <Text nativeID="screens-public-attendance-success-countdown" style={styles.countdownText} testID="screens-public-attendance-success-countdown">
-                Reiniciando el formulario en {successCountdown ?? 0} segundo{successCountdown === 1 ? "" : "s"}.
+                Reiniciando en {successCountdown ?? 0} segundo{successCountdown === 1 ? "" : "s"}…
               </Text>
             </AppCard>
           ) : (
             <>
               <AppCard nativeID="screens-public-attendance-form-card" style={styles.formCard} testID="screens-public-attendance-form-card">
+                <View nativeID="screens-public-attendance-form-divider-top" style={styles.formCardDivider} testID="screens-public-attendance-form-divider-top" />
                 <View nativeID="screens-public-attendance-context" style={styles.contextBlock} testID="screens-public-attendance-context">
-                  <AppBadge label="Registrar asistencia" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="info" />
-                  <Text nativeID="screens-public-attendance-context-title" style={styles.contextTitle} testID="screens-public-attendance-context-title">{contextQuery.data.organization_name}</Text>
-                  <Text nativeID="screens-public-attendance-context-subtitle" style={styles.contextSubtitle} testID="screens-public-attendance-context-subtitle">{contextQuery.data.branch_name}</Text>
+                  <View style={styles.contextBadgeRow}>
+                    <View style={styles.contextBadgeIconWrap}>
+                      <Feather name="book-open" size={13} color={judogiRed} />
+                    </View>
+                    <AppBadge label="Formulario de asistencia" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="warning" />
+                  </View>
+                  <Text nativeID="screens-public-attendance-section-title" style={styles.sectionTitle} testID="screens-public-attendance-section-title">
+                    Registrar asistencia
+                  </Text>
+                  <Text nativeID="screens-public-attendance-section-description" style={styles.sectionDescription} testID="screens-public-attendance-section-description">
+                    Elige la clase actual y escribe el ID del alumno. El sistema confirmara su identidad antes de marcar la asistencia.
+                  </Text>
                 </View>
-                <Text nativeID="screens-public-attendance-section-title" style={styles.sectionTitle} testID="screens-public-attendance-section-title">Registrar asistencia</Text>
-                <Text nativeID="screens-public-attendance-section-description" style={styles.sectionDescription} testID="screens-public-attendance-section-description">
-                  Escribe el ID del alumno o su codigo. Cuando el sistema lo encuentre, podras confirmar la asistencia manualmente.
-                </Text>
-                <AppSelect
-                  enabled={!registerMutation.isPending}
-                  items={classItems}
-                  label="Clase disponible"
-                  nativeID="screens-public-attendance-class-select"
-                  onValueChange={(value) => {
-                    setSelectedClassId(value);
-                    setFormError(null);
-                  }}
-                  placeholder="Selecciona una clase"
-                  testID="screens-public-attendance-class-select"
-                  value={selectedClassId}
-                />
+
+                <View nativeID="screens-public-attendance-select-wrap" style={styles.fieldWrap} testID="screens-public-attendance-select-wrap">
+                  <AppSelect
+                    enabled={!registerMutation.isPending}
+                    items={classItems}
+                    label="Clase disponible"
+                    nativeID="screens-public-attendance-class-select"
+                    onValueChange={(value) => {
+                      setSelectedClassId(value);
+                      setFormError(null);
+                    }}
+                    placeholder="Selecciona una clase"
+                    testID="screens-public-attendance-class-select"
+                    value={selectedClassId}
+                  />
+                </View>
+
                 {selectedClassName ? (
                   <View nativeID="screens-public-attendance-selection-summary" style={styles.selectionSummary} testID="screens-public-attendance-selection-summary">
                     <AppBadge
-                      label={selectedClassId === recommendedClassId ? "Clase sugerida" : "Clase elegida"}
+                      label={selectedClassId === recommendedClassId ? "Sugerida · ahora" : "Clase elegida"}
                       nativeID="screens-public-attendance-selection-summary-badge"
                       testID="screens-public-attendance-selection-summary-badge"
                       tone="success"
                     />
-                    <Text nativeID="screens-public-attendance-selection-summary-text" style={styles.selectionSummaryText} testID="screens-public-attendance-selection-summary-text">{selectedClassName}</Text>
+                    <View style={styles.selectionTextWrap}>
+                      <Feather name="chevron-right" size={13} color={indigo} />
+                      <Text style={styles.selectionSummaryText}>{selectedClassName}</Text>
+                    </View>
                   </View>
                 ) : null}
-                <AppInput
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  editable={!registerMutation.isPending}
-                  keyboardType="default"
-                  label="ID o codigo del alumno"
-                  nativeID="screens-public-attendance-student-input"
-                  onChangeText={(value) => {
-                    setStudentIdentifier(value);
-                    setFormError(null);
-                  }}
-                  placeholder="Ejemplo: 125 o ELD-A1B2"
-                  testID="screens-public-attendance-student-input"
-                  value={studentIdentifier}
-                />
-                {lookupHelperText ? <Text nativeID="screens-public-attendance-helper" style={styles.helper} testID="screens-public-attendance-helper">{lookupHelperText}</Text> : null}
+
+                <View nativeID="screens-public-attendance-input-wrap" style={styles.fieldWrap} testID="screens-public-attendance-input-wrap">
+                  <AppInput
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    editable={!registerMutation.isPending}
+                    keyboardType="default"
+                    label="ID o codigo del alumno"
+                    nativeID="screens-public-attendance-student-input"
+                    onChangeText={(value) => {
+                      setStudentIdentifier(value);
+                      setFormError(null);
+                    }}
+                    placeholder="Ejemplo: 125 o ELD-A1B2"
+                    testID="screens-public-attendance-student-input"
+                    value={studentIdentifier}
+                  />
+                </View>
+
+                {lookupHelperText ? (
+                  <View nativeID="screens-public-attendance-helper" style={styles.helperRow} testID="screens-public-attendance-helper">
+                    <Feather
+                      name={studentLookupQuery.isFetching ? "loader" : "search"}
+                      size={13}
+                      color={studentLookupQuery.isFetching ? indigo : woodAged}
+                    />
+                    <Text style={styles.helper}>{lookupHelperText}</Text>
+                  </View>
+                ) : null}
+
+                {studentLookupQuery.isFetching ? (
+                  <View nativeID="screens-public-attendance-lookup-skel" style={styles.lookupSkeleton} testID="screens-public-attendance-lookup-skel">
+                    <View style={[styles.skeletonBlock, { width: 40, height: 40, borderRadius: 999 }]} />
+                    <View style={{ flex: 1, gap: spacing.xs }}>
+                      <View style={[styles.skeletonBlock, { width: 180, height: 16 }]} />
+                      <View style={[styles.skeletonBlock, { width: 120, height: 12 }]} />
+                    </View>
+                  </View>
+                ) : null}
+
                 {resolvedStudent ? (
                   <View nativeID="screens-public-attendance-student-summary" style={styles.studentSummary} testID="screens-public-attendance-student-summary">
-                    <AppBadge label="Alumno encontrado" nativeID="screens-public-attendance-student-summary-badge" testID="screens-public-attendance-student-summary-badge" tone="info" />
-                    <Text nativeID="screens-public-attendance-student-summary-name" style={styles.studentSummaryName} testID="screens-public-attendance-student-summary-name">{resolvedStudent.student_name}</Text>
-                    <Text nativeID="screens-public-attendance-student-summary-meta" style={styles.studentSummaryMeta} testID="screens-public-attendance-student-summary-meta">Codigo: {resolvedStudent.unique_code}</Text>
+                    <View nativeID="screens-public-attendance-student-avatar" style={styles.studentAvatar} testID="screens-public-attendance-student-avatar">
+                      <Text style={styles.studentAvatarText}>
+                        {resolvedStudent.student_name
+                          .split(" ")
+                          .map((segment) => segment[0])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={styles.studentSummaryBadgeRow}>
+                        <Feather name="check" size={12} color={matchaGreen} />
+                        <Text style={[styles.helper, { color: matchaGreen }]}>Alumno confirmado</Text>
+                      </View>
+                      <Text nativeID="screens-public-attendance-student-summary-name" style={styles.studentSummaryName} testID="screens-public-attendance-student-summary-name">
+                        {resolvedStudent.student_name}
+                      </Text>
+                      <Text nativeID="screens-public-attendance-student-summary-meta" style={styles.studentSummaryMeta} testID="screens-public-attendance-student-summary-meta">
+                        Codigo · {resolvedStudent.unique_code}
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
-                {studentLookupError ? <Text nativeID="screens-public-attendance-student-error" style={styles.error} testID="screens-public-attendance-student-error">{studentLookupError}</Text> : null}
-                {formError ? <Text nativeID="screens-public-attendance-form-error" style={styles.error} testID="screens-public-attendance-form-error">{formError}</Text> : null}
-                <AppButton
-                  disabled={!resolvedStudent || !selectedClassId}
-                  label="Registrar asistencia"
-                  loading={registerMutation.isPending}
-                  nativeID="screens-public-attendance-submit-button"
-                  onPress={submitAttendance}
-                  testID="screens-public-attendance-submit-button"
-                />
+
+                {studentLookupError ? (
+                  <View nativeID="screens-public-attendance-student-error" style={styles.errorRow} testID="screens-public-attendance-student-error">
+                    <Feather name="alert-circle" size={13} color={judogiRed} />
+                    <Text style={styles.error}>{studentLookupError}</Text>
+                  </View>
+                ) : null}
+                {formError ? (
+                  <View nativeID="screens-public-attendance-form-error" style={styles.errorRow} testID="screens-public-attendance-form-error">
+                    <Feather name="alert-triangle" size={13} color={judogiRed} />
+                    <Text style={styles.error}>{formError}</Text>
+                  </View>
+                ) : null}
+
+                <View nativeID="screens-public-attendance-submit-wrap" style={styles.submitWrap} testID="screens-public-attendance-submit-wrap">
+                  <Pressable
+                    disabled={!resolvedStudent || !selectedClassId || registerMutation.isPending}
+                    style={(state) => {
+                      const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                      const hoverState = Boolean(hovered) || Boolean(state.pressed);
+
+                      return [
+                        styles.submitButton,
+                        !resolvedStudent || !selectedClassId ? styles.submitButtonDisabled : null,
+                        hoverState ? styles.submitButtonHover : null,
+                      ];
+                    }}
+                    onPress={submitAttendance}
+                  >
+                    {registerMutation.isPending ? (
+                      <Feather name="loader" size={16} color={colors.surface} />
+                    ) : (
+                      <Feather name="user-check" size={16} color={colors.surface} />
+                    )}
+                    <Text style={styles.submitButtonText}>
+                      {registerMutation.isPending ? "Registrando…" : "Registrar asistencia"}
+                    </Text>
+                  </Pressable>
+                </View>
               </AppCard>
             </>
           )}
@@ -480,79 +624,262 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
 const styles = StyleSheet.create({
   screenContent: {
-    paddingBottom: spacing["2xl"],
+    paddingBottom: 48,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    width: "100%",
   },
   layout: {
+    alignItems: "center",
+    gap: spacing.xl,
     width: "100%",
+  },
+  heroRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.lg,
+    justifyContent: "center",
+    width: "100%",
+  },
+  heroIconWrap: {
+    alignItems: "center",
+    backgroundColor: judogiRedSoft,
+    borderColor: "rgba(198, 40, 40, 0.24)",
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: "center",
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: shadows.cardElevated.shadowOffset,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    width: 56,
+  },
+  heroBrandGlyph: {
+    color: judogiRed,
+    fontFamily: typography.headingFamily,
+    fontSize: 30,
+    fontWeight: "900",
+    lineHeight: 32,
+  },
+  heroCopy: {
+    alignItems: "flex-start",
+    flex: 1,
+    gap: spacing.xs,
+  },
+  heroTagPill: {
+    alignItems: "center",
+    backgroundColor: amberSoft,
+    borderColor: "rgba(249, 168, 37, 0.3)",
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  heroTagText: {
+    color: amber,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  heroTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
+    fontWeight: "900",
+    lineHeight: 32,
+    marginTop: spacing.xs,
+  },
+  heroSubtitle: {
+    color: woodAged,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  heroDivider: {
+    alignSelf: "center",
+    backgroundColor: "rgba(141,110,99,0.14)",
+    borderColor: woodAged,
+    borderRadius: 999,
+    height: 2,
+    marginTop: spacing.md,
+    width: 56,
+  },
+  heroTagline: {
+    color: woodAged,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+    marginTop: spacing.sm,
+    opacity: 0.75,
+  },
+  skeletonBlock: {
+    backgroundColor: woodSoftAccent,
+    borderRadius: radius.md,
+    opacity: 0.7,
+  },
+  skeletonContextBlock: {
+    backgroundColor: woodSoftAccent,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  lookupSkeleton: {
+    alignItems: "center",
+    backgroundColor: woodSoftAccent,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md,
   },
   mainColumn: {
     width: "100%",
   },
+  formCardDivider: {
+    alignSelf: "center",
+    backgroundColor: judogiRed,
+    borderRadius: 999,
+    height: 4,
+    marginBottom: spacing.lg,
+    width: 56,
+  },
   formCard: {
+    backgroundColor: colors.surface,
+    borderColor: "rgba(141,110,99,0.14)",
+    borderRadius: 24,
+    borderWidth: 1,
     gap: spacing.md,
+    padding: spacing.xl,
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: shadows.cardElevated.shadowOffset,
+    shadowOpacity: 0.06,
+    shadowRadius: 22,
   },
   contextBlock: {
     gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  contextTitle: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 24,
-    fontWeight: "800",
+  contextBadgeRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
   },
-  contextSubtitle: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
+  contextBadgeIconWrap: {
+    alignItems: "center",
+    backgroundColor: judogiRedSoft,
+    borderRadius: 999,
+    height: 24,
+    justifyContent: "center",
+    width: 24,
   },
   sectionTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "900",
+    lineHeight: 28,
   },
   sectionDescription: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
+  },
+  fieldWrap: {
+    marginTop: spacing.sm,
   },
   selectionSummary: {
     alignItems: "center",
+    backgroundColor: matchaGreenSoft,
+    borderColor: "rgba(85, 139, 47, 0.22)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+    padding: spacing.md,
+  },
+  selectionTextWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    flex: 1,
+    gap: 4,
   },
   selectionSummaryText: {
     color: colors.text,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
+    fontWeight: "600",
+  },
+  helperRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
   },
   helper: {
-    color: colors.info,
+    color: indigo,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 18,
   },
+  errorRow: {
+    alignItems: "center",
+    backgroundColor: judogiRedSoft,
+    borderColor: "rgba(198, 40, 40, 0.22)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   error: {
-    color: colors.danger,
+    color: judogiRed,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
   },
   studentSummary: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    alignItems: "center",
+    backgroundColor: indigoSoft,
+    borderColor: "rgba(26, 35, 126, 0.22)",
+    borderRadius: radius.lg,
     borderWidth: 1,
-    gap: spacing.sm,
+    flexDirection: "row",
+    gap: spacing.md,
     padding: spacing.md,
+  },
+  studentAvatar: {
+    alignItems: "center",
+    backgroundColor: indigo,
+    borderRadius: 999,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  studentAvatarText: {
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  studentSummaryBadgeRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
   },
   studentSummaryName: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
+    lineHeight: 22,
   },
   studentSummaryMeta: {
     color: colors.textMuted,
@@ -560,27 +887,117 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  successCard: {
-    backgroundColor: colors.successSoft,
-    borderColor: colors.success,
+  submitWrap: {
+    marginTop: spacing.sm,
+    width: "100%",
+  },
+  submitButton: {
+    alignItems: "center",
+    backgroundColor: judogiRed,
+    borderColor: judogiRed,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
     gap: spacing.sm,
+    justifyContent: "center",
+    paddingVertical: spacing.md,
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    width: "100%",
+  },
+  submitButtonHover: {
+    backgroundColor: "rgba(198, 40, 40, 0.92)",
+    shadowOpacity: 0.28,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "rgba(141,110,99,0.14)",
+    borderColor: colors.border,
+    opacity: 0.8,
+    shadowOpacity: 0,
+  },
+  submitButtonText: {
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  successCard: {
+    backgroundColor: matchaGreenSoft,
+    borderColor: "rgba(85, 139, 47, 0.28)",
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: spacing.lg,
+    padding: spacing.xl,
+  },
+  successTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  successIconWrap: {
+    alignItems: "center",
+    backgroundColor: matchaGreen,
+    borderRadius: 999,
+    height: 40,
+    justifyContent: "center",
+    shadowColor: matchaGreen,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    width: 40,
+  },
+  successDivider: {
+    alignSelf: "center",
+    backgroundColor: matchaGreen,
+    borderRadius: 999,
+    height: 3,
+    opacity: 0.7,
+    width: 44,
   },
   successTitle: {
-    color: colors.success,
-    fontFamily: typography.headingFamily,
-    fontSize: 24,
-    fontWeight: "800",
-  },
-  successText: {
     color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 28,
+    textAlign: "center",
+  },
+  successMetaGrid: {
+    gap: spacing.sm,
+  },
+  successMetaItem: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  successTextLabel: {
+    color: woodAged,
     fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+    width: 68,
+  },
+  successTextValue: {
+    color: colors.text,
+    flex: 1,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "700",
   },
   countdownText: {
-    color: colors.success,
-    fontFamily: typography.headingFamily,
-    fontSize: 14,
+    color: matchaGreen,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
     fontWeight: "700",
+    textAlign: "center",
   },
 });
