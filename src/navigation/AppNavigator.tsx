@@ -20,7 +20,7 @@ import {
 } from "@/screens/auth/PublicSiteScreen";
 import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
 import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
-import { PUBLIC_SCREEN_PATHS } from "@/navigation/publicRoutes";
+import { PUBLIC_HOME_ALIAS_PATHS, PUBLIC_SCREEN_PATHS } from "@/navigation/publicRoutes";
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser } from "@/utils/roles";
@@ -216,6 +216,26 @@ export function AppNavigator() {
 
     consumeJustLoggedIn();
   }, [justLoggedIn, status, user, showPostConfirmation, consumeJustLoggedIn]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (typeof window === "undefined") return;
+
+    const rawPath = window.location.pathname.replace(/\/+$/, "") || "/";
+    const isHomeAlias = PUBLIC_HOME_ALIAS_PATHS.some(
+      (alias) => (alias.replace(/\/+$/, "") || "/") === rawPath
+    );
+    if (!isHomeAlias) return;
+    if (window.location.pathname === "/" || window.location.pathname === "") {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `/${PUBLIC_SCREEN_PATHS.Home}${search}${hash}`
+      );
+    }
+  }, []);
 
   const showSplash =
     status === "loading" ||

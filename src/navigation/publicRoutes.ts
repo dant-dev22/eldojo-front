@@ -31,6 +31,13 @@ export const PUBLIC_SCREEN_PATHS = {
   ConfirmAccount: PUBLIC_ROUTE_SEGMENTS.confirmAccount,
 } as const;
 
+export const PUBLIC_HOME_ALIAS_PATHS: readonly string[] = [
+  "",
+  "/",
+  `/${PUBLIC_ROUTE_SEGMENTS.home}`,
+  `/${PUBLIC_ROUTE_SEGMENTS.home}/`,
+] as const;
+
 export type PublicScreenName = keyof typeof PUBLIC_SCREEN_PATHS;
 export type PublicPageKey = "home" | "about" | "events" | "stores" | "createAccount" | "signIn";
 
@@ -53,35 +60,43 @@ export const PUBLIC_PAGE_META: Record<
 > = {
   home: {
     description: "Software para academias de artes marciales con control de alumnos, pagos, clases, sucursales y asistencia desde una sola plataforma.",
-    path: `/${PUBLIC_SCREEN_PATHS.Home}`,
+    path: "/",
     title: "ElDojo | Software para academias de artes marciales",
   },
   about: {
     description: "Conoce como ElDojo ayuda a academias de MMA, BJJ y judo a ordenar su operacion diaria con una interfaz clara y profesional.",
-    path: `/${PUBLIC_SCREEN_PATHS.About}`,
+    path: `/${PUBLIC_ROUTE_SEGMENTS.about}`,
     title: "Acerca de ElDojo | Gestion para academias",
   },
   events: {
     description: "Explora la seccion de eventos de ElDojo para opens, seminarios y funciones destacadas de academias de artes marciales.",
-    path: `/${PUBLIC_SCREEN_PATHS.Events}`,
+    path: `/${PUBLIC_ROUTE_SEGMENTS.events}`,
     title: "Eventos para academias | ElDojo",
   },
   stores: {
     description: "Descubre la vitrina de tiendas, aliados y equipo de combate para academias dentro de la experiencia publica de ElDojo.",
-    path: `/${PUBLIC_SCREEN_PATHS.Stores}`,
+    path: `/${PUBLIC_ROUTE_SEGMENTS.stores}`,
     title: "Tiendas y aliados | ElDojo",
   },
   createAccount: {
     description: "Crea tu cuenta en ElDojo y registra tu academia para empezar a operar alumnos, pagos, clases y asistencia en minutos.",
-    path: `/${PUBLIC_SCREEN_PATHS.CreateAccount}`,
+    path: `/${PUBLIC_ROUTE_SEGMENTS.createAccount}`,
     title: "Crear cuenta | ElDojo",
   },
   signIn: {
     description: "Inicia sesion en ElDojo para entrar al panel operativo de tu academia y gestionar alumnos, pagos y asistencia.",
-    path: `/${PUBLIC_SCREEN_PATHS.SignIn}`,
+    path: `/${PUBLIC_ROUTE_SEGMENTS.signIn}`,
     title: "Iniciar sesion | ElDojo",
   },
 };
+
+type SectionScrollFn = (target: "home" | "about" | "events" | "stores") => void;
+
+let _registeredHomeScrollControls: SectionScrollFn | null = null;
+
+export function registerHomeScrollControls(fn: SectionScrollFn | null): void {
+  _registeredHomeScrollControls = fn ?? null;
+}
 
 export function navigateToPublicPageKey(page: PublicPageKey): void {
   const meta = PUBLIC_PAGE_META[page];
@@ -90,23 +105,49 @@ export function navigateToPublicPageKey(page: PublicPageKey): void {
   }
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
-    const sectionKey = page === "about" || page === "events" || page === "stores" ? page : null;
-
-    if (sectionKey) {
-      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, sectionKey);
-    } else {
-      window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
-    }
-
-    const currentPath = window.location.pathname;
+    const isSectionPage = page === "about" || page === "events" || page === "stores";
+    const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
     const homePath = PUBLIC_PAGE_META.home.path;
+    const onHomeLikePath =
+      PUBLIC_HOME_ALIAS_PATHS.some(
+        (alias) => (alias.replace(/\/+$/, "") || "/") === currentPath
+      );
 
-    if (currentPath !== homePath) {
-      window.location.assign(homePath);
+    if (page === "home") {
+      window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
+      if (!onHomeLikePath) {
+        window.location.assign(homePath);
+        return;
+      }
+      if (_registeredHomeScrollControls) {
+        _registeredHomeScrollControls("home");
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      window.history.replaceState(window.history.state, "", homePath);
       return;
     }
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (isSectionPage) {
+      const sectionKey = page as "about" | "events" | "stores";
+      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, sectionKey);
+      if (!onHomeLikePath) {
+        window.location.assign(homePath);
+        return;
+      }
+      if (_registeredHomeScrollControls) {
+        _registeredHomeScrollControls(sectionKey);
+        window.history.replaceState(window.history.state, "", `${homePath}#${sectionKey}`);
+        window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
+      } else {
+        window.history.replaceState(window.history.state, "", `${homePath}#${sectionKey}`);
+        window.location.reload();
+      }
+      return;
+    }
+
+    window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
+    window.location.assign(meta.path);
     return;
   }
 }

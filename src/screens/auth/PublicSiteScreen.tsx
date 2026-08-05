@@ -25,7 +25,14 @@ import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { PUBLIC_PAGE_META, PUBLIC_PAGE_TO_SCREEN, PUBLIC_SCROLL_TARGET_KEY, navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
+import {
+  PUBLIC_PAGE_META,
+  PUBLIC_PAGE_TO_SCREEN,
+  PUBLIC_SCROLL_TARGET_KEY,
+  navigateToPublicPageKey,
+  registerHomeScrollControls,
+  type PublicPageKey,
+} from "@/navigation/publicRoutes";
 import type { AdminStackParamList, AuthStackParamList } from "@/navigation/types";
 import type { PendingAcademyRegistration } from "@/types/api";
 import {
@@ -956,6 +963,13 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
 
     onReadyScrollControls({ scrollToSection: scrollToSectionExternal });
   }, [onReadyScrollControls, scrollToSectionExternal]);
+
+  useEffect(() => {
+    registerHomeScrollControls(scrollToSectionExternal);
+    return () => {
+      registerHomeScrollControls(null);
+    };
+  }, [scrollToSectionExternal]);
 
   const handleDesktopNavbarPress = (target: DesktopNavKey, section: SectionKey | null) => {
     setDesktopNavSelection(target);
