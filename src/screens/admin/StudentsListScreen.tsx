@@ -599,19 +599,111 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
   const selectedBranch = branches.find((branch) => String(branch.id) === form.branchId) ?? null;
   const selectedClass = classes.find((classItem) => String(classItem.id) === form.primaryClassId) ?? null;
+  const studentsHeaderBottomContent = (
+    <View nativeID="screens-admin-students-list-dashboard-header-block" style={styles.dashboardHeaderBlock} testID="screens-admin-students-list-dashboard-header-block">
+      <View nativeID="screens-admin-students-list-dashboard-top" style={[styles.dashboardTop, isDesktop ? desktopStyles.dashboardTop : mobileStyles.dashboardTop]} testID="screens-admin-students-list-dashboard-top">
+        <View nativeID="screens-admin-students-list-dashboard-copy" style={styles.dashboardCopy} testID="screens-admin-students-list-dashboard-copy">
+          <Text nativeID="screens-admin-students-list-dashboard-kicker" style={styles.dashboardKicker} testID="screens-admin-students-list-dashboard-kicker">Dashboard compacto</Text>
+          <Text nativeID="screens-admin-students-list-dashboard-title" style={styles.dashboardTitle} testID="screens-admin-students-list-dashboard-title">Busca alumnos por nombre</Text>
+          <Text nativeID="screens-admin-students-list-dashboard-description" style={styles.dashboardDescription} testID="screens-admin-students-list-dashboard-description">
+            Encuentra coincidencias al instante, revisa cuántos alumnos aparecen y entra al detalle desde una vista más ligera para web y móvil.
+          </Text>
+          <View nativeID="screens-admin-students-list-dashboard-links" style={styles.dashboardHeaderLinks} testID="screens-admin-students-list-dashboard-links">
+            <Pressable
+              accessibilityRole="button"
+              nativeID="screens-admin-students-list-new-link"
+              onPress={handleOpenCreate}
+              style={({ pressed }) => [styles.inlineLink, pressed ? styles.inlineLinkPressed : null]}
+              testID="screens-admin-students-list-new-link"
+            >
+              <Text nativeID="screens-admin-students-list-new-link-label" style={styles.inlineLinkLabel} testID="screens-admin-students-list-new-link-label">
+                Agregar alumno
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {!studentsQuery.isLoading && !studentsQuery.isError ? (
+          <View nativeID="screens-admin-students-list-dashboard-badge-wrap" style={styles.dashboardBadgeWrap} testID="screens-admin-students-list-dashboard-badge-wrap">
+            <AppBadge
+              label={foundStudentsLabel}
+              nativeID="screens-admin-students-list-dashboard-found-badge"
+              testID="screens-admin-students-list-dashboard-found-badge"
+              tone="info"
+            />
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+  const studentsHeaderSearch = (
+    <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRow, isDesktop ? desktopStyles.searchRow : mobileStyles.searchRow]} testID="screens-admin-students-list-search-row">
+      <View nativeID="screens-admin-students-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-students-list-search-input-wrap">
+        <AppInput
+          label="Buscar por nombre"
+          nativeID="screens-admin-students-list-search-input"
+          onChangeText={setSearch}
+          placeholder="Ej. Juan Pérez"
+          rightAdornment={<Feather color={colors.textMuted} name="search" size={18} />}
+          testID="screens-admin-students-list-search-input"
+          value={search}
+        />
+      </View>
+      {search.trim() ? (
+        <AppButton
+          label="Limpiar"
+          nativeID="screens-admin-students-list-clear-search-button"
+          onPress={() => setSearch("")}
+          testID="screens-admin-students-list-clear-search-button"
+          variant="secondary"
+        />
+      ) : null}
+    </View>
+  );
+  const studentsHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
+    <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-students-list-metrics-grid">
+      <DashboardMetricCard
+        description={hasActiveSearch ? `Filtro: ${debouncedSearch.trim()}` : "Sin filtro activo"}
+        icon="users"
+        idPrefix="screens-admin-students-list-metric-found"
+        tone="info"
+        title="Encontrados"
+        value={String(students.length)}
+      />
+      <DashboardMetricCard
+        description="Con estatus activo"
+        icon="check-circle"
+        idPrefix="screens-admin-students-list-metric-active"
+        tone="success"
+        title="Activos"
+        value={String(activeStudentsCount)}
+      />
+      <DashboardMetricCard
+        description="Vencidos o parciales"
+        icon="alert-circle"
+        idPrefix="screens-admin-students-list-metric-payment"
+        tone="warning"
+        title="Cobranza"
+        value={String(paymentAttentionCount)}
+      />
+      <DashboardMetricCard
+        description="Congelados o inactivos"
+        icon="pause-circle"
+        idPrefix="screens-admin-students-list-metric-inactive"
+        tone="neutral"
+        title="No activos"
+        value={String(inactiveStudentsCount)}
+      />
+    </View>
+  ) : null;
 
   return (
     <Screen scrollable contentStyle={styles.screenContent} nativeID="screens-admin-students-list-screen" testID="screens-admin-students-list-screen">
       <AdminShell
         activeSection="students"
-        headerActions={
-          <AppButton
-            label="Nuevo alumno"
-            nativeID="screens-admin-students-list-new-button"
-            onPress={handleOpenCreate}
-            testID="screens-admin-students-list-new-button"
-          />
-        }
+        headerBottomContent={studentsHeaderBottomContent}
+        headerMainContent={studentsHeaderMainContent}
+        headerSearch={studentsHeaderSearch}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -639,89 +731,6 @@ export function StudentsListScreen({ navigation, route }: Props) {
             <AppButton label="Cerrar aviso" nativeID="screens-admin-students-list-feedback-close-button" onPress={() => setFeedbackMessage(null)} testID="screens-admin-students-list-feedback-close-button" variant="secondary" />
           </AppCard>
         ) : null}
-
-        <AppCard nativeID="screens-admin-students-list-dashboard-card" style={styles.dashboardCard} testID="screens-admin-students-list-dashboard-card">
-          <View nativeID="screens-admin-students-list-dashboard-top" style={[styles.dashboardTop, isDesktop ? desktopStyles.dashboardTop : mobileStyles.dashboardTop]} testID="screens-admin-students-list-dashboard-top">
-            <View nativeID="screens-admin-students-list-dashboard-copy" style={styles.dashboardCopy} testID="screens-admin-students-list-dashboard-copy">
-              <Text nativeID="screens-admin-students-list-dashboard-kicker" style={styles.dashboardKicker} testID="screens-admin-students-list-dashboard-kicker">Dashboard compacto</Text>
-              <Text nativeID="screens-admin-students-list-dashboard-title" style={styles.dashboardTitle} testID="screens-admin-students-list-dashboard-title">Busca alumnos por nombre</Text>
-              <Text nativeID="screens-admin-students-list-dashboard-description" style={styles.dashboardDescription} testID="screens-admin-students-list-dashboard-description">
-                Encuentra coincidencias al instante, revisa cuántos alumnos aparecen y entra al detalle desde una vista más ligera para web y móvil.
-              </Text>
-            </View>
-
-            {!studentsQuery.isLoading && !studentsQuery.isError ? (
-              <View nativeID="screens-admin-students-list-dashboard-badge-wrap" style={styles.dashboardBadgeWrap} testID="screens-admin-students-list-dashboard-badge-wrap">
-                <AppBadge
-                  label={foundStudentsLabel}
-                  nativeID="screens-admin-students-list-dashboard-found-badge"
-                  testID="screens-admin-students-list-dashboard-found-badge"
-                  tone="info"
-                />
-              </View>
-            ) : null}
-          </View>
-
-          <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRow, isDesktop ? desktopStyles.searchRow : mobileStyles.searchRow]} testID="screens-admin-students-list-search-row">
-            <View nativeID="screens-admin-students-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-students-list-search-input-wrap">
-              <AppInput
-                label="Buscar por nombre"
-                nativeID="screens-admin-students-list-search-input"
-                onChangeText={setSearch}
-                placeholder="Ej. Juan Pérez"
-                rightAdornment={<Feather color={colors.textMuted} name="search" size={18} />}
-                testID="screens-admin-students-list-search-input"
-                value={search}
-              />
-            </View>
-            {search.trim() ? (
-              <AppButton
-                label="Limpiar"
-                nativeID="screens-admin-students-list-clear-search-button"
-                onPress={() => setSearch("")}
-                testID="screens-admin-students-list-clear-search-button"
-                variant="secondary"
-              />
-            ) : null}
-          </View>
-
-          {!studentsQuery.isLoading && !studentsQuery.isError ? (
-            <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-students-list-metrics-grid">
-              <DashboardMetricCard
-                description={hasActiveSearch ? `Filtro: ${debouncedSearch.trim()}` : "Sin filtro activo"}
-                icon="users"
-                idPrefix="screens-admin-students-list-metric-found"
-                tone="info"
-                title="Encontrados"
-                value={String(students.length)}
-              />
-              <DashboardMetricCard
-                description="Con estatus activo"
-                icon="check-circle"
-                idPrefix="screens-admin-students-list-metric-active"
-                tone="success"
-                title="Activos"
-                value={String(activeStudentsCount)}
-              />
-              <DashboardMetricCard
-                description="Vencidos o parciales"
-                icon="alert-circle"
-                idPrefix="screens-admin-students-list-metric-payment"
-                tone="warning"
-                title="Cobranza"
-                value={String(paymentAttentionCount)}
-              />
-              <DashboardMetricCard
-                description="Congelados o inactivos"
-                icon="pause-circle"
-                idPrefix="screens-admin-students-list-metric-inactive"
-                tone="neutral"
-                title="No activos"
-                value={String(inactiveStudentsCount)}
-              />
-            </View>
-          ) : null}
-        </AppCard>
 
         {studentsQuery.isLoading ? (
           <StatusView
@@ -1435,6 +1444,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  dashboardHeaderBlock: {
+    width: "100%",
+  },
   dashboardCard: {
     gap: spacing.md,
     padding: spacing.md,
@@ -1469,6 +1481,24 @@ const styles = StyleSheet.create({
   },
   dashboardBadgeWrap: {
     alignItems: "flex-start",
+  },
+  dashboardHeaderLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  inlineLink: {
+    alignSelf: "flex-start",
+  },
+  inlineLinkPressed: {
+    opacity: 0.84,
+  },
+  inlineLinkLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   searchRow: {
     gap: spacing.sm,
