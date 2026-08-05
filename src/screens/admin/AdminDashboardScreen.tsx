@@ -57,6 +57,7 @@ type FeedbackTone = "success" | "danger";
 type AttendanceDialogMode = "create" | "edit";
 type BranchDialogMode = "create" | "edit";
 type ClassDialogMode = "create" | "edit";
+type OperationsDashboardView = "attendance" | "classes" | null;
 type PaymentDialogMode = "create" | "edit";
 type DestructiveActionState = {
   title: string;
@@ -677,6 +678,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [paymentsBranchId, setPaymentsBranchId] = useState<string>(scopedBranchId ? String(scopedBranchId) : "");
   const [paymentsSearchQuery, setPaymentsSearchQuery] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
+  const [operationsDashboardView, setOperationsDashboardView] = useState<OperationsDashboardView>(null);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialBusy, setTutorialBusy] = useState(false);
   const [tutorialAnchorFrame, setTutorialAnchorFrame] = useState<TutorialAnchorFrame | null>(null);
@@ -1280,6 +1282,12 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const activeClasses = visibleClasses.filter((item) => item.is_active).length;
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  const operationsDashboardTitle =
+    operationsDashboardView === "attendance"
+      ? "Asistencias"
+      : operationsDashboardView === "classes"
+        ? "Clases"
+        : "Selecciona una vista";
   const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu dojo";
   const focusedSection: AdminDashboardSection = route.params?.section ?? "overview";
   const isOverviewSection = focusedSection === "overview";
@@ -1424,6 +1432,14 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   useEffect(() => {
     setPaymentsPage((current) => Math.min(current, paymentsTotalPages));
   }, [paymentsTotalPages]);
+
+  useEffect(() => {
+    if (!isOperationsSection) {
+      return;
+    }
+
+    setOperationsDashboardView(null);
+  }, [isOperationsSection]);
 
   useEffect(() => {
     if (!selectedPaymentsStudent) {
@@ -1892,25 +1908,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               variant="secondary"
             />
           </>
-        ) : focusedSection === "operations" ? (
-          <>
-            <AppButton
-              label="Registrar asistencia"
-              nativeID="screens-admin-dashboard-operations-new-attendance-button"
-              onPress={openCreateAttendanceModal}
-              testID="screens-admin-dashboard-operations-new-attendance-button"
-              variant="success"
-              disabled={visibleStudents.length === 0}
-            />
-            <AppButton
-              label="Nueva clase"
-              nativeID="screens-admin-dashboard-operations-new-class-button"
-              onPress={openCreateClassModal}
-              testID="screens-admin-dashboard-operations-new-class-button"
-              disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
-            />
-          </>
-        ) : focusedSection === "payments" ? null : (
+        ) : focusedSection === "operations" || focusedSection === "payments" ? null : (
           <>
             {canManageOrganization && organization ? (
               <AppButton
@@ -1934,6 +1932,244 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         )}
       </View>
     );
+  const operationsHeaderBottomContent = isOperationsSection ? (
+    <AdminSectionDashboardTemplate
+      idPrefix="screens-admin-dashboard-operations-central-dashboard"
+      title={currentBranch ? `Operación · ${currentBranch.name}` : "Centro operativo"}
+      description="Elige entre asistencias o clases para cargar la información principal dentro del dashboard central."
+      actions={
+        <View style={styles.dashboardTemplateActionGroup}>
+          <AppButton
+            label="Registrar asistencia"
+            nativeID="screens-admin-dashboard-operations-header-register-attendance-button"
+            onPress={openCreateAttendanceModal}
+            testID="screens-admin-dashboard-operations-header-register-attendance-button"
+            variant="success"
+            disabled={visibleStudents.length === 0}
+          />
+          <AppButton
+            label="Abrir registro de asistencias"
+            nativeID="screens-admin-dashboard-operations-header-open-attendance-button"
+            onPress={() => {
+              if (organization && currentBranch) {
+                void openPublicAttendancePage(organization.slug, currentBranch.name);
+              }
+            }}
+            testID="screens-admin-dashboard-operations-header-open-attendance-button"
+            variant="secondary"
+            disabled={!organization || !currentBranch || !currentBranch.is_active}
+          />
+        </View>
+      }
+      summary={
+        <View nativeID="screens-admin-dashboard-operations-header-summary" style={styles.paymentSummaryRow} testID="screens-admin-dashboard-operations-header-summary">
+          <AppBadge label={`${visibleAttendanceRecords.length} asistencias`} tone="neutral" />
+          <AppBadge label={`${todayAttendanceCount} hoy`} tone={todayAttendanceCount > 0 ? "success" : "neutral"} />
+          <AppBadge label={`${activeClasses} clases activas`} tone={activeClasses > 0 ? "info" : "neutral"} />
+        </View>
+      }
+    />
+  ) : null;
+  const operationsHeaderMainContent = isOperationsSection ? (
+    <AnimatedSurface delay={360} style={styles.fullWidthPanel}>
+      <View nativeID="screens-admin-dashboard-operations-central-content" style={styles.operationsCenterContent} testID="screens-admin-dashboard-operations-central-content">
+        <View nativeID="screens-admin-dashboard-operations-selector-grid" style={styles.operationsSelectorGrid} testID="screens-admin-dashboard-operations-selector-grid">
+          <Pressable
+            accessibilityRole="button"
+            nativeID="screens-admin-dashboard-operations-selector-attendance"
+            onPress={() => setOperationsDashboardView("attendance")}
+            style={({ pressed }) => [
+              styles.operationsSelectorCard,
+              operationsDashboardView === "attendance" ? styles.operationsSelectorCardActive : null,
+              pressed ? styles.operationsSelectorCardPressed : null,
+            ]}
+            testID="screens-admin-dashboard-operations-selector-attendance"
+          >
+            <View nativeID="screens-admin-dashboard-operations-selector-attendance-icon" style={styles.operationsSelectorIconWrap} testID="screens-admin-dashboard-operations-selector-attendance-icon">
+              <Feather color={colors.info} name="clipboard" size={18} />
+            </View>
+            <View nativeID="screens-admin-dashboard-operations-selector-attendance-copy" style={styles.operationsSelectorCopy} testID="screens-admin-dashboard-operations-selector-attendance-copy">
+              <Text nativeID="screens-admin-dashboard-operations-selector-attendance-title" style={styles.operationsSelectorTitle} testID="screens-admin-dashboard-operations-selector-attendance-title">Asistencias</Text>
+              <Text nativeID="screens-admin-dashboard-operations-selector-attendance-description" style={styles.operationsSelectorDescription} testID="screens-admin-dashboard-operations-selector-attendance-description">
+                {`${visibleAttendanceRecords.length} registros visibles y ${todayAttendanceCount} de hoy.`}
+              </Text>
+            </View>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            nativeID="screens-admin-dashboard-operations-selector-classes"
+            onPress={() => setOperationsDashboardView("classes")}
+            style={({ pressed }) => [
+              styles.operationsSelectorCard,
+              operationsDashboardView === "classes" ? styles.operationsSelectorCardActive : null,
+              pressed ? styles.operationsSelectorCardPressed : null,
+            ]}
+            testID="screens-admin-dashboard-operations-selector-classes"
+          >
+            <View nativeID="screens-admin-dashboard-operations-selector-classes-icon" style={styles.operationsSelectorIconWrap} testID="screens-admin-dashboard-operations-selector-classes-icon">
+              <Feather color={colors.info} name="book-open" size={18} />
+            </View>
+            <View nativeID="screens-admin-dashboard-operations-selector-classes-copy" style={styles.operationsSelectorCopy} testID="screens-admin-dashboard-operations-selector-classes-copy">
+              <Text nativeID="screens-admin-dashboard-operations-selector-classes-title" style={styles.operationsSelectorTitle} testID="screens-admin-dashboard-operations-selector-classes-title">Clases</Text>
+              <Text nativeID="screens-admin-dashboard-operations-selector-classes-description" style={styles.operationsSelectorDescription} testID="screens-admin-dashboard-operations-selector-classes-description">
+                {`${visibleClasses.length} clases visibles y ${activeClasses} activas.`}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+        <AppCard
+          nativeID="screens-admin-dashboard-operations-main-card"
+          style={[styles.panelCard, styles.fullWidthPanel]}
+          testID="screens-admin-dashboard-operations-main-card"
+        >
+          <View nativeID="screens-admin-dashboard-operations-main-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-operations-main-header">
+            <Text nativeID="screens-admin-dashboard-operations-main-title" style={styles.sectionTitle} testID="screens-admin-dashboard-operations-main-title">
+              {operationsDashboardTitle}
+            </Text>
+            {operationsDashboardView ? (
+              <AppBadge
+                label={
+                  operationsDashboardView === "attendance"
+                    ? `${visibleAttendanceRecords.length} registros`
+                    : `${visibleClasses.length} clases`
+                }
+                nativeID="screens-admin-dashboard-operations-main-badge"
+                testID="screens-admin-dashboard-operations-main-badge"
+                tone="neutral"
+              />
+            ) : null}
+          </View>
+          {operationsDashboardView === "attendance" ? (
+            visibleAttendanceRecords.length > 0 ? (
+              <View nativeID="screens-admin-dashboard-operations-attendance-list" style={styles.operationsDataList} testID="screens-admin-dashboard-operations-attendance-list">
+                {visibleAttendanceRecords.map((attendance) => {
+                  const student = visibleStudents.find((item) => item.id === attendance.student_id) ?? null;
+                  const classItem = visibleClasses.find((item) => item.id === attendance.class_id) ?? null;
+                  const branchName =
+                    visibleBranches.find((branch) => branch.id === attendance.branch_id)?.name ??
+                    `Sucursal ${attendance.branch_id}`;
+
+                  return (
+                    <View key={attendance.id} nativeID={`screens-admin-dashboard-operations-attendance-row-${attendance.id}`} style={styles.operationsDataRow} testID={`screens-admin-dashboard-operations-attendance-row-${attendance.id}`}>
+                      <View nativeID={`screens-admin-dashboard-operations-attendance-icon-wrap-${attendance.id}`} style={styles.operationsDataIconWrap} testID={`screens-admin-dashboard-operations-attendance-icon-wrap-${attendance.id}`}>
+                        <Feather color={colors.info} name={attendance.method === "qr" ? "smartphone" : "check-circle"} size={16} />
+                      </View>
+                      <View nativeID={`screens-admin-dashboard-operations-attendance-copy-${attendance.id}`} style={styles.operationsDataCopy} testID={`screens-admin-dashboard-operations-attendance-copy-${attendance.id}`}>
+                        <View nativeID={`screens-admin-dashboard-operations-attendance-head-${attendance.id}`} style={styles.operationsDataHead} testID={`screens-admin-dashboard-operations-attendance-head-${attendance.id}`}>
+                          <Text nativeID={`screens-admin-dashboard-operations-attendance-title-${attendance.id}`} style={styles.operationsDataTitle} testID={`screens-admin-dashboard-operations-attendance-title-${attendance.id}`}>
+                            {student ? `${student.first_name} ${student.last_name}` : `Alumno ${attendance.student_id}`}
+                          </Text>
+                          <AppBadge
+                            label={formatAttendanceMethod(attendance.method)}
+                            nativeID={`screens-admin-dashboard-operations-attendance-method-badge-${attendance.id}`}
+                            testID={`screens-admin-dashboard-operations-attendance-method-badge-${attendance.id}`}
+                            tone={attendance.method === "qr" ? "info" : "neutral"}
+                          />
+                        </View>
+                        <Text nativeID={`screens-admin-dashboard-operations-attendance-meta-${attendance.id}`} style={styles.operationsDataMeta} testID={`screens-admin-dashboard-operations-attendance-meta-${attendance.id}`}>
+                          {student ? `${student.unique_code} · ${branchName}` : branchName}
+                        </Text>
+                        <View nativeID={`screens-admin-dashboard-operations-attendance-summary-${attendance.id}`} style={styles.operationsDataSummary} testID={`screens-admin-dashboard-operations-attendance-summary-${attendance.id}`}>
+                          <Text nativeID={`screens-admin-dashboard-operations-attendance-checkin-${attendance.id}`} style={styles.operationsDataSummaryText} testID={`screens-admin-dashboard-operations-attendance-checkin-${attendance.id}`}>
+                            {`Check-in: ${formatDateTime(attendance.check_in_at)}`}
+                          </Text>
+                          <Text nativeID={`screens-admin-dashboard-operations-attendance-class-${attendance.id}`} style={styles.operationsDataSummaryText} testID={`screens-admin-dashboard-operations-attendance-class-${attendance.id}`}>
+                            {`Clase: ${classItem?.name ?? "Sin clase"}`}
+                          </Text>
+                        </View>
+                      </View>
+                      <View nativeID={`screens-admin-dashboard-operations-attendance-actions-${attendance.id}`} style={styles.operationsDataActions} testID={`screens-admin-dashboard-operations-attendance-actions-${attendance.id}`}>
+                        <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
+                        <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View nativeID="screens-admin-dashboard-operations-attendance-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-operations-attendance-empty-block">
+                <Text nativeID="screens-admin-dashboard-operations-attendance-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-attendance-empty-title">Sin asistencias registradas</Text>
+                <Text nativeID="screens-admin-dashboard-operations-attendance-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-operations-attendance-empty-description">
+                  Registra la primera asistencia para empezar a monitorear la operación diaria.
+                </Text>
+              </View>
+            )
+          ) : operationsDashboardView === "classes" ? (
+            visibleClasses.length > 0 ? (
+              <View nativeID="screens-admin-dashboard-operations-classes-list" style={styles.operationsDataList} testID="screens-admin-dashboard-operations-classes-list">
+                {visibleClasses.map((classItem) => {
+                  const branchName =
+                    visibleBranches.find((branch) => branch.id === classItem.branch_id)?.name ??
+                    `Sucursal ${classItem.branch_id}`;
+                  const disciplineName =
+                    classItem.discipline_name ??
+                    disciplines.find((discipline) => discipline.id === classItem.discipline_id)?.name ??
+                    `Disciplina ${classItem.discipline_id}`;
+
+                  return (
+                    <View key={classItem.id} nativeID={`screens-admin-dashboard-operations-class-row-${classItem.id}`} style={styles.operationsDataRow} testID={`screens-admin-dashboard-operations-class-row-${classItem.id}`}>
+                      <View nativeID={`screens-admin-dashboard-operations-class-icon-wrap-${classItem.id}`} style={styles.operationsDataIconWrap} testID={`screens-admin-dashboard-operations-class-icon-wrap-${classItem.id}`}>
+                        <Feather color={colors.info} name="book-open" size={16} />
+                      </View>
+                      <View nativeID={`screens-admin-dashboard-operations-class-copy-${classItem.id}`} style={styles.operationsDataCopy} testID={`screens-admin-dashboard-operations-class-copy-${classItem.id}`}>
+                        <View nativeID={`screens-admin-dashboard-operations-class-head-${classItem.id}`} style={styles.operationsDataHead} testID={`screens-admin-dashboard-operations-class-head-${classItem.id}`}>
+                          <Text nativeID={`screens-admin-dashboard-operations-class-title-${classItem.id}`} style={styles.operationsDataTitle} testID={`screens-admin-dashboard-operations-class-title-${classItem.id}`}>
+                            {classItem.name}
+                          </Text>
+                          <AppBadge
+                            label={classItem.is_active ? "Activa" : "Inactiva"}
+                            nativeID={`screens-admin-dashboard-class-status-badge-${classItem.id}`}
+                            testID={`screens-admin-dashboard-class-status-badge-${classItem.id}`}
+                            tone={classItem.is_active ? "success" : "warning"}
+                          />
+                        </View>
+                        <Text nativeID={`screens-admin-dashboard-operations-class-meta-${classItem.id}`} style={styles.operationsDataMeta} testID={`screens-admin-dashboard-operations-class-meta-${classItem.id}`}>
+                          {`${disciplineName} · ${branchName}`}
+                        </Text>
+                        <View nativeID={`screens-admin-dashboard-operations-class-summary-${classItem.id}`} style={styles.operationsDataSummary} testID={`screens-admin-dashboard-operations-class-summary-${classItem.id}`}>
+                          <Text nativeID={`screens-admin-dashboard-operations-class-instructor-${classItem.id}`} style={styles.operationsDataSummaryText} testID={`screens-admin-dashboard-operations-class-instructor-${classItem.id}`}>
+                            {classItem.instructor_name ? `Instructor: ${classItem.instructor_name}` : "Instructor pendiente"}
+                          </Text>
+                          <Text nativeID={`screens-admin-dashboard-operations-class-capacity-${classItem.id}`} style={styles.operationsDataSummaryText} testID={`screens-admin-dashboard-operations-class-capacity-${classItem.id}`}>
+                            {classItem.capacity ? `Capacidad: ${classItem.capacity} cupos` : "Capacidad sin definir"}
+                          </Text>
+                          {classItem.description ? (
+                            <Text nativeID={`screens-admin-dashboard-operations-class-description-${classItem.id}`} style={styles.operationsDataSummaryText} testID={`screens-admin-dashboard-operations-class-description-${classItem.id}`}>
+                              {classItem.description}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                      <View nativeID={`screens-admin-dashboard-operations-class-actions-${classItem.id}`} style={styles.operationsDataActions} testID={`screens-admin-dashboard-operations-class-actions-${classItem.id}`}>
+                        <AppButton label="Editar" nativeID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} variant="secondary" />
+                        {classItem.is_active ? (
+                          <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} variant="danger" />
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View nativeID="screens-admin-dashboard-operations-classes-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-operations-classes-empty-block">
+                <Text nativeID="screens-admin-dashboard-operations-classes-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-classes-empty-title">Sin clases registradas</Text>
+                <Text nativeID="screens-admin-dashboard-operations-classes-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-operations-classes-empty-description">
+                  Todavía no hay clases configuradas dentro del alcance visible.
+                </Text>
+              </View>
+            )
+          ) : (
+            <View nativeID="screens-admin-dashboard-operations-placeholder-block" style={styles.emptyBlock} testID="screens-admin-dashboard-operations-placeholder-block">
+              <Text nativeID="screens-admin-dashboard-operations-placeholder-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-placeholder-title">Elige una vista operativa</Text>
+              <Text nativeID="screens-admin-dashboard-operations-placeholder-description" style={styles.emptyDescription} testID="screens-admin-dashboard-operations-placeholder-description">
+                Usa cualquiera de las dos tarjetas superiores para cargar el historial de asistencias o la configuración de clases.
+              </Text>
+            </View>
+          )}
+        </AppCard>
+      </View>
+    </AnimatedSurface>
+  ) : null;
   const paymentsHeaderBottomContent = isPaymentsSection ? (
     <AdminSectionDashboardTemplate
       idPrefix="screens-admin-dashboard-payments-central-dashboard"
@@ -2141,9 +2377,9 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
-        headerBottomContent={paymentsHeaderBottomContent}
-        headerMainContent={paymentsHeaderMainContent}
-        headerSearch={paymentsHeaderSearch}
+        headerBottomContent={isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
+        headerMainContent={isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
+        headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -2257,7 +2493,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     />
                   </View>
                 </>
-              ) : !isPaymentsSection ? (
+              ) : !isPaymentsSection && !isOperationsSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -2411,7 +2647,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
               ) : null}
 
-              {!isOverviewSection ? (
+              {!isOverviewSection && !isOperationsSection && !isPaymentsSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
@@ -2622,7 +2858,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
 
-                {isOverviewSection || isOperationsSection ? (
+                {isOverviewSection ? (
                 <AnimatedSurface delay={360}>
                   <View
                     collapsable={false}
@@ -2789,7 +3025,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
 
-                {isOverviewSection || isOperationsSection ? (
+                {isOverviewSection ? (
                 <AnimatedSurface delay={420}>
                   <AppCard nativeID="screens-admin-dashboard-classes-card" style={styles.panelCard} testID="screens-admin-dashboard-classes-card">
                   <View nativeID="screens-admin-dashboard-classes-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-classes-header">
@@ -4091,6 +4327,134 @@ const styles = StyleSheet.create({
   headerButtonStack: {
     alignSelf: "stretch",
     minWidth: 0,
+  },
+  dashboardTemplateActionGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  operationsCenterContent: {
+    gap: spacing.md,
+    width: "100%",
+  },
+  operationsSelectorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  operationsSelectorCard: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minWidth: 240,
+    padding: spacing.md,
+  },
+  operationsSelectorCardActive: {
+    backgroundColor: colors.infoSoft,
+    borderColor: colors.action,
+  },
+  operationsSelectorCardPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.995 }],
+  },
+  operationsSelectorIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  operationsSelectorCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  operationsSelectorTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  operationsSelectorDescription: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  operationsDataList: {
+    gap: spacing.xs,
+  },
+  operationsDataRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    minHeight: 82,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  operationsDataIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.infoSoft,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  operationsDataCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  operationsDataHead: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  operationsDataTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  operationsDataMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  operationsDataSummary: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  operationsDataSummaryText: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  operationsDataActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    justifyContent: "flex-end",
   },
   quickAction: {
     backgroundColor: colors.surfaceAlt,
