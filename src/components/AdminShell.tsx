@@ -23,6 +23,8 @@ interface AdminShellProps extends PropsWithChildren {
   onGoDojo: () => void;
   headerActions?: ReactNode;
   headerBottomContent?: ReactNode;
+  headerSearch?: ReactNode;
+  headerMainContent?: ReactNode;
   sidebarSummary?: {
     organizationName?: string | null;
     suffix?: string | null;
@@ -76,6 +78,8 @@ export function AdminShell({
   onGoDojo,
   headerActions,
   headerBottomContent,
+  headerSearch,
+  headerMainContent,
   sidebarSummary,
   children,
 }: AdminShellProps) {
@@ -336,15 +340,33 @@ export function AdminShell({
               {headerBottomContent}
             </View>
           ) : null}
+          {headerSearch || headerMainContent ? (
+            <View
+              nativeID="components-admin-shell-content-wrap"
+              style={[styles.headerContentWrap, { maxWidth: contentMaxWidth }]}
+              testID="components-admin-shell-content-wrap"
+            >
+              {headerSearch ? (
+                <View nativeID="components-admin-shell-header-search" style={styles.headerSearch} testID="components-admin-shell-header-search">
+                  {headerSearch}
+                </View>
+              ) : null}
+              {headerMainContent ? (
+                <View nativeID="components-admin-shell-header-main-content" style={styles.headerMainContent} testID="components-admin-shell-header-main-content">
+                  {headerMainContent}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View
-          nativeID="components-admin-shell-content-wrap"
+          nativeID="components-admin-shell-body-wrap"
           style={[
             styles.contentWrap,
             { maxWidth: contentMaxWidth },
           ]}
-          testID="components-admin-shell-content-wrap"
+          testID="components-admin-shell-body-wrap"
         >
           {children}
         </View>
@@ -637,6 +659,19 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     borderTopWidth: 1,
     paddingTop: spacing.md,
+    width: "100%",
+  },
+  headerContentWrap: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    width: "100%",
+  },
+  headerSearch: {
+    width: "100%",
+  },
+  headerMainContent: {
     width: "100%",
   },
   contentWrap: {
