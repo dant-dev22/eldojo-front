@@ -549,9 +549,11 @@ export function PublicPageChrome({
 
 const styles = StyleSheet.create({
   screenContent: {
+    flex: 1,
     width: "100%",
   },
   shell: {
+    flex: 1,
     width: "100%",
   },
   navbar: {
@@ -780,6 +782,8 @@ const styles = StyleSheet.create({
   },
   contentWrap: {
     alignSelf: "center",
+    flex: 1,
+    minHeight: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     width: "100%",
