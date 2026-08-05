@@ -1092,6 +1092,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           nativeID="screens-auth-public-scroll-view"
+          nestedScrollEnabled={true}
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
           testID="screens-auth-public-scroll-view"
@@ -1680,7 +1681,7 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
       onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
       onGoDashboard={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
       onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
-      screenScrollable={false}
+      screenScrollable={true}
     >
       <PublicSiteScreen onReadyScrollControls={handleReady} page="home" />
     </PublicPageChrome>

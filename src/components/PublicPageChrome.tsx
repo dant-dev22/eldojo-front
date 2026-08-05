@@ -43,6 +43,7 @@ interface PublicPageChromeProps extends PropsWithChildren {
   contentContainerStyle?: StyleProp<ViewStyle>;
   contentMaxWidth?: number;
   showAuthControls?: boolean;
+  showFooter?: boolean;
   screenScrollable?: boolean;
   screenContentStyle?: StyleProp<ViewStyle>;
   onGoSignIn?: () => void;
@@ -64,6 +65,7 @@ export function PublicPageChrome({
   contentContainerStyle,
   contentMaxWidth,
   showAuthControls = true,
+  showFooter = true,
   screenScrollable = true,
   screenContentStyle,
   onGoSignIn,
@@ -324,15 +326,28 @@ export function PublicPageChrome({
           </View>
         )}
 
-        <View
-          nativeID={`${idPrefix}-content-wrap`}
-          style={[styles.contentWrap, { maxWidth: resolvedContentMaxWidth }, contentContainerStyle]}
-          testID={`${idPrefix}-content-wrap`}
-        >
-          {children}
-        </View>
+        {screenScrollable ? null : (
+          <View
+            nativeID={`${idPrefix}-content-wrap`}
+            style={[styles.contentWrap, { maxWidth: resolvedContentMaxWidth }, contentContainerStyle]}
+            testID={`${idPrefix}-content-wrap`}
+          >
+            {children}
+          </View>
+        )}
 
-        <View nativeID={`${idPrefix}-footer`} style={styles.footerShell} testID={`${idPrefix}-footer`}>
+        {screenScrollable ? (
+          <View
+            nativeID={`${idPrefix}-content-wrap`}
+            style={[styles.contentWrapStatic, { maxWidth: resolvedContentMaxWidth }, contentContainerStyle]}
+            testID={`${idPrefix}-content-wrap`}
+          >
+            {children}
+          </View>
+        ) : null}
+
+        {showFooter ? (
+          <View nativeID={`${idPrefix}-footer`} style={styles.footerShell} testID={`${idPrefix}-footer`}>
           <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
           <View nativeID={`${idPrefix}-footer-inner`} style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]} testID={`${idPrefix}-footer-inner`}>
             <View nativeID={`${idPrefix}-footer-grid`} style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]} testID={`${idPrefix}-footer-grid`}>
@@ -446,7 +461,8 @@ export function PublicPageChrome({
               </View>
             </View>
           </View>
-        </View>
+          </View>
+        ) : null}
 
         <AppModal
           nativeID={`${idPrefix}-mobile-menu`}
@@ -784,6 +800,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     flex: 1,
     minHeight: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    width: "100%",
+  },
+  contentWrapStatic: {
+    alignSelf: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     width: "100%",

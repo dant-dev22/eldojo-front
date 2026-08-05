@@ -377,6 +377,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       onGoSignIn={() => navigateToPublicPageKey("signIn")}
       onGoDashboard={() => navigateToPublicPageKey("home")}
       showAuthControls={true}
+      showFooter={false}
       screenScrollable={true}
       contentContainerStyle={[styles.screenContent, { alignItems: "center" }]}
       contentMaxWidth={contentMaxWidth}
