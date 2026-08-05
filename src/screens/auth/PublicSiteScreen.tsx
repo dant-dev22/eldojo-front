@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import {
   DimensionValue,
   Image,
@@ -35,8 +35,13 @@ import {
 } from "@/utils/storage";
 
 type AuthMode = "login" | "academy";
+export type PublicSiteSectionKey = "home" | "about" | "events" | "stores";
 type SectionKey = "about" | "events" | "stores";
-type DesktopNavKey = "home" | "about" | "events";
+type DesktopNavKey = "home" | "about" | "events" | "stores";
+
+export type PublicSiteScrollControls = {
+  scrollToSection: (section: PublicSiteSectionKey) => void;
+};
 
 type ShowcaseItem = {
   id: string;
@@ -46,6 +51,7 @@ type ShowcaseItem = {
 
 type PublicSiteScreenProps = {
   page: PublicPageKey;
+  onReadyScrollControls?: (controls: PublicSiteScrollControls) => void;
 };
 
 function buildWebsiteImage(prompt: string, imageSize: string): string {
@@ -188,21 +194,23 @@ const DESKTOP_NAV_ITEMS: Array<{ key: DesktopNavKey; label: string; page: Public
   { key: "home", label: "Inicio", page: "home", section: null },
   { key: "about", label: "¿Qué hace ElDojo?", page: "about", section: "about" },
   { key: "events", label: "Eventos", page: "events", section: "events" },
+  { key: "stores", label: "Tiendas", page: "stores", section: "stores" },
 ];
 
 const MOBILE_SECTION_NAV_ITEMS: Array<{ key: SectionKey | "home"; label: string; page: PublicPageKey }> = [
   { key: "home", label: "Inicio", page: "home" },
   { key: "about", label: "¿Qué hace ElDojo?", page: "about" },
   { key: "events", label: "Eventos", page: "events" },
+  { key: "stores", label: "Tiendas", page: "stores" },
 ];
 
 const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
   about: ["about"],
   createAccount: ["about"],
   events: ["events"],
-  home: ["events", "about"],
+  home: ["about", "events", "stores"],
   signIn: ["about"],
-  stores: [],
+  stores: ["stores"],
 };
 
 const PAGE_COPY: Record<
@@ -543,7 +551,7 @@ function renderStoresSection(
   );
 }
 
-export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
+export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { redeemPendingAcademySession, resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
@@ -927,6 +935,28 @@ export function PublicSiteScreen({ page }: PublicSiteScreenProps) {
       updateBrowserPath(`${nextPath}#${section}`);
     }
   };
+
+  const scrollToSectionExternal = useCallback(
+    (target: PublicSiteSectionKey) => {
+      if (target === "home") {
+        scrollToTop(PUBLIC_PAGE_META.home.path);
+        return;
+      }
+
+      if (PAGE_SECTIONS[page].includes(target)) {
+        scrollToSection(target);
+      }
+    },
+    [page]
+  );
+
+  useEffect(() => {
+    if (!onReadyScrollControls) {
+      return;
+    }
+
+    onReadyScrollControls({ scrollToSection: scrollToSectionExternal });
+  }, [onReadyScrollControls, scrollToSectionExternal]);
 
   const handleDesktopNavbarPress = (target: DesktopNavKey, section: SectionKey | null) => {
     setDesktopNavSelection(target);
@@ -1567,20 +1597,58 @@ function buildChromeNavItems(
   }));
 }
 
+function buildHomeSpaNavItems(
+  scrollRef: MutableRefObject<PublicSiteScrollControls | null>,
+  navigation: ReturnType<typeof useNavigation<NativeStackNavigationProp<AuthStackParamList>>>
+) {
+  const pages: Array<{ key: PublicSiteSectionKey; label: string; fallbackNavigate?: PublicPageKey }> = [
+    { key: "home", label: "Inicio" },
+    { key: "about", label: "Acerca de", fallbackNavigate: "about" },
+    { key: "events", label: "Eventos", fallbackNavigate: "events" },
+    { key: "stores", label: "Tiendas", fallbackNavigate: "stores" },
+  ];
+
+  return pages.map((page) => ({
+    key: page.key,
+    label: page.label,
+    onPress: () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollToSection(page.key);
+        return;
+      }
+      if (page.fallbackNavigate) {
+        navigation.navigate(PUBLIC_PAGE_TO_SCREEN[page.fallbackNavigate]);
+      }
+    },
+  }));
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
+  const [readyTick, setReadyTick] = useState(0);
+
+  const handleReady = useCallback((controls: PublicSiteScrollControls) => {
+    scrollControlsRef.current = controls;
+    setReadyTick((tick) => (tick + 1) % 10_000);
+  }, []);
+
+  const spaNavItems = useMemo(() => {
+    return buildHomeSpaNavItems(scrollControlsRef, navigation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyTick]);
 
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-home"
-      navItems={buildChromeNavItems(navigation, "home")}
-      onBrandPress={() => navigateToPublicPageKey("home")}
+      navItems={spaNavItems}
+      onBrandPress={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
       onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
-      onGoDashboard={() => navigateToPublicPageKey("home")}
+      onGoDashboard={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
       onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
       screenScrollable={false}
     >
-      <PublicSiteScreen page="home" />
+      <PublicSiteScreen onReadyScrollControls={handleReady} page="home" />
     </PublicPageChrome>
   );
 }
