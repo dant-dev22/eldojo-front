@@ -52,7 +52,6 @@ interface PublicPageChromeProps extends PropsWithChildren {
   onGoSignIn?: () => void;
   onGoCreateAccount?: () => void;
   onGoDashboard?: () => void;
-  onGoSettings?: () => void;
 }
 
 function getWebClassNameProps(className?: string) {
@@ -74,7 +73,6 @@ export function PublicPageChrome({
   onGoSignIn,
   onGoCreateAccount,
   onGoDashboard,
-  onGoSettings,
 }: PublicPageChromeProps) {
   const { contentMaxWidth: responsiveContentMaxWidth, isMobile, width } = useResponsiveLayout();
   const { status, user, signOut } = useAuth();
@@ -84,6 +82,7 @@ export function PublicPageChrome({
   );
   const resolvedContentMaxWidth = contentMaxWidth ?? responsiveContentMaxWidth;
   const locallyAuthenticated = status === "authenticated" && Boolean(user);
+  const outerPaddingHorizontal = width >= 1280 ? 32 : spacing.lg;
 
   const hintShowsAuth = useMemo(() => {
     if (locallyAuthenticated) return true;
@@ -145,14 +144,6 @@ export function PublicPageChrome({
         label: "Ir al panel",
         onPress: handleGoDashboard,
       },
-      ...(onGoSettings
-        ? [
-            {
-              label: "Configuración",
-              onPress: onGoSettings,
-            },
-          ]
-        : []),
       {
         label: "Cerrar sesión",
         onPress: () => {
@@ -161,7 +152,7 @@ export function PublicPageChrome({
         tone: "danger" as const,
       },
     ];
-  }, [handleGoDashboard, onGoSettings, signOut]);
+  }, [handleGoDashboard, signOut]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -198,7 +189,7 @@ export function PublicPageChrome({
             nativeID={`${idPrefix}-navbar`}
             style={[
               styles.navbar,
-              { paddingHorizontal: width >= 1280 ? 32 : spacing.lg },
+              { paddingHorizontal: outerPaddingHorizontal },
             ]}
             testID={`${idPrefix}-navbar`}
             {...getWebClassNameProps("public-chrome-navbar eldojo-public-desktop-hover-target")}
@@ -401,7 +392,7 @@ export function PublicPageChrome({
         ) : null}
 
         {showFooter ? (
-          <View nativeID={`${idPrefix}-footer`} style={[styles.footerShell, screenScrollable ? styles.footerShellStatic : null]} testID={`${idPrefix}-footer`}>
+          <View nativeID={`${idPrefix}-footer`} style={[styles.footerShell, screenScrollable ? styles.footerShellStatic : null, { paddingHorizontal: outerPaddingHorizontal }]} testID={`${idPrefix}-footer`}>
           <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
           <View nativeID={`${idPrefix}-footer-inner`} style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]} testID={`${idPrefix}-footer-inner`}>
             <View nativeID={`${idPrefix}-footer-grid`} style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]} testID={`${idPrefix}-footer-grid`}>

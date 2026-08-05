@@ -63,7 +63,6 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
     [user?.email, user?.first_name, user?.last_name]
   );
   const displayInitial = useMemo(() => displayName.charAt(0).toUpperCase() || "A", [displayName]);
-  const assignmentCount = user?.admin_assignments.length ?? 0;
 
   function handleActionPress(action: AdminUserMenuAction) {
     setOpen(false);
@@ -117,17 +116,6 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
                   </View>
                 </View>
                 <Text nativeID="components-admin-user-menu-profile-email" style={styles.profileEmail} testID="components-admin-user-menu-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
-              </View>
-
-              <View nativeID="components-admin-user-menu-meta-block" style={styles.metaBlock} testID="components-admin-user-menu-meta-block">
-                <View nativeID="components-admin-user-menu-meta-row-role" style={styles.metaRow} testID="components-admin-user-menu-meta-row-role">
-                  <Text nativeID="components-admin-user-menu-meta-role-label" style={styles.metaLabel} testID="components-admin-user-menu-meta-role-label">Rol</Text>
-                  <Text nativeID="components-admin-user-menu-meta-role-value" style={styles.metaValue} testID="components-admin-user-menu-meta-role-value">{formatAdminRole(user?.role)}</Text>
-                </View>
-                <View nativeID="components-admin-user-menu-meta-row-assignments" style={styles.metaRow} testID="components-admin-user-menu-meta-row-assignments">
-                  <Text nativeID="components-admin-user-menu-meta-assignments-label" style={styles.metaLabel} testID="components-admin-user-menu-meta-assignments-label">Asignaciones</Text>
-                  <Text nativeID="components-admin-user-menu-meta-assignments-value" style={styles.metaValue} testID="components-admin-user-menu-meta-assignments-value">{assignmentCount}</Text>
-                </View>
               </View>
 
               <View nativeID="components-admin-user-menu-actions-block" style={styles.actionsBlock} testID="components-admin-user-menu-actions-block">
@@ -276,33 +264,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
-  },
-  metaBlock: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  metaRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  metaLabel: {
-    color: colors.textMuted,
-    fontFamily: typography.headingFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  metaValue: {
-    color: colors.text,
-    fontFamily: typography.bodyFamily,
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "right",
   },
   actionsBlock: {
     gap: spacing.xs,
