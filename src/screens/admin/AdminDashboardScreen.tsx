@@ -679,6 +679,11 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [paymentsSearchQuery, setPaymentsSearchQuery] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [operationsDashboardView, setOperationsDashboardView] = useState<OperationsDashboardView>(null);
+  const [operationsSearchQuery, setOperationsSearchQuery] = useState("");
+  const [operationsPage, setOperationsPage] = useState(1);
+  const [operationsSelectedClassId, setOperationsSelectedClassId] = useState<string>("");
+  const [operationsClassPickerVisible, setOperationsClassPickerVisible] = useState(false);
+  const [operationsClassPickerValue, setOperationsClassPickerValue] = useState("");
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialBusy, setTutorialBusy] = useState(false);
   const [tutorialAnchorFrame, setTutorialAnchorFrame] = useState<TutorialAnchorFrame | null>(null);
@@ -1282,12 +1287,90 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const activeClasses = visibleClasses.filter((item) => item.is_active).length;
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  const operationsClassOptions = useMemo(
+    () =>
+      visibleClasses.map((item) => ({
+        label: item.name,
+        value: String(item.id),
+      })),
+    [visibleClasses]
+  );
+  const selectedOperationsClass = useMemo(
+    () => visibleClasses.find((item) => String(item.id) === operationsSelectedClassId) ?? null,
+    [operationsSelectedClassId, visibleClasses]
+  );
+  const normalizedOperationsSearchQuery = operationsSearchQuery.trim().toLowerCase();
+  const filteredOperationsAttendanceRecords = useMemo(
+    () =>
+      visibleAttendanceRecords.filter((attendance) => {
+        if (operationsSelectedClassId && String(attendance.class_id) !== operationsSelectedClassId) {
+          return false;
+        }
+
+        if (!normalizedOperationsSearchQuery) {
+          return true;
+        }
+
+        const student = visibleStudents.find((item) => item.id === attendance.student_id) ?? null;
+        const searchableAttendanceText = [
+          student?.first_name ?? "",
+          student?.last_name ?? "",
+          student?.unique_code ?? "",
+          attendance.student_id,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return searchableAttendanceText.includes(normalizedOperationsSearchQuery);
+      }),
+    [normalizedOperationsSearchQuery, operationsSelectedClassId, visibleAttendanceRecords, visibleStudents]
+  );
+  const filteredOperationsClasses = useMemo(
+    () =>
+      normalizedOperationsSearchQuery
+        ? visibleClasses.filter((classItem) => {
+            const searchableClassText = [
+              classItem.name,
+              classItem.instructor_name ?? "",
+              classItem.description ?? "",
+              classItem.discipline_name ?? "",
+            ]
+              .join(" ")
+              .toLowerCase();
+
+            return searchableClassText.includes(normalizedOperationsSearchQuery);
+          })
+        : visibleClasses,
+    [normalizedOperationsSearchQuery, visibleClasses]
+  );
+  const operationsPageSize = 12;
+  const operationsSourceLength =
+    operationsDashboardView === "attendance"
+      ? filteredOperationsAttendanceRecords.length
+      : operationsDashboardView === "classes"
+        ? filteredOperationsClasses.length
+        : 0;
+  const operationsTotalPages = Math.max(1, Math.ceil(operationsSourceLength / operationsPageSize));
+  const paginatedOperationsAttendanceRecords = useMemo(() => {
+    const startIndex = (operationsPage - 1) * operationsPageSize;
+    return filteredOperationsAttendanceRecords.slice(startIndex, startIndex + operationsPageSize);
+  }, [filteredOperationsAttendanceRecords, operationsPage]);
+  const paginatedOperationsClasses = useMemo(() => {
+    const startIndex = (operationsPage - 1) * operationsPageSize;
+    return filteredOperationsClasses.slice(startIndex, startIndex + operationsPageSize);
+  }, [filteredOperationsClasses, operationsPage]);
   const operationsDashboardTitle =
     operationsDashboardView === "attendance"
       ? "Asistencias"
       : operationsDashboardView === "classes"
         ? "Clases"
         : "Selecciona una vista";
+  const operationsDashboardLinkLabel =
+    operationsDashboardView === "attendance"
+      ? "Cambiar clase"
+      : operationsDashboardView === "classes"
+        ? "Registrar clase"
+        : null;
   const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu dojo";
   const focusedSection: AdminDashboardSection = route.params?.section ?? "overview";
   const isOverviewSection = focusedSection === "overview";
@@ -1439,7 +1522,34 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     }
 
     setOperationsDashboardView(null);
+    setOperationsSearchQuery("");
+    setOperationsPage(1);
+    setOperationsSelectedClassId("");
   }, [isOperationsSection]);
+
+  useEffect(() => {
+    if (!isOperationsSection) {
+      return;
+    }
+
+    setOperationsPage(1);
+  }, [isOperationsSection, operationsDashboardView, operationsSearchQuery, operationsSelectedClassId]);
+
+  useEffect(() => {
+    setOperationsPage((current) => Math.min(current, operationsTotalPages));
+  }, [operationsTotalPages]);
+
+  useEffect(() => {
+    if (!operationsSelectedClassId) {
+      return;
+    }
+
+    if (visibleClasses.some((item) => String(item.id) === operationsSelectedClassId)) {
+      return;
+    }
+
+    setOperationsSelectedClassId("");
+  }, [operationsSelectedClassId, visibleClasses]);
 
   useEffect(() => {
     if (!selectedPaymentsStudent) {
@@ -1937,35 +2047,24 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       idPrefix="screens-admin-dashboard-operations-central-dashboard"
       title={currentBranch ? `Operación · ${currentBranch.name}` : "Centro operativo"}
       description="Elige entre asistencias o clases para cargar la información principal dentro del dashboard central."
-      actions={
-        <View style={styles.dashboardTemplateActionGroup}>
-          <AppButton
-            label="Registrar asistencia"
-            nativeID="screens-admin-dashboard-operations-header-register-attendance-button"
-            onPress={openCreateAttendanceModal}
-            testID="screens-admin-dashboard-operations-header-register-attendance-button"
-            variant="success"
-            disabled={visibleStudents.length === 0}
-          />
-          <AppButton
-            label="Abrir registro de asistencias"
-            nativeID="screens-admin-dashboard-operations-header-open-attendance-button"
+      actions={null}
+      summary={
+        <View nativeID="screens-admin-dashboard-operations-central-dashboard-meta" style={styles.operationsQuickLinkWrap} testID="screens-admin-dashboard-operations-central-dashboard-meta">
+          <Pressable
+            accessibilityRole="link"
+            nativeID="screens-admin-dashboard-operations-quick-attendance-link"
             onPress={() => {
               if (organization && currentBranch) {
                 void openPublicAttendancePage(organization.slug, currentBranch.name);
               }
             }}
-            testID="screens-admin-dashboard-operations-header-open-attendance-button"
-            variant="secondary"
-            disabled={!organization || !currentBranch || !currentBranch.is_active}
-          />
-        </View>
-      }
-      summary={
-        <View nativeID="screens-admin-dashboard-operations-header-summary" style={styles.paymentSummaryRow} testID="screens-admin-dashboard-operations-header-summary">
-          <AppBadge label={`${visibleAttendanceRecords.length} asistencias`} tone="neutral" />
-          <AppBadge label={`${todayAttendanceCount} hoy`} tone={todayAttendanceCount > 0 ? "success" : "neutral"} />
-          <AppBadge label={`${activeClasses} clases activas`} tone={activeClasses > 0 ? "info" : "neutral"} />
+            style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+            testID="screens-admin-dashboard-operations-quick-attendance-link"
+          >
+            <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
+              Ir rapido a asistencias
+            </Text>
+          </Pressable>
         </View>
       }
     />
@@ -1977,7 +2076,10 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           <Pressable
             accessibilityRole="button"
             nativeID="screens-admin-dashboard-operations-selector-attendance"
-            onPress={() => setOperationsDashboardView("attendance")}
+            onPress={() => {
+              setOperationsClassPickerValue(operationsSelectedClassId);
+              setOperationsClassPickerVisible(true);
+            }}
             style={({ pressed }) => [
               styles.operationsSelectorCard,
               operationsDashboardView === "attendance" ? styles.operationsSelectorCardActive : null,
@@ -2022,16 +2124,41 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           style={[styles.panelCard, styles.fullWidthPanel]}
           testID="screens-admin-dashboard-operations-main-card"
         >
-          <View nativeID="screens-admin-dashboard-operations-main-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-operations-main-header">
-            <Text nativeID="screens-admin-dashboard-operations-main-title" style={styles.sectionTitle} testID="screens-admin-dashboard-operations-main-title">
-              {operationsDashboardTitle}
-            </Text>
+          <View nativeID="screens-admin-dashboard-operations-main-header" style={[styles.cardHeaderRow, styles.operationsMainHeader]} testID="screens-admin-dashboard-operations-main-header">
+            <View nativeID="screens-admin-dashboard-operations-main-copy" style={styles.operationsMainCopy} testID="screens-admin-dashboard-operations-main-copy">
+              <Text nativeID="screens-admin-dashboard-operations-main-title" style={styles.sectionTitle} testID="screens-admin-dashboard-operations-main-title">
+                {operationsDashboardTitle}
+              </Text>
+              {operationsDashboardLinkLabel ? (
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID="screens-admin-dashboard-operations-main-link"
+                  onPress={() => {
+                    if (operationsDashboardView === "attendance") {
+                      setOperationsClassPickerValue(operationsSelectedClassId);
+                      setOperationsClassPickerVisible(true);
+                      return;
+                    }
+
+                    if (operationsDashboardView === "classes") {
+                      openCreateClassModal();
+                    }
+                  }}
+                  style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                  testID="screens-admin-dashboard-operations-main-link"
+                >
+                  <Text nativeID="screens-admin-dashboard-operations-main-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-main-link-label">
+                    {operationsDashboardLinkLabel}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
             {operationsDashboardView ? (
               <AppBadge
                 label={
                   operationsDashboardView === "attendance"
-                    ? `${visibleAttendanceRecords.length} registros`
-                    : `${visibleClasses.length} clases`
+                    ? `${filteredOperationsAttendanceRecords.length} registros`
+                    : `${filteredOperationsClasses.length} clases`
                 }
                 nativeID="screens-admin-dashboard-operations-main-badge"
                 testID="screens-admin-dashboard-operations-main-badge"
@@ -2039,10 +2166,21 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               />
             ) : null}
           </View>
+          {operationsDashboardView ? (
+            <AppInput
+              label={operationsDashboardView === "attendance" ? "Buscar asistencia" : "Buscar clase"}
+              nativeID="screens-admin-dashboard-operations-search-input"
+              onChangeText={setOperationsSearchQuery}
+              placeholder="Buscar por nombre"
+              rightAdornment={<Feather color={colors.textMuted} name="search" size={16} />}
+              testID="screens-admin-dashboard-operations-search-input"
+              value={operationsSearchQuery}
+            />
+          ) : null}
           {operationsDashboardView === "attendance" ? (
-            visibleAttendanceRecords.length > 0 ? (
+            paginatedOperationsAttendanceRecords.length > 0 ? (
               <View nativeID="screens-admin-dashboard-operations-attendance-list" style={styles.operationsDataList} testID="screens-admin-dashboard-operations-attendance-list">
-                {visibleAttendanceRecords.map((attendance) => {
+                {paginatedOperationsAttendanceRecords.map((attendance) => {
                   const student = visibleStudents.find((item) => item.id === attendance.student_id) ?? null;
                   const classItem = visibleClasses.find((item) => item.id === attendance.class_id) ?? null;
                   const branchName =
@@ -2088,16 +2226,20 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               </View>
             ) : (
               <View nativeID="screens-admin-dashboard-operations-attendance-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-operations-attendance-empty-block">
-                <Text nativeID="screens-admin-dashboard-operations-attendance-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-attendance-empty-title">Sin asistencias registradas</Text>
+                <Text nativeID="screens-admin-dashboard-operations-attendance-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-attendance-empty-title">
+                  {operationsSearchQuery.trim() ? "Sin coincidencias" : "Sin asistencias registradas"}
+                </Text>
                 <Text nativeID="screens-admin-dashboard-operations-attendance-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-operations-attendance-empty-description">
-                  Registra la primera asistencia para empezar a monitorear la operación diaria.
+                  {operationsSearchQuery.trim()
+                    ? "No encontramos asistencias para la búsqueda actual."
+                    : "Selecciona una clase y registra la primera asistencia para empezar a monitorear la operación diaria."}
                 </Text>
               </View>
             )
           ) : operationsDashboardView === "classes" ? (
-            visibleClasses.length > 0 ? (
+            paginatedOperationsClasses.length > 0 ? (
               <View nativeID="screens-admin-dashboard-operations-classes-list" style={styles.operationsDataList} testID="screens-admin-dashboard-operations-classes-list">
-                {visibleClasses.map((classItem) => {
+                {paginatedOperationsClasses.map((classItem) => {
                   const branchName =
                     visibleBranches.find((branch) => branch.id === classItem.branch_id)?.name ??
                     `Sucursal ${classItem.branch_id}`;
@@ -2152,9 +2294,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               </View>
             ) : (
               <View nativeID="screens-admin-dashboard-operations-classes-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-operations-classes-empty-block">
-                <Text nativeID="screens-admin-dashboard-operations-classes-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-classes-empty-title">Sin clases registradas</Text>
+                <Text nativeID="screens-admin-dashboard-operations-classes-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-operations-classes-empty-title">
+                  {operationsSearchQuery.trim() ? "Sin coincidencias" : "Sin clases registradas"}
+                </Text>
                 <Text nativeID="screens-admin-dashboard-operations-classes-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-operations-classes-empty-description">
-                  Todavía no hay clases configuradas dentro del alcance visible.
+                  {operationsSearchQuery.trim()
+                    ? "No encontramos clases que coincidan con la búsqueda actual."
+                    : "Todavía no hay clases configuradas dentro del alcance visible."}
                 </Text>
               </View>
             )
@@ -2166,6 +2312,29 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               </Text>
             </View>
           )}
+          {operationsDashboardView && operationsSourceLength > operationsPageSize ? (
+            <View nativeID="screens-admin-dashboard-operations-pagination-controls" style={styles.paymentsPaginationControls} testID="screens-admin-dashboard-operations-pagination-controls">
+              <AppButton
+                label="Anterior"
+                nativeID="screens-admin-dashboard-operations-pagination-prev-button"
+                onPress={() => setOperationsPage((current) => Math.max(1, current - 1))}
+                testID="screens-admin-dashboard-operations-pagination-prev-button"
+                variant="secondary"
+                disabled={operationsPage === 1}
+              />
+              <Text nativeID="screens-admin-dashboard-operations-pagination-page-label" style={styles.paymentsPaginationLabel} testID="screens-admin-dashboard-operations-pagination-page-label">
+                {`Página ${operationsPage} de ${operationsTotalPages}`}
+              </Text>
+              <AppButton
+                label="Siguiente"
+                nativeID="screens-admin-dashboard-operations-pagination-next-button"
+                onPress={() => setOperationsPage((current) => Math.min(operationsTotalPages, current + 1))}
+                testID="screens-admin-dashboard-operations-pagination-next-button"
+                variant="secondary"
+                disabled={operationsPage === operationsTotalPages}
+              />
+            </View>
+          ) : null}
         </AppCard>
       </View>
     </AnimatedSurface>
@@ -3268,6 +3437,37 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               onPress={handleBranchSave}
               loading={createBranchMutation.isPending || updateBranchMutation.isPending}
               variant="success"
+            />
+          </View>
+        </View>
+      </AppModal>
+
+      <AppModal
+        visible={operationsClassPickerVisible}
+        title="Elegir clase"
+        description="Selecciona la clase cuya asistencia quieres administrar en el dashboard."
+        onClose={() => setOperationsClassPickerVisible(false)}
+      >
+        <AppSelect
+          label="Clase"
+          value={operationsClassPickerValue}
+          onValueChange={setOperationsClassPickerValue}
+          items={operationsClassOptions}
+          placeholder={operationsClassOptions.length > 0 ? "Selecciona una clase" : "Sin clases disponibles"}
+          enabled={operationsClassOptions.length > 0}
+        />
+        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null]}>
+          <View style={styles.modalPrimaryActions}>
+            <AppButton label="Cancelar" onPress={() => setOperationsClassPickerVisible(false)} variant="secondary" />
+            <AppButton
+              label="Cargar asistencias"
+              onPress={() => {
+                setOperationsSelectedClassId(operationsClassPickerValue);
+                setOperationsDashboardView("attendance");
+                setOperationsClassPickerVisible(false);
+              }}
+              variant="success"
+              disabled={!operationsClassPickerValue}
             />
           </View>
         </View>
@@ -4388,6 +4588,30 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 19,
+  },
+  operationsQuickLinkWrap: {
+    alignItems: "flex-start",
+  },
+  operationsMainHeader: {
+    alignItems: "center",
+  },
+  operationsMainCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  operationsInlineLink: {
+    alignSelf: "flex-start",
+  },
+  operationsInlineLinkPressed: {
+    opacity: 0.84,
+  },
+  operationsInlineLinkLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   operationsDataList: {
     gap: spacing.xs,

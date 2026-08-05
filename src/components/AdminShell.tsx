@@ -424,6 +424,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     gap: spacing.xl,
+    height: "100%",
     padding: spacing.xl,
   },
   brandBlock: {
@@ -820,6 +821,7 @@ const desktopStyles = StyleSheet.create({
   sidebar: {
     alignSelf: "stretch",
     flexShrink: 0,
+    height: "100%",
     width: 300,
   },
   header: {
