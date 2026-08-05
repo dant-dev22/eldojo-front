@@ -21,6 +21,9 @@ import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
 import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboardTemplate";
 import { AdminShell } from "@/components/AdminShell";
+import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
@@ -696,6 +699,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     crud: null,
     hero: null,
   });
+  const [dashboardSheetVisible, setDashboardSheetVisible] = useState(false);
+  const [rowContextVisible, setRowContextVisible] = useState(false);
+  const [rowContext, setRowContext] = useState<
+    | { type: "branch"; entity: Branch }
+    | { type: "attendance"; entity: Attendance }
+    | { type: "payment"; entity: Payment }
+    | { type: "class"; entity: MartialClass }
+    | null
+  >(null);
 
   const studentsQuery = useQuery({
     queryKey: ["dashboard-students"],
@@ -1463,6 +1475,208 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   );
   const inactiveStudents = Math.max(visibleStudents.length - activeStudents, 0);
   const inactiveBranches = Math.max(visibleBranches.length - activeBranches, 0);
+
+  const dashboardQuickActions = useMemo<BottomSheetAction[]>(
+    () => [
+      {
+        key: "new-student",
+        label: "Nuevo alumno",
+        icon: "user-plus",
+        tone: "primary",
+        onPress: () => navigation.navigate("StudentsList", { openCreate: true }),
+      },
+      {
+        key: "manage-students",
+        label: "Administrar alumnos",
+        icon: "users",
+        onPress: () => navigation.navigate("StudentsList"),
+      },
+      {
+        key: "register-payment",
+        label: "Registrar pago",
+        icon: "dollar-sign",
+        tone: "success",
+        onPress: openCreatePaymentModal,
+      },
+      {
+        key: "new-attendance",
+        label: "Registrar asistencia",
+        icon: "check-circle",
+        tone: "success",
+        onPress: openCreateAttendanceModal,
+        disabled: visibleStudents.length === 0,
+      },
+      {
+        key: "open-attendance-route",
+        label: "Abrir registro público",
+        icon: "external-link",
+        tone: "warning",
+        onPress: () => {
+          if (organization && currentBranch) {
+            void openPublicAttendancePage(organization.slug, currentBranch.name);
+          }
+        },
+        disabled: !organization || !currentBranch || !currentBranch.is_active,
+      },
+      {
+        key: "new-class",
+        label: "Nueva clase",
+        icon: "calendar",
+        tone: "primary",
+        onPress: openCreateClassModal,
+        disabled: visibleBranches.length === 0 || disciplineOptions.length === 0,
+      },
+      {
+        key: "new-branch",
+        label: "Nueva sucursal",
+        icon: "map-pin",
+        onPress: openCreateBranchModal,
+        disabled: !canCreateBranches || !organizationId,
+      },
+      {
+        key: "edit-organization",
+        label: "Editar dojo",
+        icon: "edit-3",
+        onPress: openOrganizationModal,
+        disabled: !canManageOrganization || !organization,
+      },
+    ],
+    [
+      currentBranch,
+      disciplineOptions.length,
+      navigation,
+      openCreateAttendanceModal,
+      openCreateBranchModal,
+      openCreateClassModal,
+      openCreatePaymentModal,
+      openOrganizationModal,
+      organization,
+      canCreateBranches,
+      canManageOrganization,
+      organizationId,
+      visibleBranches.length,
+      visibleStudents.length,
+    ],
+  );
+
+  const rowContextActions = useMemo<BottomSheetAction[]>(() => {
+    if (!rowContext) return [];
+    if (rowContext.type === "branch") {
+      const branch = rowContext.entity;
+      return [
+        {
+          key: "branch-open-attendance",
+          label: "Abrir asistencia pública",
+          icon: "external-link",
+          tone: "warning",
+          onPress: () => {
+            if (organization) {
+              void openPublicAttendancePage(organization.slug, branch.name);
+            }
+          },
+          disabled: !branch.is_active || !organization,
+        },
+        {
+          key: "branch-copy-route",
+          label: "Copiar liga de asistencia",
+          icon: "link",
+          onPress: () => {
+            if (organization) {
+              void copyPublicAttendanceUrl(
+                buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name),
+              );
+            }
+          },
+          disabled: !organization,
+        },
+        {
+          key: "branch-edit",
+          label: branch.id === 1 ? "Editar matriz" : "Editar sucursal",
+          icon: "edit-3",
+          tone: "primary",
+          onPress: () => openEditBranchModal(branch),
+          disabled: !canEditVisibleBranches,
+        },
+        {
+          key: "branch-deactivate",
+          label: "Desactivar sucursal",
+          icon: "pause-circle",
+          destructive: true,
+          onPress: () => openEditBranchModal(branch),
+          disabled: !canDeactivateBranches || !branch.is_active,
+        },
+      ];
+    }
+    if (rowContext.type === "attendance") {
+      const attendance = rowContext.entity;
+      return [
+        {
+          key: "attendance-edit",
+          label: "Editar asistencia",
+          icon: "edit-3",
+          tone: "primary",
+          onPress: () => openEditAttendanceModal(attendance),
+        },
+        {
+          key: "attendance-delete",
+          label: "Eliminar registro",
+          icon: "trash-2",
+          destructive: true,
+          onPress: () => openEditAttendanceModal(attendance),
+        },
+      ];
+    }
+    if (rowContext.type === "payment") {
+      const payment = rowContext.entity;
+      return [
+        {
+          key: "payment-edit",
+          label: "Editar pago",
+          icon: "edit-3",
+          tone: "primary",
+          onPress: () => openEditPaymentModal(payment),
+        },
+        {
+          key: "payment-void",
+          label: "Anular movimiento",
+          icon: "x-circle",
+          destructive: true,
+          onPress: () => openEditPaymentModal(payment),
+          disabled: payment.status === "void",
+        },
+      ];
+    }
+    if (rowContext.type === "class") {
+      const classItem = rowContext.entity;
+      return [
+        {
+          key: "class-edit",
+          label: "Editar clase",
+          icon: "edit-3",
+          tone: "primary",
+          onPress: () => openEditClassModal(classItem),
+        },
+        {
+          key: "class-deactivate",
+          label: classItem.is_active ? "Desactivar clase" : "Activar clase",
+          icon: "pause-circle",
+          destructive: classItem.is_active,
+          onPress: () => openEditClassModal(classItem),
+        },
+      ];
+    }
+    return [];
+  }, [
+    rowContext,
+    organization,
+    publicAttendanceOrigin,
+    canEditVisibleBranches,
+    canDeactivateBranches,
+    openEditBranchModal,
+    openEditAttendanceModal,
+    openEditPaymentModal,
+    openEditClassModal,
+  ]);
   const inactiveClasses = Math.max(visibleClasses.length - activeClasses, 0);
   const overviewGraphData = [
     { key: "students-active", label: "Alumnos activos", value: activeStudents, tone: colors.success },
@@ -2929,11 +3143,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           ) : null}
 
           {isLoading ? (
-            <StatusView
-              title="Cargando panel"
-              description="Obteniendo alumnos, sucursales y datos operativos de tu organizacion."
-              loading
-            />
+            <View nativeID="screens-admin-dashboard-skeleton-block" style={styles.skeletonWrap} testID="screens-admin-dashboard-skeleton-block">
+              <SkeletonCardGrid columns={isDesktop ? 2 : 1} count={3} idPrefix="screens-admin-dashboard-overview-skeleton" />
+              <View style={styles.skeletonGap} />
+              <AppCard style={styles.panelCard}>
+                <SkeletonList count={5} idPrefix="screens-admin-dashboard-lists-skeleton" />
+              </AppCard>
+            </View>
           ) : hasError ? (
             <AnimatedSurface delay={110}>
               <AppCard style={styles.panelCard}>
@@ -3276,34 +3492,105 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                             <Text nativeID={`screens-admin-dashboard-branch-location-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-location-${branch.id}`}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
                             <Text nativeID={`screens-admin-dashboard-branch-address-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-address-${branch.id}`}>{branch.address}</Text>
                           </View>
-                          <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
-                            {organization ? (
-                              <AppButton
-                                label="Abrir asistencia"
-                                nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                                onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
-                                testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                                variant="secondary"
-                                disabled={!branch.is_active}
-                              />
-                            ) : null}
-                            <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
-                            {canDeactivateBranches && branch.is_active ? (
-                              <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
-                            ) : null}
+                          <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={[styles.branchActions, !isDesktop ? styles.mobileRowActions : null]} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
+                            {isDesktop ? (
+                              <>
+                                {organization ? (
+                                  <AppButton
+                                    label="Abrir asistencia"
+                                    nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                    onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                                    testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                    variant="secondary"
+                                    disabled={!branch.is_active}
+                                  />
+                                ) : null}
+                                <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
+                                {canDeactivateBranches && branch.is_active ? (
+                                  <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                <Pressable
+                                  accessibilityLabel="Abrir asistencia pública"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-branch-open-attendance-link-${branch.id}`}
+                                  onPress={() => {
+                                    if (organization && branch.is_active) {
+                                      void openPublicAttendancePage(organization.slug, branch.name);
+                                    }
+                                  }}
+                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null, !branch.is_active || !organization ? { opacity: 0.5 } : null]}
+                                  testID={`screens-admin-dashboard-branch-open-attendance-link-${branch.id}`}
+                                >
+                                  <Text nativeID={`screens-admin-dashboard-branch-open-attendance-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-open-attendance-link-label-${branch.id}`}>
+                                    Abrir asistencia
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  accessibilityLabel="Editar sucursal"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-branch-edit-link-${branch.id}`}
+                                  onPress={() => openEditBranchModal(branch)}
+                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+                                  testID={`screens-admin-dashboard-branch-edit-link-${branch.id}`}
+                                >
+                                  <Text nativeID={`screens-admin-dashboard-branch-edit-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-edit-link-label-${branch.id}`}>
+                                    {branch.id === 1 ? "Editar matriz" : "Editar"}
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  accessibilityLabel="Más acciones"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-branch-context-button-${branch.id}`}
+                                  onPress={() => {
+                                    setRowContext({ type: "branch", entity: branch });
+                                    setRowContextVisible(true);
+                                  }}
+                                  style={({ pressed }) => [styles.mobileContextButton, pressed ? styles.mobileContextButtonPressed : null]}
+                                  testID={`screens-admin-dashboard-branch-context-button-${branch.id}`}
+                                >
+                                  <Feather color={colors.primary} name="more-horizontal" size={20} />
+                                </Pressable>
+                              </>
+                            )}
                           </View>
                           {organization && branch.is_active ? (
                             <View nativeID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`} style={styles.publicRouteBlock} testID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`}>
                               <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
                                 {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
                               </Text>
-                              <AppButton
-                                label="Copiar liga"
-                                nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                                onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
-                                testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                                variant="secondary"
-                              />
+                              {isDesktop ? (
+                                <AppButton
+                                  label="Copiar liga"
+                                  nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                  onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
+                                  testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                  variant="secondary"
+                                />
+                              ) : (
+                                <Pressable
+                                  accessibilityLabel="Copiar liga de asistencia"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
+                                  onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
+                                  style={({ pressed }) => [
+                                    styles.mobileActionLink,
+                                    { alignItems: "flex-start", alignSelf: "flex-start" },
+                                    pressed ? styles.mobileActionLinkPressed : null,
+                                  ]}
+                                  testID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
+                                >
+                                  <Text nativeID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`}>
+                                    Copiar liga
+                                  </Text>
+                                </Pressable>
+                              )}
                             </View>
                           ) : null}
                         </View>
@@ -3387,9 +3674,43 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                               <EntityField idPrefix={`screens-admin-dashboard-attendance-checkin-${attendance.id}`} label="Check-in" value={formatDateTime(attendance.check_in_at)} />
                               <EntityField idPrefix={`screens-admin-dashboard-attendance-class-${attendance.id}`} label="Clase" value={classItem?.name ?? "Sin clase"} />
                             </View>
-                            <View nativeID={`screens-admin-dashboard-attendance-actions-${attendance.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-attendance-actions-${attendance.id}`}>
-                              <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
-                              <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
+                            <View nativeID={`screens-admin-dashboard-attendance-actions-${attendance.id}`} style={[styles.branchActions, !isDesktop ? styles.mobileRowActions : null]} testID={`screens-admin-dashboard-attendance-actions-${attendance.id}`}>
+                              {isDesktop ? (
+                                <>
+                                  <AppButton label="Editar" nativeID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-edit-button-${attendance.id}`} variant="secondary" />
+                                  <AppButton label="Eliminar" nativeID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} onPress={() => openEditAttendanceModal(attendance)} testID={`screens-admin-dashboard-attendance-delete-button-${attendance.id}`} variant="danger" />
+                                </>
+                              ) : (
+                                <>
+                                  <Pressable
+                                    accessibilityLabel="Editar asistencia"
+                                    accessibilityRole="button"
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    nativeID={`screens-admin-dashboard-attendance-edit-link-${attendance.id}`}
+                                    onPress={() => openEditAttendanceModal(attendance)}
+                                    style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+                                    testID={`screens-admin-dashboard-attendance-edit-link-${attendance.id}`}
+                                  >
+                                    <Text nativeID={`screens-admin-dashboard-attendance-edit-link-label-${attendance.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-attendance-edit-link-label-${attendance.id}`}>
+                                      Editar
+                                    </Text>
+                                  </Pressable>
+                                  <Pressable
+                                    accessibilityLabel="Más acciones"
+                                    accessibilityRole="button"
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    nativeID={`screens-admin-dashboard-attendance-context-button-${attendance.id}`}
+                                    onPress={() => {
+                                      setRowContext({ type: "attendance", entity: attendance });
+                                      setRowContextVisible(true);
+                                    }}
+                                    style={({ pressed }) => [styles.mobileContextButton, pressed ? styles.mobileContextButtonPressed : null]}
+                                    testID={`screens-admin-dashboard-attendance-context-button-${attendance.id}`}
+                                  >
+                                    <Feather color={colors.primary} name="more-horizontal" size={20} />
+                                  </Pressable>
+                                </>
+                              )}
                             </View>
                           </View>
                         );
@@ -3467,11 +3788,45 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                             />
                           </View>
                           {payment.notes ? <Text nativeID={`screens-admin-dashboard-payment-notes-${payment.id}`} style={styles.paymentNote} testID={`screens-admin-dashboard-payment-notes-${payment.id}`}>Notas: {payment.notes}</Text> : null}
-                          <View nativeID={`screens-admin-dashboard-payment-actions-${payment.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-payment-actions-${payment.id}`}>
-                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} variant="secondary" />
-                            {payment.status !== "void" ? (
-                              <AppButton label="Anular" nativeID={`screens-admin-dashboard-payment-void-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-void-button-${payment.id}`} variant="danger" />
-                            ) : null}
+                          <View nativeID={`screens-admin-dashboard-payment-actions-${payment.id}`} style={[styles.branchActions, !isDesktop ? styles.mobileRowActions : null]} testID={`screens-admin-dashboard-payment-actions-${payment.id}`}>
+                            {isDesktop ? (
+                              <>
+                                <AppButton label="Editar" nativeID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} variant="secondary" />
+                                {payment.status !== "void" ? (
+                                  <AppButton label="Anular" nativeID={`screens-admin-dashboard-payment-void-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-void-button-${payment.id}`} variant="danger" />
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                <Pressable
+                                  accessibilityLabel="Editar pago"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-payment-edit-link-${payment.id}`}
+                                  onPress={() => openEditPaymentModal(payment)}
+                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+                                  testID={`screens-admin-dashboard-payment-edit-link-${payment.id}`}
+                                >
+                                  <Text nativeID={`screens-admin-dashboard-payment-edit-link-label-${payment.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-payment-edit-link-label-${payment.id}`}>
+                                    Editar
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  accessibilityLabel="Más acciones"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-payment-context-button-${payment.id}`}
+                                  onPress={() => {
+                                    setRowContext({ type: "payment", entity: payment });
+                                    setRowContextVisible(true);
+                                  }}
+                                  style={({ pressed }) => [styles.mobileContextButton, pressed ? styles.mobileContextButtonPressed : null]}
+                                  testID={`screens-admin-dashboard-payment-context-button-${payment.id}`}
+                                >
+                                  <Feather color={colors.primary} name="more-horizontal" size={20} />
+                                </Pressable>
+                              </>
+                            )}
                           </View>
                         </View>
                       );
@@ -3534,11 +3889,45 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                             </Text>
                             {classItem.description ? <Text nativeID={`screens-admin-dashboard-class-description-${classItem.id}`} style={styles.classMeta} testID={`screens-admin-dashboard-class-description-${classItem.id}`}>{classItem.description}</Text> : null}
                           </View>
-                          <View nativeID={`screens-admin-dashboard-class-actions-${classItem.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-class-actions-${classItem.id}`}>
-                            <AppButton label="Editar" nativeID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} variant="secondary" />
-                            {classItem.is_active ? (
-                              <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} variant="danger" />
-                            ) : null}
+                          <View nativeID={`screens-admin-dashboard-class-actions-${classItem.id}`} style={[styles.branchActions, !isDesktop ? styles.mobileRowActions : null]} testID={`screens-admin-dashboard-class-actions-${classItem.id}`}>
+                            {isDesktop ? (
+                              <>
+                                <AppButton label="Editar" nativeID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-edit-button-${classItem.id}`} variant="secondary" />
+                                {classItem.is_active ? (
+                                  <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} onPress={() => openEditClassModal(classItem)} testID={`screens-admin-dashboard-class-deactivate-button-${classItem.id}`} variant="danger" />
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                <Pressable
+                                  accessibilityLabel="Editar clase"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-class-edit-link-${classItem.id}`}
+                                  onPress={() => openEditClassModal(classItem)}
+                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+                                  testID={`screens-admin-dashboard-class-edit-link-${classItem.id}`}
+                                >
+                                  <Text nativeID={`screens-admin-dashboard-class-edit-link-label-${classItem.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-class-edit-link-label-${classItem.id}`}>
+                                    Editar
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  accessibilityLabel="Más acciones"
+                                  accessibilityRole="button"
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  nativeID={`screens-admin-dashboard-class-context-button-${classItem.id}`}
+                                  onPress={() => {
+                                    setRowContext({ type: "class", entity: classItem });
+                                    setRowContextVisible(true);
+                                  }}
+                                  style={({ pressed }) => [styles.mobileContextButton, pressed ? styles.mobileContextButtonPressed : null]}
+                                  testID={`screens-admin-dashboard-class-context-button-${classItem.id}`}
+                                >
+                                  <Feather color={colors.primary} name="more-horizontal" size={20} />
+                                </Pressable>
+                              </>
+                            )}
                           </View>
                         </View>
                       );
@@ -3560,6 +3949,50 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           )}
         </View>
       </AdminShell>
+
+      <FloatingActionButton
+        accessibilityLabel="Acciones rápidas"
+        onPress={() => setDashboardSheetVisible(true)}
+        icon="plus"
+        label="Acciones"
+        variant="extended"
+      />
+
+      <BottomSheet
+        idPrefix="screens-admin-dashboard-quick-actions"
+        title="Acciones rápidas"
+        subtitle="Operaciones diarias del dojo"
+        visible={dashboardSheetVisible}
+        onClose={() => setDashboardSheetVisible(false)}
+        actions={dashboardQuickActions}
+      />
+
+      <BottomSheet
+        idPrefix="screens-admin-dashboard-row-context"
+        title={
+          rowContext?.type === "branch"
+            ? rowContext.entity.name
+            : rowContext?.type === "attendance"
+              ? "Asistencia"
+              : rowContext?.type === "payment"
+                ? "Pago"
+                : rowContext?.type === "class"
+                  ? rowContext.entity.name
+                  : "Acciones"
+        }
+        subtitle={
+          rowContext?.type === "branch"
+            ? [rowContext.entity.city, rowContext.entity.state, rowContext.entity.country].filter(Boolean).join(", ") || undefined
+            : rowContext?.type === "payment"
+              ? formatCurrency(rowContext.entity.amount, rowContext.entity.currency)
+              : rowContext?.type === "class"
+                ? rowContext.entity.instructor_name ?? "Clase"
+                : undefined
+        }
+        visible={rowContextVisible}
+        onClose={() => setRowContextVisible(false)}
+        actions={rowContextActions}
+      />
 
       {activeTutorialStep ? (
         <Modal
@@ -4688,6 +5121,12 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
   },
+  skeletonWrap: {
+    gap: spacing.lg,
+  },
+  skeletonGap: {
+    height: spacing.xs,
+  },
   tutorialAnchorTarget: {
     minWidth: 0,
   },
@@ -5503,6 +5942,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.sm,
+  },
+  mobileRowActions: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "flex-start",
+    marginTop: spacing.xs,
+  },
+  mobileActionLink: {
+    alignItems: "center",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  mobileActionLinkPressed: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.8,
+  },
+  mobileActionLinkLabel: {
+    color: colors.primary,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.15,
+  },
+  mobileActionLinkLabelMuted: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.15,
+  },
+  mobileContextButton: {
+    alignItems: "center",
+    borderRadius: radius.sm,
+    height: 40,
+    justifyContent: "center",
+    marginLeft: "auto",
+    width: 40,
+  },
+  mobileContextButtonPressed: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.85,
   },
   paymentSummaryRow: {
     flexDirection: "row",

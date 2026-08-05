@@ -16,6 +16,10 @@ import { AppInput } from "@/components/AppInput";
 import { AdminShell } from "@/components/AdminShell";
 import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
+import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
+import { ConfirmActionModal } from "@/components/ConfirmActionModal";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
@@ -310,6 +314,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const [form, setForm] = useState<StudentFormState>(() => createEmptyForm());
   const [currentFormPage, setCurrentFormPage] = useState(0);
   const [currentStudentsPage, setCurrentStudentsPage] = useState(1);
+  const [showContextSheet, setShowContextSheet] = useState(false);
+  const [contextSheetStudent, setContextSheetStudent] = useState<Student | null>(null);
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -512,6 +518,65 @@ export function StudentsListScreen({ navigation, route }: Props) {
     setForm(toFormState(student));
     setIsFormDialogVisible(true);
   }
+
+  function handleOpenContextActions(student: Student) {
+    setContextSheetStudent(student);
+    setShowContextSheet(true);
+  }
+
+  const contextActions = useMemo<BottomSheetAction[]>(
+    () => {
+      if (!contextSheetStudent) return [];
+      return [
+        {
+          key: "view",
+          label: "Ver detalle",
+          icon: "eye",
+          tone: "primary",
+          onPress: () => navigation.navigate("StudentDetail", { studentId: contextSheetStudent.id }),
+        },
+        {
+          key: "edit",
+          label: "Editar alumno",
+          icon: "edit-3",
+          onPress: () => handleOpenEdit(contextSheetStudent),
+        },
+        {
+          key: "payment",
+          label: "Registrar pago",
+          icon: "dollar-sign",
+          tone: "success",
+          onPress: () => {
+            // TODO: Integrar con pantalla de pagos cuando exista
+            setFeedbackMessage(
+              `Funcionalidad de registro de pago para ${contextSheetStudent.first_name} ${contextSheetStudent.last_name} próximamente.`
+            );
+            setFeedbackTone("success");
+          },
+        },
+        {
+          key: "attendance",
+          label: "Marcar asistencia",
+          icon: "check-circle",
+          tone: "warning",
+          onPress: () => {
+            setFeedbackMessage(
+              `Asistencia marcada para ${contextSheetStudent.first_name}.`
+            );
+            setFeedbackTone("success");
+          },
+        },
+        {
+          key: "delete",
+          label: "Eliminar alumno",
+          icon: "trash-2",
+          destructive: true,
+          onPress: () => setStudentToDelete(contextSheetStudent),
+        },
+      ];
+    },
+    [contextSheetStudent, navigation],
+  );
 
   function handleUpdateField<K extends keyof StudentFormState>(field: K, value: StudentFormState[K]) {
     setForm((current) => ({
@@ -747,6 +812,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <StudentListRow
                   key={item.id}
                   isDesktop={isDesktop}
+                  onContext={() => handleOpenContextActions(item)}
                   onDelete={() => {
                     setFeedbackMessage(null);
                     setStudentToDelete(item);
@@ -837,12 +903,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
         ) : null}
 
         {studentsQuery.isLoading ? (
-          <StatusView
-            nativeID="screens-admin-students-list-loading-status"
-            title="Cargando alumnos"
-            description="Obteniendo el listado inicial desde el backend."
-            loading
-          />
+          <AppCard nativeID="screens-admin-students-list-skeleton-card" style={styles.resultsPanel} testID="screens-admin-students-list-skeleton-card">
+            <SkeletonList count={6} idPrefix="screens-admin-students-list-skeleton" />
+          </AppCard>
         ) : studentsQuery.isError ? (
           <View nativeID="screens-admin-students-list-error-block" style={styles.errorBlock} testID="screens-admin-students-list-error-block">
             <StatusView
@@ -855,6 +918,23 @@ export function StudentsListScreen({ navigation, route }: Props) {
         ) : null}
       </View>
       </AdminShell>
+
+      <FloatingActionButton
+        accessibilityLabel="Agregar nuevo alumno"
+        onPress={handleOpenCreate}
+        icon="user-plus"
+        label="Agregar alumno"
+        variant="extended"
+      />
+
+      <BottomSheet
+        nativeID="screens-admin-students-list-context-sheet"
+        title={contextSheetStudent ? `${contextSheetStudent.first_name} ${contextSheetStudent.last_name}` : "Acciones"}
+        subtitle={contextSheetStudent?.unique_code ? `Código ${contextSheetStudent.unique_code}` : undefined}
+        visible={showContextSheet}
+        onClose={() => setShowContextSheet(false)}
+        actions={contextActions}
+      />
 
       <AppModal
         nativeID="screens-admin-students-list-form-modal"
@@ -1257,6 +1337,7 @@ function StudentListRow({
   onViewDetail,
   onEdit,
   onDelete,
+  onContext,
 }: {
   student: Student;
   branchName: string;
@@ -1268,6 +1349,7 @@ function StudentListRow({
   onViewDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onContext?: () => void;
 }) {
   if (isDesktop) {
     return (
@@ -1355,9 +1437,46 @@ function StudentListRow({
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
-        <AppButton label="Ver detalle" nativeID={`screens-admin-students-list-detail-button-${student.id}`} onPress={onViewDetail} testID={`screens-admin-students-list-detail-button-${student.id}`} variant="secondary" />
-        <AppButton label="Editar" nativeID={`screens-admin-students-list-edit-button-${student.id}`} onPress={onEdit} testID={`screens-admin-students-list-edit-button-${student.id}`} variant="secondary" />
-        <AppButton label="Dar de baja" nativeID={`screens-admin-students-list-delete-button-${student.id}`} onPress={onDelete} testID={`screens-admin-students-list-delete-button-${student.id}`} variant="danger" />
+        <Pressable
+          accessibilityLabel="Ver detalle del alumno"
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          nativeID={`screens-admin-students-list-detail-link-${student.id}`}
+          onPress={onViewDetail}
+          style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+          testID={`screens-admin-students-list-detail-link-${student.id}`}
+        >
+          <Text nativeID={`screens-admin-students-list-detail-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-detail-link-label-${student.id}`}>
+            Ver detalle
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Editar alumno"
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          nativeID={`screens-admin-students-list-edit-link-${student.id}`}
+          onPress={onEdit}
+          style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+          testID={`screens-admin-students-list-edit-link-${student.id}`}
+        >
+          <Text nativeID={`screens-admin-students-list-edit-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-edit-link-label-${student.id}`}>
+            Editar
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Más acciones"
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          nativeID={`screens-admin-students-list-context-button-${student.id}`}
+          onPress={onContext}
+          style={({ pressed }) => [
+            styles.mobileContextButton,
+            pressed ? styles.mobileContextButtonPressed : null,
+          ]}
+          testID={`screens-admin-students-list-context-button-${student.id}`}
+        >
+          <Feather color={colors.primary} name="more-horizontal" size={20} />
+        </Pressable>
       </View>
     </View>
   );
@@ -1764,7 +1883,40 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   mobileRowActions: {
-    gap: spacing.xs,
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  mobileActionLink: {
+    alignItems: "center",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  mobileActionLinkPressed: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.8,
+  },
+  mobileActionLinkLabel: {
+    color: colors.primary,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.15,
+  },
+  mobileContextButton: {
+    alignItems: "center",
+    borderRadius: radius.sm,
+    height: 40,
+    justifyContent: "center",
+    marginLeft: "auto",
+    width: 40,
+  },
+  mobileContextButtonPressed: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.85,
   },
   pagination: {
     alignItems: "center",

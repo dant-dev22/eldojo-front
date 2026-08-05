@@ -1,15 +1,27 @@
 import { Feather } from "@expo/vector-icons";
 import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
+import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
+import { MobileDrawerNavigation } from "@/components/MobileDrawerNavigation";
+import { MobileHeader } from "@/components/MobileHeader";
 import { activeBorderWidth, colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
-type AdminSection = "dashboard" | "students" | "branches" | "operations" | "payments" | "dojo";
+export type AdminSection =
+  | "dashboard"
+  | "students"
+  | "branches"
+  | "operations"
+  | "payments"
+  | "dojo"
+  | "reports"
+  | "settings";
 
 interface AdminShellProps extends PropsWithChildren {
   title: string;
@@ -21,10 +33,14 @@ interface AdminShellProps extends PropsWithChildren {
   onGoOperations: () => void;
   onGoPayments: () => void;
   onGoDojo: () => void;
+  onGoReports?: () => void;
+  onGoSettings?: () => void;
   headerActions?: ReactNode;
   headerBottomContent?: ReactNode;
   headerSearch?: ReactNode;
   headerMainContent?: ReactNode;
+  onBack?: () => void;
+  showBackButton?: boolean;
   sidebarSummary?: {
     organizationName?: string | null;
     suffix?: string | null;
@@ -76,64 +92,91 @@ export function AdminShell({
   onGoOperations,
   onGoPayments,
   onGoDojo,
+  onGoReports,
+  onGoSettings,
   headerActions,
   headerBottomContent,
   headerSearch,
   headerMainContent,
+  onBack,
+  showBackButton = false,
   sidebarSummary,
   children,
 }: AdminShellProps) {
   const { user, signOut } = useAuth();
-  const { contentMaxWidth, isDesktop, isTablet } = useResponsiveLayout();
+  const { contentMaxWidth, isDesktop, isMobile, isTablet } = useResponsiveLayout();
+  const insets = useSafeAreaInsets();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showQuickActionsSheet, setShowQuickActionsSheet] = useState(false);
 
   const navItems = useMemo<NavItem[]>(
-    () => [
-      {
-        key: "dashboard",
-        label: "Resumen general",
-        description: "Vista global y gráficas de tu academia",
-        icon: "grid",
-        onPress: onGoDashboard,
-      },
-      {
-        key: "students",
-        label: "Alumnos",
-        description: "Padrón, altas y seguimiento",
-        icon: "users",
-        onPress: onGoStudents,
-      },
-      {
-        key: "branches",
-        label: "Sucursales",
-        description: "Alta y edición de sedes",
-        icon: "map-pin",
-        onPress: onGoBranches,
-      },
-      {
-        key: "operations",
-        label: "Asistencia y clases",
-        description: "Registro diario y operación de clases",
-        icon: "clipboard",
-        onPress: onGoOperations,
-      },
-      {
+    () => {
+      const base: NavItem[] = [
+        {
+          key: "dashboard",
+          label: "Resumen general",
+          description: "Vista global y gráficas de tu academia",
+          icon: "grid",
+          onPress: onGoDashboard,
+        },
+        {
+          key: "students",
+          label: "Miembros",
+          description: "Padrón, altas y seguimiento",
+          icon: "users",
+          onPress: onGoStudents,
+        },
+        {
+          key: "operations",
+          label: "Clases",
+          description: "Registro diario y operación",
+          icon: "clipboard",
+          onPress: onGoOperations,
+        },
+        {
+          key: "branches",
+          label: "Sucursales",
+          description: "Alta y edición de sedes",
+          icon: "map-pin",
+          onPress: onGoBranches,
+        },
+      ];
+      if (onGoReports) {
+        base.push({
+          key: "reports",
+          label: "Reportes",
+          description: "Métricas, análisis y exportación",
+          icon: "bar-chart-2",
+          onPress: onGoReports,
+        });
+      }
+      base.push({
         key: "payments",
         label: "Pagos",
         description: "Cobranza, historial y movimientos",
         icon: "credit-card",
         onPress: onGoPayments,
-      },
-      {
+      });
+      if (onGoSettings) {
+        base.push({
+          key: "settings",
+          label: "Configuración",
+          description: "Preferencias y ajustes del sistema",
+          icon: "settings",
+          onPress: onGoSettings,
+        });
+      }
+      base.push({
         key: "dojo",
         label: "Mi Dojo",
         description: "Datos de tu dojo y ajustes rápidos",
         icon: "home",
         onPress: onGoDojo,
-      },
-    ],
-    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoStudents],
+      });
+      return base;
+    },
+    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoReports, onGoSettings, onGoStudents],
   );
 
   const displayName = useMemo(
@@ -260,137 +303,279 @@ export function AdminShell({
     </View>
   );
 
+  const drawerNavItems = useMemo(
+    () =>
+      navItems.map((item) => ({
+        key: item.key as AdminSection,
+        label: item.label,
+        icon: item.icon,
+        onPress: item.onPress,
+      })),
+    [navItems],
+  );
+
+  const quickActions = useMemo<BottomSheetAction[]>(
+    () => [
+      { key: "new-student", label: "Nuevo alumno", icon: "user-plus", tone: "primary", onPress: onGoStudents },
+      { key: "new-class", label: "Registrar clase", icon: "calendar", tone: "success", onPress: onGoOperations },
+      { key: "new-payment", label: "Registrar pago", icon: "dollar-sign", tone: "warning", onPress: onGoPayments },
+      { key: "view-reports", label: "Ver reportes", icon: "bar-chart-2", onPress: () => onGoReports?.() },
+    ],
+    [onGoOperations, onGoPayments, onGoReports, onGoStudents],
+  );
+
+  const renderTabletSidebar = () => (
+    <View nativeID="components-admin-shell-sidebar" style={tabletStyles.sidebar} testID="components-admin-shell-sidebar">
+      {renderSidebarContent("desktop")}
+    </View>
+  );
+
+  const renderMainHeader = () => (
+    <View
+      nativeID="components-admin-shell-header"
+      style={[
+        styles.header,
+        isDesktop ? desktopStyles.header : isTablet ? tabletStyles.header : null,
+      ]}
+      testID="components-admin-shell-header"
+    >
+      <View nativeID="components-admin-shell-header-top-row" style={[styles.headerTopRow, isDesktop ? desktopStyles.headerTopRow : tabletStyles.headerTopRow]} testID="components-admin-shell-header-top-row">
+        <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
+          <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
+            <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
+              Centro de Operaciones
+            </Text>
+          </View>
+          <Text
+            nativeID="components-admin-shell-page-title"
+            style={[
+              styles.pageTitle,
+              isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : null,
+            ]}
+            testID="components-admin-shell-page-title"
+          >
+            {title}
+          </Text>
+          <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
+        </View>
+
+        <View
+          nativeID="components-admin-shell-header-actions"
+          style={[
+            styles.headerActions,
+            isDesktop ? desktopStyles.headerActions : isTablet ? tabletStyles.headerActions : null,
+          ]}
+          testID="components-admin-shell-header-actions"
+        >
+          {isTablet ? (
+            <Pressable
+              accessibilityLabel="Acciones rápidas"
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              nativeID="components-admin-shell-quick-actions-btn"
+              onPress={() => setShowQuickActionsSheet(true)}
+              style={({ pressed }) => [
+                styles.mobileMenuTrigger,
+                pressed ? styles.mobileMenuTriggerPressed : null,
+              ]}
+              testID="components-admin-shell-quick-actions-btn"
+            >
+              <View style={styles.mobileMenuTriggerIconWrap}>
+                <Feather color={colors.text} name="plus" size={18} />
+              </View>
+              <Text style={styles.mobileMenuTriggerLabel}>Acciones</Text>
+            </Pressable>
+          ) : null}
+          <AdminUserMenu
+            actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
+            user={user}
+          />
+          {headerActions}
+        </View>
+      </View>
+      {headerBottomContent ? (
+        <View nativeID="components-admin-shell-header-bottom-content" style={styles.headerBottomContent} testID="components-admin-shell-header-bottom-content">
+          {headerBottomContent}
+        </View>
+      ) : null}
+      {headerSearch || headerMainContent ? (
+        <View
+          nativeID="components-admin-shell-content-wrap"
+          style={[styles.headerContentWrap, { maxWidth: contentMaxWidth }]}
+          testID="components-admin-shell-content-wrap"
+        >
+          {headerSearch ? (
+            <View nativeID="components-admin-shell-header-search" style={styles.headerSearch} testID="components-admin-shell-header-search">
+              {headerSearch}
+            </View>
+          ) : null}
+          {headerMainContent ? (
+            <View nativeID="components-admin-shell-header-main-content" style={styles.headerMainContent} testID="components-admin-shell-header-main-content">
+              {headerMainContent}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const renderMobileContent = () => (
+    <View nativeID="components-admin-shell-mobile-main" style={mobileStyles.mainColumn} testID="components-admin-shell-mobile-main">
+      {headerSearch || headerMainContent || headerBottomContent ? (
+        <View
+          nativeID="components-admin-shell-mobile-header-extra"
+          style={mobileStyles.headerExtraBlock}
+          testID="components-admin-shell-mobile-header-extra"
+        >
+          <View style={[mobileStyles.headerExtraInner, { maxWidth: contentMaxWidth }]}>
+            {headerBottomContent ? (
+              <View nativeID="components-admin-shell-mobile-header-bottom" style={styles.headerBottomContent} testID="components-admin-shell-mobile-header-bottom">
+                {headerBottomContent}
+              </View>
+            ) : null}
+            {headerSearch ? (
+              <View nativeID="components-admin-shell-mobile-search" style={styles.headerSearch} testID="components-admin-shell-mobile-search">
+                {headerSearch}
+              </View>
+            ) : null}
+            {headerMainContent ? (
+              <View nativeID="components-admin-shell-mobile-main-content" style={styles.headerMainContent} testID="components-admin-shell-mobile-main-content">
+                {headerMainContent}
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      <View
+        nativeID="components-admin-shell-mobile-page-copy"
+        style={[mobileStyles.pageCopyBlock, { maxWidth: contentMaxWidth }]}
+        testID="components-admin-shell-mobile-page-copy"
+      >
+        <Text
+          nativeID="components-admin-shell-mobile-page-title"
+          style={mobileStyles.pageTitle}
+          testID="components-admin-shell-mobile-page-title"
+        >
+          {title}
+        </Text>
+        <Text
+          nativeID="components-admin-shell-mobile-page-subtitle"
+          style={mobileStyles.pageSubtitle}
+          testID="components-admin-shell-mobile-page-subtitle"
+        >
+          {subtitle}
+        </Text>
+      </View>
+
+      <View
+        nativeID="components-admin-shell-body-wrap"
+        style={[
+          styles.contentWrap,
+          { maxWidth: contentMaxWidth, paddingBottom: insets.bottom + spacing.md },
+        ]}
+        testID="components-admin-shell-body-wrap"
+      >
+        {children}
+      </View>
+    </View>
+  );
+
+  const renderDesktopContent = () => (
+    <View nativeID="components-admin-shell-main-column" style={styles.mainColumn} testID="components-admin-shell-main-column">
+      {renderMainHeader()}
+      <View
+        nativeID="components-admin-shell-body-wrap"
+        style={[
+          styles.contentWrap,
+          { maxWidth: contentMaxWidth },
+        ]}
+        testID="components-admin-shell-body-wrap"
+      >
+        {children}
+      </View>
+    </View>
+  );
+
   return (
     <View
       nativeID="components-admin-shell-shell"
-      style={[styles.shell, isDesktop ? desktopStyles.shell : mobileStyles.shell]}
+      style={[
+        styles.shell,
+        isDesktop ? desktopStyles.shell : isTablet ? tabletStyles.shell : mobileStyles.shell,
+        isMobile ? { padding: 0, gap: 0 } : null,
+      ]}
       testID="components-admin-shell-shell"
     >
       {isDesktop ? (
         <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
           {renderSidebarContent("desktop")}
         </View>
-      ) : null}
+      ) : isTablet ? renderTabletSidebar() : null}
 
-      <View nativeID="components-admin-shell-main-column" style={styles.mainColumn} testID="components-admin-shell-main-column">
-        <View
-          nativeID="components-admin-shell-header"
-          style={[
-            styles.header,
-            isDesktop ? desktopStyles.header : isTablet ? tabletStyles.header : mobileStyles.header,
-          ]}
-          testID="components-admin-shell-header"
-        >
-          <View nativeID="components-admin-shell-header-top-row" style={[styles.headerTopRow, isDesktop ? desktopStyles.headerTopRow : mobileStyles.headerTopRow]} testID="components-admin-shell-header-top-row">
-            <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
-              <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
-                <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
-                  Centro de Operaciones
-                </Text>
-              </View>
-              <Text
-                nativeID="components-admin-shell-page-title"
-                style={[
-                  styles.pageTitle,
-                  isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : mobileStyles.pageTitle,
+      {isMobile ? (
+        <>
+          <MobileHeader
+            idPrefix="mobile-admin-header"
+            menuPosition="right"
+            onBack={onBack}
+            onOpenMenu={() => setShowMobileMenu(true)}
+            rightActions={
+              <Pressable
+                accessibilityLabel="Acciones rápidas"
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                nativeID="mobile-admin-quick-actions-btn"
+                onPress={() => setShowQuickActionsSheet(true)}
+                style={({ pressed }) => [
+                  {
+                    alignItems: "center",
+                    backgroundColor: pressed ? colors.primarySoft : "transparent",
+                    borderRadius: radius.pill,
+                    height: 44,
+                    justifyContent: "center",
+                    minWidth: 44,
+                    width: 44,
+                  },
+                  pressed ? { opacity: 0.92 } : null,
                 ]}
-                testID="components-admin-shell-page-title"
+                testID="mobile-admin-quick-actions-btn"
               >
-                {title}
-              </Text>
-              <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
-            </View>
-
-            <View
-              nativeID="components-admin-shell-header-actions"
-              style={[
-                styles.headerActions,
-                isDesktop ? desktopStyles.headerActions : isTablet ? tabletStyles.headerActions : mobileStyles.headerActions,
-              ]}
-              testID="components-admin-shell-header-actions"
-            >
-              {!isDesktop ? (
-                <View nativeID="components-admin-shell-mobile-header-topbar" style={styles.mobileHeaderTopBar} testID="components-admin-shell-mobile-header-topbar">
-                  <Pressable
-                    accessibilityLabel="Abrir secciones del administrador"
-                    accessibilityRole="button"
-                    nativeID="components-admin-shell-mobile-menu-trigger"
-                    onPress={() => setShowMobileMenu(true)}
-                    testID="components-admin-shell-mobile-menu-trigger"
-                    style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.mobileMenuTriggerPressed : null]}
-                  >
-                    <View nativeID="components-admin-shell-mobile-menu-trigger-icon" style={styles.mobileMenuTriggerIconWrap} testID="components-admin-shell-mobile-menu-trigger-icon">
-                      <Feather color={colors.text} name="menu" size={18} />
-                    </View>
-                    <Text nativeID="components-admin-shell-mobile-menu-trigger-label" style={styles.mobileMenuTriggerLabel} testID="components-admin-shell-mobile-menu-trigger-label">
-                      Secciones
-                    </Text>
-                  </Pressable>
-                  <AdminUserMenu
-                    actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
-                    user={user}
-                  />
-                </View>
-              ) : null}
-              {headerActions}
-            </View>
-          </View>
-          {headerBottomContent ? (
-            <View nativeID="components-admin-shell-header-bottom-content" style={styles.headerBottomContent} testID="components-admin-shell-header-bottom-content">
-              {headerBottomContent}
-            </View>
-          ) : null}
-          {headerSearch || headerMainContent ? (
-            <View
-              nativeID="components-admin-shell-content-wrap"
-              style={[styles.headerContentWrap, { maxWidth: contentMaxWidth }]}
-              testID="components-admin-shell-content-wrap"
-            >
-              {headerSearch ? (
-                <View nativeID="components-admin-shell-header-search" style={styles.headerSearch} testID="components-admin-shell-header-search">
-                  {headerSearch}
-                </View>
-              ) : null}
-              {headerMainContent ? (
-                <View nativeID="components-admin-shell-header-main-content" style={styles.headerMainContent} testID="components-admin-shell-header-main-content">
-                  {headerMainContent}
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-
-        <View
-          nativeID="components-admin-shell-body-wrap"
-          style={[
-            styles.contentWrap,
-            { maxWidth: contentMaxWidth },
-          ]}
-          testID="components-admin-shell-body-wrap"
-        >
-          {children}
-        </View>
-      </View>
-      <Modal animationType="slide" onRequestClose={() => setShowMobileMenu(false)} transparent visible={showMobileMenu}>
-        <View nativeID="components-admin-shell-mobile-menu-overlay" style={styles.mobileMenuOverlay} testID="components-admin-shell-mobile-menu-overlay">
-          <Pressable
-            nativeID="components-admin-shell-mobile-menu-backdrop"
-            onPress={() => setShowMobileMenu(false)}
-            style={styles.mobileMenuBackdrop}
-            testID="components-admin-shell-mobile-menu-backdrop"
+                <Feather color={colors.primary} name="plus" size={20} />
+              </Pressable>
+            }
+            showBackButton={showBackButton}
+            title={title}
           />
-          <View nativeID="components-admin-shell-mobile-menu-sheet-wrap" style={styles.mobileMenuSheetWrap} testID="components-admin-shell-mobile-menu-sheet-wrap">
-            <ScrollView
-              contentContainerStyle={styles.mobileMenuScrollContent}
-              nativeID="components-admin-shell-mobile-menu-scroll"
-              showsVerticalScrollIndicator={false}
-              testID="components-admin-shell-mobile-menu-scroll"
-            >
-              {renderSidebarContent("mobile")}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+          {renderMobileContent()}
+        </>
+      ) : (
+        renderDesktopContent()
+      )}
+
+      <MobileDrawerNavigation
+        activeSection={activeSection}
+        avatarInitial={displayName.charAt(0).toUpperCase()}
+        branchName={sidebarSummary?.branchName}
+        displayName={displayName}
+        email={user?.email}
+        idPrefix="admin-mobile-drawer"
+        items={drawerNavItems}
+        onClose={() => setShowMobileMenu(false)}
+        onSignOut={requestSignOut}
+        organizationName={sidebarSummary?.organizationName}
+        visible={showMobileMenu}
+      />
+
+      <BottomSheet
+        actions={quickActions}
+        description="Acceso directo a las operaciones más frecuentes"
+        idPrefix="admin-quick-actions"
+        onClose={() => setShowQuickActionsSheet(false)}
+        title="Acciones rápidas"
+        visible={showQuickActionsSheet}
+      />
+
       <ConfirmActionModal
         confirmLabel="Si, cerrar sesion"
         idPrefix="components-admin-shell-signout-confirm"
@@ -752,8 +937,47 @@ const styles = StyleSheet.create({
 
 const mobileStyles = StyleSheet.create({
   shell: {
+    backgroundColor: colors.background,
     flexDirection: "column",
-    padding: spacing.sm,
+    flex: 1,
+  },
+  mainColumn: {
+    flex: 1,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  headerExtraBlock: {
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    marginHorizontal: -spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  headerExtraInner: {
+    alignSelf: "center",
+    gap: spacing.md,
+    width: "100%",
+  },
+  pageCopyBlock: {
+    alignSelf: "center",
+    gap: 4,
+    width: "100%",
+  },
+  pageTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  pageSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
   },
   header: {
     flexDirection: "column",
@@ -761,9 +985,6 @@ const mobileStyles = StyleSheet.create({
   },
   headerTopRow: {
     flexDirection: "column",
-  },
-  pageTitle: {
-    fontSize: 26,
   },
   headerActions: {
     alignItems: "stretch",
@@ -785,6 +1006,21 @@ const mobileStyles = StyleSheet.create({
 });
 
 const tabletStyles = StyleSheet.create({
+  shell: {
+    alignItems: "stretch",
+    backgroundColor: colors.background,
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md,
+    width: "100%",
+  },
+  sidebar: {
+    alignSelf: "stretch",
+    flexShrink: 0,
+    height: "100%",
+    width: 272,
+  },
   header: {
     flexDirection: "column",
     padding: spacing.xl,
