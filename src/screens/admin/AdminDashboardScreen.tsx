@@ -2167,6 +2167,94 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       </View>
     </View>
   ) : null;
+  const dojoHeaderBottomContent = isDojoSection ? (
+    <View nativeID="screens-admin-dashboard-dojo-central-dashboard" style={styles.overviewHeroHeaderBlock} testID="screens-admin-dashboard-dojo-central-dashboard">
+      <Text nativeID="screens-admin-dashboard-dojo-central-title" style={styles.sectionTitle} testID="screens-admin-dashboard-dojo-central-title">
+        {pageTitle}
+      </Text>
+      <Text nativeID="screens-admin-dashboard-dojo-central-description" style={styles.helperText} testID="screens-admin-dashboard-dojo-central-description">
+        {pageSubtitle}
+      </Text>
+    </View>
+  ) : null;
+  const dojoHeaderMainContent = isDojoSection ? (
+    <AnimatedSurface delay={300} style={styles.fullWidthPanel}>
+      <AppCard nativeID="screens-admin-dashboard-dojo-central-card" style={[styles.panelCard, styles.fullWidthPanel]} testID="screens-admin-dashboard-dojo-central-card">
+        <View nativeID="screens-admin-dashboard-dojo-central-header" style={[styles.cardHeaderRow, styles.operationsMainHeader]} testID="screens-admin-dashboard-dojo-central-header">
+          <View nativeID="screens-admin-dashboard-dojo-central-copy" style={styles.operationsMainCopy} testID="screens-admin-dashboard-dojo-central-copy">
+            <Text nativeID="screens-admin-dashboard-dojo-central-card-title" style={styles.sectionTitle} testID="screens-admin-dashboard-dojo-central-card-title">
+              Mi Dojo
+            </Text>
+            <Text nativeID="screens-admin-dashboard-dojo-central-card-subtitle" style={styles.helperText} testID="screens-admin-dashboard-dojo-central-card-subtitle">
+              Administra la identidad del dojo y los datos visibles de la sucursal actual desde un solo dashboard central.
+            </Text>
+          </View>
+          <AppBadge
+            label={organization?.is_active ? "Activa" : "Inactiva"}
+            nativeID="screens-admin-dashboard-dojo-central-status-badge"
+            testID="screens-admin-dashboard-dojo-central-status-badge"
+            tone={organization?.is_active ? "success" : "warning"}
+          />
+        </View>
+        {organization ? (
+          <>
+            <View nativeID="screens-admin-dashboard-dojo-central-summary" style={styles.branchSummaryGrid} testID="screens-admin-dashboard-dojo-central-summary">
+              <View nativeID="screens-admin-dashboard-dojo-central-name-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-dojo-central-name-card">
+                <Text nativeID="screens-admin-dashboard-dojo-central-name-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-dojo-central-name-label">Nombre</Text>
+                <Text nativeID="screens-admin-dashboard-dojo-central-name-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-dojo-central-name-value">{organization.name}</Text>
+              </View>
+              <View nativeID="screens-admin-dashboard-dojo-central-slug-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-dojo-central-slug-card">
+                <Text nativeID="screens-admin-dashboard-dojo-central-slug-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-dojo-central-slug-label">Sufijo</Text>
+                <Text nativeID="screens-admin-dashboard-dojo-central-slug-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-dojo-central-slug-value">{organization.slug}</Text>
+              </View>
+            </View>
+            <View nativeID="screens-admin-dashboard-dojo-central-actions" style={styles.detailList} testID="screens-admin-dashboard-dojo-central-actions">
+              <EditableDetailRow
+                idPrefix="screens-admin-dashboard-dojo-name-row"
+                label="Nombre del dojo"
+                value={organization?.name ?? "Sin definir"}
+                onPress={canManageOrganization && organization ? openOrganizationModal : undefined}
+              />
+              <EditableDetailRow
+                idPrefix="screens-admin-dashboard-dojo-suffix-row"
+                label="Sufijo"
+                value={organization?.slug ?? "Sin definir"}
+                onPress={canManageOrganization && organization ? openOrganizationModal : undefined}
+              />
+              <EditableDetailRow
+                idPrefix="screens-admin-dashboard-dojo-branch-row"
+                label="Sucursal visible"
+                value={currentBranch?.name ?? "Sin sucursal asignada"}
+                onPress={currentBranch ? () => openEditBranchModal(currentBranch) : undefined}
+              />
+              <EditableDetailRow
+                idPrefix="screens-admin-dashboard-dojo-location-row"
+                label="Ubicación"
+                value={
+                  currentBranch
+                    ? [currentBranch.city, currentBranch.state, currentBranch.country].filter(Boolean).join(", ") || currentBranch.address
+                    : "Sin ubicación disponible"
+                }
+                onPress={currentBranch ? () => openEditBranchModal(currentBranch) : undefined}
+              />
+            </View>
+            {!canManageOrganization ? (
+              <Text nativeID="screens-admin-dashboard-organization-helper-text" style={styles.helperText} testID="screens-admin-dashboard-organization-helper-text">
+                Tu rol puede operar la sucursal asignada, pero no editar la configuración global del dojo.
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <View nativeID="screens-admin-dashboard-organization-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-organization-empty-block">
+            <Text nativeID="screens-admin-dashboard-organization-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-organization-empty-title">Sin organización cargada</Text>
+            <Text nativeID="screens-admin-dashboard-organization-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-organization-empty-description">
+              Cuando la API devuelva la organización asignada, podrás editarla desde este panel.
+            </Text>
+          </View>
+        )}
+      </AppCard>
+    </AnimatedSurface>
+  ) : null;
   const branchesHeaderBottomContent = isBranchesSection ? (
     <AdminSectionDashboardTemplate
       idPrefix="screens-admin-dashboard-branches-central-dashboard"
@@ -2835,8 +2923,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
-        headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
-        headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
+        headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : isPaymentsSection ? paymentsHeaderBottomContent : isDojoSection ? dojoHeaderBottomContent : undefined}
+        headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : isPaymentsSection ? paymentsHeaderMainContent : isDojoSection ? dojoHeaderMainContent : undefined}
         headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
@@ -2890,7 +2978,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             </AnimatedSurface>
           ) : (
             <>
-              {!isOverviewSection && !isBranchesSection && !isPaymentsSection && !isOperationsSection ? (
+              {!isOverviewSection && !isBranchesSection && !isPaymentsSection && !isOperationsSection && !isDojoSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -3044,7 +3132,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
               ) : null}
 
-              {!isOverviewSection && !isBranchesSection && !isOperationsSection && !isPaymentsSection ? (
+              {!isOverviewSection && !isBranchesSection && !isOperationsSection && !isPaymentsSection && !isDojoSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
@@ -3143,7 +3231,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
 
-                {isOverviewSection || isDojoSection ? (
+                {isOverviewSection ? (
                 <AnimatedSurface delay={300}>
                   <AppCard nativeID="screens-admin-dashboard-organization-card" style={styles.panelCard} testID="screens-admin-dashboard-organization-card">
                   <View nativeID="screens-admin-dashboard-organization-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-organization-header">
