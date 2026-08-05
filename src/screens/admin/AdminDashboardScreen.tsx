@@ -19,6 +19,7 @@ import { AppDateInput } from "@/components/AppDateInput";
 import { AppInput } from "@/components/AppInput";
 import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
+import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboardTemplate";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
@@ -1904,6 +1905,68 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         )}
       </View>
     );
+  const paymentsHeaderBottomContent = isPaymentsSection ? (
+    <AdminSectionDashboardTemplate
+      idPrefix="screens-admin-dashboard-payments-central-dashboard"
+      title={selectedPaymentsBranch ? `Sucursal activa · ${selectedPaymentsBranch.name}` : "Configura la cobranza por sucursal"}
+      description={
+        selectedPaymentsBranch
+          ? "Selecciona alumnos, abre su historial mensual y registra nuevos pagos desde este panel central."
+          : "Elige una sucursal para cargar a sus alumnos y administrar sus pagos sin salir del dashboard."
+      }
+      actions={
+        <AppButton
+          label="Registrar pago"
+          nativeID="screens-admin-dashboard-payments-header-register-button"
+          onPress={openCreatePaymentModal}
+          testID="screens-admin-dashboard-payments-header-register-button"
+          variant="success"
+          disabled={!selectedPaymentsBranchId || availablePaymentStudents.length === 0}
+        />
+      }
+      toolbar={
+        <View
+          nativeID="screens-admin-dashboard-payments-header-branch-filter"
+          style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}
+          testID="screens-admin-dashboard-payments-header-branch-filter"
+        >
+          <AppSelect
+            label="Sucursal"
+            value={paymentsBranchId}
+            onValueChange={setPaymentsBranchId}
+            items={branchOptions}
+            placeholder={visibleBranches.length > 0 ? "Selecciona una sucursal" : "Sin sucursales disponibles"}
+            enabled={!scopedBranchId && visibleBranches.length > 0}
+            nativeID="screens-admin-dashboard-payments-branch-select"
+            testID="screens-admin-dashboard-payments-branch-select"
+          />
+        </View>
+      }
+      summary={
+        <>
+          <View nativeID="screens-admin-dashboard-payments-header-summary" style={styles.paymentSummaryRow} testID="screens-admin-dashboard-payments-header-summary">
+            <AppBadge
+              label={`${paymentScopedStudentsSorted.length} alumnos`}
+              nativeID="screens-admin-dashboard-payments-header-students-badge"
+              testID="screens-admin-dashboard-payments-header-students-badge"
+              tone="neutral"
+            />
+            <AppBadge
+              label={`${paymentScopedPendingPayments} pendientes`}
+              nativeID="screens-admin-dashboard-payments-header-pending-badge"
+              testID="screens-admin-dashboard-payments-header-pending-badge"
+              tone={paymentScopedPendingPayments > 0 ? "warning" : "success"}
+            />
+          </View>
+          {selectedPaymentsBranch ? (
+            <Text nativeID="screens-admin-dashboard-payments-header-range" style={styles.helperText} testID="screens-admin-dashboard-payments-header-range">
+              {`Mostrando ${paymentsRangeStart}-${paymentsRangeEnd} de ${paymentScopedStudentsSorted.length} alumnos`}
+            </Text>
+          ) : null}
+        </>
+      }
+    />
+  ) : null;
 
   return (
     <Screen
@@ -1915,6 +1978,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
+        headerBottomContent={paymentsHeaderBottomContent}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -2028,7 +2092,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     />
                   </View>
                 </>
-              ) : (
+              ) : !isPaymentsSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -2180,7 +2244,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     )}
                   </AppCard>
                 </AnimatedSurface>
-              )}
+              ) : null}
 
               {!isOverviewSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
@@ -2483,38 +2547,30 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     style={[styles.panelCard, isPaymentsSection ? styles.fullWidthPanel : null]}
                     testID="screens-admin-dashboard-payments-card"
                   >
-                  <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
-                    <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">
-                      {isPaymentsSection && selectedPaymentsBranch ? `Pagos · ${selectedPaymentsBranch.name}` : "Pagos"}
-                    </Text>
-                    {!isPaymentsSection ? (
-                      <AppButton
-                        label="Agregar pago"
-                        onPress={openCreatePaymentModal}
-                        variant="success"
-                        disabled={visibleStudents.length === 0}
-                      />
-                    ) : null}
-                  </View>
-                  <View style={styles.paymentSummaryRow}>
-                    <AppBadge
-                      label={`${isPaymentsSection ? paymentScopedStudentsSorted.length : visiblePayments.length} ${isPaymentsSection ? "alumnos" : "movimientos"}`}
-                      tone="neutral"
-                    />
-                    <AppBadge
-                      label={`${isPaymentsSection ? paymentScopedPendingPayments : pendingPayments} pendientes`}
-                      tone={(isPaymentsSection ? paymentScopedPendingPayments : pendingPayments) > 0 ? "warning" : "success"}
-                    />
-                  </View>
+                  {!isPaymentsSection ? (
+                    <>
+                      <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
+                        <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">
+                          Pagos
+                        </Text>
+                        <AppButton
+                          label="Agregar pago"
+                          onPress={openCreatePaymentModal}
+                          variant="success"
+                          disabled={visibleStudents.length === 0}
+                        />
+                      </View>
+                      <View style={styles.paymentSummaryRow}>
+                        <AppBadge label={`${visiblePayments.length} movimientos`} tone="neutral" />
+                        <AppBadge
+                          label={`${pendingPayments} pendientes`}
+                          tone={pendingPayments > 0 ? "warning" : "success"}
+                        />
+                      </View>
+                    </>
+                  ) : null}
                   {isPaymentsSection ? (
                     <>
-                      {selectedPaymentsBranch ? (
-                        <View nativeID="screens-admin-dashboard-payments-pagination-summary" style={styles.paymentsPaginationSummary} testID="screens-admin-dashboard-payments-pagination-summary">
-                          <Text nativeID="screens-admin-dashboard-payments-pagination-summary-text" style={styles.helperText} testID="screens-admin-dashboard-payments-pagination-summary-text">
-                            {`Mostrando ${paymentsRangeStart}-${paymentsRangeEnd} de ${paymentScopedStudentsSorted.length} alumnos`}
-                          </Text>
-                        </View>
-                      ) : null}
                       {!selectedPaymentsBranch ? (
                         <View nativeID="screens-admin-dashboard-payments-select-branch-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-select-branch-block">
                           <Text nativeID="screens-admin-dashboard-payments-select-branch-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-select-branch-title">Selecciona una sucursal</Text>

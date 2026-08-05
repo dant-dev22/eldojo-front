@@ -22,6 +22,7 @@ interface AdminShellProps extends PropsWithChildren {
   onGoPayments: () => void;
   onGoDojo: () => void;
   headerActions?: ReactNode;
+  headerBottomContent?: ReactNode;
   sidebarSummary?: {
     organizationName?: string | null;
     suffix?: string | null;
@@ -74,6 +75,7 @@ export function AdminShell({
   onGoPayments,
   onGoDojo,
   headerActions,
+  headerBottomContent,
   sidebarSummary,
   children,
 }: AdminShellProps) {
@@ -275,58 +277,65 @@ export function AdminShell({
           ]}
           testID="components-admin-shell-header"
         >
-          <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
-            <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
-              <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
-                Centro de Operaciones
-              </Text>
-            </View>
-            <Text
-              nativeID="components-admin-shell-page-title"
-              style={[
-                styles.pageTitle,
-                isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : mobileStyles.pageTitle,
-              ]}
-              testID="components-admin-shell-page-title"
-            >
-              {title}
-            </Text>
-            <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
-          </View>
-
-          <View
-            nativeID="components-admin-shell-header-actions"
-            style={[
-              styles.headerActions,
-              isDesktop ? desktopStyles.headerActions : isTablet ? tabletStyles.headerActions : mobileStyles.headerActions,
-            ]}
-            testID="components-admin-shell-header-actions"
-          >
-            {!isDesktop ? (
-              <View nativeID="components-admin-shell-mobile-header-topbar" style={styles.mobileHeaderTopBar} testID="components-admin-shell-mobile-header-topbar">
-                <Pressable
-                  accessibilityLabel="Abrir secciones del administrador"
-                  accessibilityRole="button"
-                  nativeID="components-admin-shell-mobile-menu-trigger"
-                  onPress={() => setShowMobileMenu(true)}
-                  testID="components-admin-shell-mobile-menu-trigger"
-                  style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.mobileMenuTriggerPressed : null]}
-                >
-                  <View nativeID="components-admin-shell-mobile-menu-trigger-icon" style={styles.mobileMenuTriggerIconWrap} testID="components-admin-shell-mobile-menu-trigger-icon">
-                    <Feather color={colors.text} name="menu" size={18} />
-                  </View>
-                  <Text nativeID="components-admin-shell-mobile-menu-trigger-label" style={styles.mobileMenuTriggerLabel} testID="components-admin-shell-mobile-menu-trigger-label">
-                    Secciones
-                  </Text>
-                </Pressable>
-                <AdminUserMenu
-                  actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
-                  user={user}
-                />
+          <View nativeID="components-admin-shell-header-top-row" style={[styles.headerTopRow, isDesktop ? desktopStyles.headerTopRow : mobileStyles.headerTopRow]} testID="components-admin-shell-header-top-row">
+            <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
+              <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
+                <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
+                  Centro de Operaciones
+                </Text>
               </View>
-            ) : null}
-            {headerActions}
+              <Text
+                nativeID="components-admin-shell-page-title"
+                style={[
+                  styles.pageTitle,
+                  isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : mobileStyles.pageTitle,
+                ]}
+                testID="components-admin-shell-page-title"
+              >
+                {title}
+              </Text>
+              <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
+            </View>
+
+            <View
+              nativeID="components-admin-shell-header-actions"
+              style={[
+                styles.headerActions,
+                isDesktop ? desktopStyles.headerActions : isTablet ? tabletStyles.headerActions : mobileStyles.headerActions,
+              ]}
+              testID="components-admin-shell-header-actions"
+            >
+              {!isDesktop ? (
+                <View nativeID="components-admin-shell-mobile-header-topbar" style={styles.mobileHeaderTopBar} testID="components-admin-shell-mobile-header-topbar">
+                  <Pressable
+                    accessibilityLabel="Abrir secciones del administrador"
+                    accessibilityRole="button"
+                    nativeID="components-admin-shell-mobile-menu-trigger"
+                    onPress={() => setShowMobileMenu(true)}
+                    testID="components-admin-shell-mobile-menu-trigger"
+                    style={({ pressed }) => [styles.mobileMenuTrigger, pressed ? styles.mobileMenuTriggerPressed : null]}
+                  >
+                    <View nativeID="components-admin-shell-mobile-menu-trigger-icon" style={styles.mobileMenuTriggerIconWrap} testID="components-admin-shell-mobile-menu-trigger-icon">
+                      <Feather color={colors.text} name="menu" size={18} />
+                    </View>
+                    <Text nativeID="components-admin-shell-mobile-menu-trigger-label" style={styles.mobileMenuTriggerLabel} testID="components-admin-shell-mobile-menu-trigger-label">
+                      Secciones
+                    </Text>
+                  </Pressable>
+                  <AdminUserMenu
+                    actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
+                    user={user}
+                  />
+                </View>
+              ) : null}
+              {headerActions}
+            </View>
           </View>
+          {headerBottomContent ? (
+            <View nativeID="components-admin-shell-header-bottom-content" style={styles.headerBottomContent} testID="components-admin-shell-header-bottom-content">
+              {headerBottomContent}
+            </View>
+          ) : null}
         </View>
 
         <View
@@ -581,6 +590,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.sm,
   },
+  headerTopRow: {
+    gap: spacing.md,
+    width: "100%",
+  },
   headerCopy: {
     flex: 1,
     gap: 4,
@@ -619,6 +632,12 @@ const styles = StyleSheet.create({
   headerActions: {
     gap: spacing.sm,
     minWidth: 0,
+  },
+  headerBottomContent: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+    width: "100%",
   },
   contentWrap: {
     alignSelf: "center",
@@ -703,6 +722,9 @@ const mobileStyles = StyleSheet.create({
     flexDirection: "column",
     padding: spacing.md,
   },
+  headerTopRow: {
+    flexDirection: "column",
+  },
   pageTitle: {
     fontSize: 26,
   },
@@ -729,6 +751,9 @@ const tabletStyles = StyleSheet.create({
   header: {
     flexDirection: "column",
     padding: spacing.xl,
+  },
+  headerTopRow: {
+    flexDirection: "column",
   },
   pageTitle: {
     fontSize: 30,
@@ -763,10 +788,12 @@ const desktopStyles = StyleSheet.create({
     width: 300,
   },
   header: {
+    padding: spacing.xl,
+  },
+  headerTopRow: {
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: spacing.xl,
   },
   pageTitle: {
     fontSize: 34,
