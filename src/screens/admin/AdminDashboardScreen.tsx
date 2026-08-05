@@ -4469,7 +4469,7 @@ function OverviewCircularGraphCard({
                   >
                     <Text
                       nativeID={`${idPrefix}-circle-${item.key}-link-label`}
-                      style={styles.operationsInlineLinkLabel}
+                      style={[styles.operationsInlineLinkLabel, styles.circularStatInlineLinkLabel]}
                       testID={`${idPrefix}-circle-${item.key}-link-label`}
                     >
                       {circleLink.label}
@@ -4486,12 +4486,12 @@ function OverviewCircularGraphCard({
               accessibilityRole="link"
               nativeID={`${idPrefix}-footer-link`}
               onPress={footerLink.onPress}
-              style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+              style={({ pressed }) => [styles.operationsInlineLink, styles.graphCardFooterInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
               testID={`${idPrefix}-footer-link`}
             >
               <Text
                 nativeID={`${idPrefix}-footer-link-label`}
-                style={styles.operationsInlineLinkLabel}
+                style={[styles.operationsInlineLinkLabel, styles.graphCardFooterInlineLinkLabel]}
                 testID={`${idPrefix}-footer-link-label`}
               >
                 {footerLink.label}
@@ -4885,10 +4885,16 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   graphCardFooter: {
-    alignItems: "flex-start",
+    alignItems: "center",
     borderTopColor: colors.border,
     borderTopWidth: 1,
     paddingTop: spacing.md,
+  },
+  graphCardFooterInlineLink: {
+    alignSelf: "center",
+  },
+  graphCardFooterInlineLinkLabel: {
+    textAlign: "center",
   },
   circularStatsGrid: {
     flexDirection: "row",
@@ -4903,10 +4909,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexGrow: 1,
     gap: spacing.sm,
+    justifyContent: "center",
     minWidth: 150,
   },
   circularStatInlineLink: {
     alignSelf: "center",
+  },
+  circularStatInlineLinkLabel: {
+    textAlign: "center",
   },
   circularStatCard: {
     alignItems: "center",
