@@ -2146,6 +2146,10 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         <OverviewCircularGraphCard
           compact={!isDesktop}
           delay={120}
+          footerLink={{
+            label: "Ir a alumnos",
+            onPress: () => navigation.navigate("StudentsList"),
+          }}
           idPrefix="screens-admin-dashboard-students-graph"
           items={overviewGraphData}
           subtitle="Distribución actual del alumnado visible en el resumen."
@@ -2154,6 +2158,16 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         <OverviewCircularGraphCard
           compact
           delay={150}
+          circleLinks={{
+            "branches-active": {
+              label: "Ir a sucursales",
+              onPress: () => navigation.navigate("AdminHome", { section: "branches" }),
+            },
+            "classes-active": {
+              label: "Ir a clases",
+              onPress: () => navigation.navigate("AdminHome", { section: "operations" }),
+            },
+          }}
           idPrefix="screens-admin-dashboard-structure-graph"
           items={structureGraphData}
           subtitle={visibleBranches.length === 1 ? "Estructura actual de tu sucursal visible." : "Panorama general de sucursales y clases activas del dojo."}
@@ -4410,6 +4424,8 @@ function OverviewCircularGraphCard({
   subtitle,
   title,
   compact = false,
+  footerLink,
+  circleLinks,
 }: {
   delay: number;
   idPrefix: string;
@@ -4417,6 +4433,8 @@ function OverviewCircularGraphCard({
   subtitle: string;
   title: string;
   compact?: boolean;
+  footerLink?: { label: string; onPress: () => void };
+  circleLinks?: Record<string, { label: string; onPress: () => void }>;
 }) {
   const totalValue = Math.max(items.reduce((accumulator, item) => accumulator + item.value, 0), 1);
 
@@ -4428,18 +4446,59 @@ function OverviewCircularGraphCard({
           <Text nativeID={`${idPrefix}-subtitle`} style={styles.helperText} testID={`${idPrefix}-subtitle`}>{subtitle}</Text>
         </View>
         <View nativeID={`${idPrefix}-circles`} style={[styles.circularStatsGrid, compact ? styles.circularStatsGridCompact : null]} testID={`${idPrefix}-circles`}>
-          {items.map((item) => (
-            <CircularStat
-              key={item.key}
-              compact={compact}
-              idPrefix={`${idPrefix}-circle-${item.key}`}
-              label={item.label}
-              tone={item.tone}
-              total={totalValue}
-              value={item.value}
-            />
-          ))}
+          {items.map((item) => {
+            const circleLink = circleLinks?.[item.key];
+
+            return (
+              <View key={item.key} style={styles.circularStatColumn}>
+                <CircularStat
+                  compact={compact}
+                  idPrefix={`${idPrefix}-circle-${item.key}`}
+                  label={item.label}
+                  tone={item.tone}
+                  total={totalValue}
+                  value={item.value}
+                />
+                {circleLink ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    nativeID={`${idPrefix}-circle-${item.key}-link`}
+                    onPress={circleLink.onPress}
+                    style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                    testID={`${idPrefix}-circle-${item.key}-link`}
+                  >
+                    <Text
+                      nativeID={`${idPrefix}-circle-${item.key}-link-label`}
+                      style={styles.operationsInlineLinkLabel}
+                      testID={`${idPrefix}-circle-${item.key}-link-label`}
+                    >
+                      {circleLink.label}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            );
+          })}
         </View>
+        {footerLink ? (
+          <View nativeID={`${idPrefix}-footer`} style={styles.graphCardFooter} testID={`${idPrefix}-footer`}>
+            <Pressable
+              accessibilityRole="link"
+              nativeID={`${idPrefix}-footer-link`}
+              onPress={footerLink.onPress}
+              style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+              testID={`${idPrefix}-footer-link`}
+            >
+              <Text
+                nativeID={`${idPrefix}-footer-link-label`}
+                style={styles.operationsInlineLinkLabel}
+                testID={`${idPrefix}-footer-link-label`}
+              >
+                {footerLink.label}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </AppCard>
     </AnimatedSurface>
   );
@@ -4825,6 +4884,12 @@ const styles = StyleSheet.create({
   graphCardHeader: {
     gap: spacing.xs,
   },
+  graphCardFooter: {
+    alignItems: "flex-start",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
+  },
   circularStatsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -4833,6 +4898,12 @@ const styles = StyleSheet.create({
   },
   circularStatsGridCompact: {
     gap: spacing.sm,
+  },
+  circularStatColumn: {
+    alignItems: "center",
+    flexGrow: 1,
+    gap: spacing.sm,
+    minWidth: 150,
   },
   circularStatCard: {
     alignItems: "center",
