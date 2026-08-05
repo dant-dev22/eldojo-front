@@ -637,65 +637,67 @@ export function StudentsListScreen({ navigation, route }: Props) {
     </View>
   );
   const studentsHeaderSearch = (
-    <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRow, isDesktop ? desktopStyles.searchRow : mobileStyles.searchRow]} testID="screens-admin-students-list-search-row">
-      <View nativeID="screens-admin-students-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-students-list-search-input-wrap">
-        <AppInput
-          label="Buscar por nombre"
-          nativeID="screens-admin-students-list-search-input"
-          onChangeText={setSearch}
-          placeholder="Ej. Juan Pérez"
-          rightAdornment={<Feather color={colors.textMuted} name="search" size={18} />}
-          testID="screens-admin-students-list-search-input"
-          value={search}
-        />
+    <View nativeID="screens-admin-students-list-search-wrap" style={styles.searchWrap} testID="screens-admin-students-list-search-wrap">
+      <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.inlineMetricsGrid, isDesktop ? desktopStyles.inlineMetricsGrid : mobileStyles.inlineMetricsGrid]} testID="screens-admin-students-list-metrics-grid">
+        <View nativeID="screens-admin-students-list-metric-found" style={styles.inlineMetricRow} testID="screens-admin-students-list-metric-found">
+          <Text nativeID="screens-admin-students-list-metric-found-value" style={styles.inlineMetricValue} testID="screens-admin-students-list-metric-found-value">
+            {students.length}
+          </Text>
+          <Text nativeID="screens-admin-students-list-metric-found-label" style={styles.inlineMetricLabel} testID="screens-admin-students-list-metric-found-label">
+            alumnos en total
+          </Text>
+        </View>
+        <View nativeID="screens-admin-students-list-metric-active" style={styles.inlineMetricRow} testID="screens-admin-students-list-metric-active">
+          <Text nativeID="screens-admin-students-list-metric-active-value" style={styles.inlineMetricValue} testID="screens-admin-students-list-metric-active-value">
+            {activeStudentsCount}
+          </Text>
+          <Text nativeID="screens-admin-students-list-metric-active-label" style={styles.inlineMetricLabel} testID="screens-admin-students-list-metric-active-label">
+            alumnos activos
+          </Text>
+        </View>
+        <View nativeID="screens-admin-students-list-metric-payment" style={styles.inlineMetricRow} testID="screens-admin-students-list-metric-payment">
+          <Text nativeID="screens-admin-students-list-metric-payment-value" style={styles.inlineMetricValue} testID="screens-admin-students-list-metric-payment-value">
+            {paymentAttentionCount}
+          </Text>
+          <Text nativeID="screens-admin-students-list-metric-payment-label" style={styles.inlineMetricLabel} testID="screens-admin-students-list-metric-payment-label">
+            pagos vencidos
+          </Text>
+        </View>
+        <View nativeID="screens-admin-students-list-metric-inactive" style={styles.inlineMetricRow} testID="screens-admin-students-list-metric-inactive">
+          <Text nativeID="screens-admin-students-list-metric-inactive-value" style={styles.inlineMetricValue} testID="screens-admin-students-list-metric-inactive-value">
+            {inactiveStudentsCount}
+          </Text>
+          <Text nativeID="screens-admin-students-list-metric-inactive-label" style={styles.inlineMetricLabel} testID="screens-admin-students-list-metric-inactive-label">
+            alumnos no activos
+          </Text>
+        </View>
       </View>
-      {search.trim() ? (
-        <AppButton
-          label="Limpiar"
-          nativeID="screens-admin-students-list-clear-search-button"
-          onPress={() => setSearch("")}
-          testID="screens-admin-students-list-clear-search-button"
-          variant="secondary"
-        />
-      ) : null}
+      <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRow, isDesktop ? desktopStyles.searchRow : mobileStyles.searchRow]} testID="screens-admin-students-list-search-row">
+        <View nativeID="screens-admin-students-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-students-list-search-input-wrap">
+          <AppInput
+            label="Buscar por nombre"
+            nativeID="screens-admin-students-list-search-input"
+            onChangeText={setSearch}
+            placeholder="Ej. Juan Pérez"
+            rightAdornment={<Feather color={colors.textMuted} name="search" size={18} />}
+            testID="screens-admin-students-list-search-input"
+            value={search}
+          />
+        </View>
+        {search.trim() ? (
+          <AppButton
+            label="Limpiar"
+            nativeID="screens-admin-students-list-clear-search-button"
+            onPress={() => setSearch("")}
+            testID="screens-admin-students-list-clear-search-button"
+            variant="secondary"
+          />
+        ) : null}
+      </View>
     </View>
   );
   const studentsHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
     <View nativeID="screens-admin-students-list-header-main-content" style={styles.headerMainContent} testID="screens-admin-students-list-header-main-content">
-      <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-students-list-metrics-grid">
-        <DashboardMetricCard
-          description={hasActiveSearch ? `Filtro: ${debouncedSearch.trim()}` : "Sin filtro activo"}
-          icon="users"
-          idPrefix="screens-admin-students-list-metric-found"
-          tone="info"
-          title="Encontrados"
-          value={String(students.length)}
-        />
-        <DashboardMetricCard
-          description="Con estatus activo"
-          icon="check-circle"
-          idPrefix="screens-admin-students-list-metric-active"
-          tone="success"
-          title="Activos"
-          value={String(activeStudentsCount)}
-        />
-        <DashboardMetricCard
-          description="Vencidos o parciales"
-          icon="alert-circle"
-          idPrefix="screens-admin-students-list-metric-payment"
-          tone="warning"
-          title="Cobranza"
-          value={String(paymentAttentionCount)}
-        />
-        <DashboardMetricCard
-          description="Congelados o inactivos"
-          icon="pause-circle"
-          idPrefix="screens-admin-students-list-metric-inactive"
-          tone="neutral"
-          title="No activos"
-          value={String(inactiveStudentsCount)}
-        />
-      </View>
       <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
         <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
           <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Listado de alumnos</Text>
@@ -1503,11 +1505,36 @@ const styles = StyleSheet.create({
   searchRow: {
     gap: spacing.sm,
   },
+  searchWrap: {
+    gap: spacing.md,
+  },
   searchInputWrap: {
     flex: 1,
   },
   headerMainContent: {
     gap: spacing.md,
+  },
+  inlineMetricsGrid: {
+    gap: spacing.sm,
+  },
+  inlineMetricRow: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  inlineMetricValue: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  inlineMetricLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
   },
   metricsGrid: {
     gap: spacing.sm,
@@ -1903,6 +1930,9 @@ const mobileStyles = StyleSheet.create({
   searchRow: {
     flexDirection: "column",
   },
+  inlineMetricsGrid: {
+    flexDirection: "column",
+  },
   metricsGrid: {
     flexDirection: "column",
   },
@@ -1932,6 +1962,10 @@ const desktopStyles = StyleSheet.create({
   searchRow: {
     alignItems: "flex-end",
     flexDirection: "row",
+  },
+  inlineMetricsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   metricsGrid: {
     flexDirection: "row",
