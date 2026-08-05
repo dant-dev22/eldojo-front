@@ -2090,22 +2090,17 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         ) : focusedSection === "operations" || focusedSection === "payments" ? null : (
           <>
             {canManageOrganization && organization ? (
-              <AppButton
-                label="Editar dojo"
+              <Pressable
+                accessibilityRole="button"
                 nativeID="screens-admin-dashboard-edit-organization-button"
                 onPress={openOrganizationModal}
+                style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
                 testID="screens-admin-dashboard-edit-organization-button"
-                variant="secondary"
-              />
-            ) : null}
-            {currentBranch ? (
-              <AppButton
-                label="Editar sucursal"
-                nativeID="screens-admin-dashboard-dojo-edit-branch-button"
-                onPress={() => openEditBranchModal(currentBranch)}
-                testID="screens-admin-dashboard-dojo-edit-branch-button"
-                variant="secondary"
-              />
+              >
+                <Text nativeID="screens-admin-dashboard-edit-organization-button-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-edit-organization-button-label">
+                  Editar
+                </Text>
+              </Pressable>
             ) : null}
           </>
         )}
@@ -2167,48 +2162,17 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       </View>
     </View>
   ) : null;
-  const dojoHeaderBottomContent = isDojoSection ? (
-    <View nativeID="screens-admin-dashboard-dojo-central-dashboard" style={styles.overviewHeroHeaderBlock} testID="screens-admin-dashboard-dojo-central-dashboard">
-      <Text nativeID="screens-admin-dashboard-dojo-central-title" style={styles.sectionTitle} testID="screens-admin-dashboard-dojo-central-title">
-        {pageTitle}
-      </Text>
-      <Text nativeID="screens-admin-dashboard-dojo-central-description" style={styles.helperText} testID="screens-admin-dashboard-dojo-central-description">
-        {pageSubtitle}
-      </Text>
-    </View>
-  ) : null;
   const dojoHeaderMainContent = isDojoSection ? (
     <AnimatedSurface delay={300} style={styles.fullWidthPanel}>
       <AppCard nativeID="screens-admin-dashboard-dojo-central-card" style={[styles.panelCard, styles.fullWidthPanel]} testID="screens-admin-dashboard-dojo-central-card">
-        <View nativeID="screens-admin-dashboard-dojo-central-header" style={[styles.cardHeaderRow, styles.operationsMainHeader]} testID="screens-admin-dashboard-dojo-central-header">
-          <View nativeID="screens-admin-dashboard-dojo-central-copy" style={styles.operationsMainCopy} testID="screens-admin-dashboard-dojo-central-copy">
-            <Text nativeID="screens-admin-dashboard-dojo-central-card-title" style={styles.sectionTitle} testID="screens-admin-dashboard-dojo-central-card-title">
-              Mi Dojo
-            </Text>
-            <Text nativeID="screens-admin-dashboard-dojo-central-card-subtitle" style={styles.helperText} testID="screens-admin-dashboard-dojo-central-card-subtitle">
-              Administra la identidad del dojo y los datos visibles de la sucursal actual desde un solo dashboard central.
-            </Text>
-          </View>
-          <AppBadge
-            label={organization?.is_active ? "Activa" : "Inactiva"}
-            nativeID="screens-admin-dashboard-dojo-central-status-badge"
-            testID="screens-admin-dashboard-dojo-central-status-badge"
-            tone={organization?.is_active ? "success" : "warning"}
-          />
-        </View>
         {organization ? (
           <>
-            <View nativeID="screens-admin-dashboard-dojo-central-summary" style={styles.branchSummaryGrid} testID="screens-admin-dashboard-dojo-central-summary">
-              <View nativeID="screens-admin-dashboard-dojo-central-name-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-dojo-central-name-card">
-                <Text nativeID="screens-admin-dashboard-dojo-central-name-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-dojo-central-name-label">Nombre</Text>
-                <Text nativeID="screens-admin-dashboard-dojo-central-name-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-dojo-central-name-value">{organization.name}</Text>
-              </View>
-              <View nativeID="screens-admin-dashboard-dojo-central-slug-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-dojo-central-slug-card">
-                <Text nativeID="screens-admin-dashboard-dojo-central-slug-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-dojo-central-slug-label">Sufijo</Text>
-                <Text nativeID="screens-admin-dashboard-dojo-central-slug-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-dojo-central-slug-value">{organization.slug}</Text>
-              </View>
-            </View>
             <View nativeID="screens-admin-dashboard-dojo-central-actions" style={styles.detailList} testID="screens-admin-dashboard-dojo-central-actions">
+              <EditableDetailRow
+                idPrefix="screens-admin-dashboard-dojo-status-row"
+                label="Estado"
+                value={organization.is_active ? "Activa" : "Inactiva"}
+              />
               <EditableDetailRow
                 idPrefix="screens-admin-dashboard-dojo-name-row"
                 label="Nombre del dojo"
@@ -2923,7 +2887,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
-        headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : isPaymentsSection ? paymentsHeaderBottomContent : isDojoSection ? dojoHeaderBottomContent : undefined}
+        headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : isPaymentsSection ? paymentsHeaderBottomContent : undefined}
         headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : isPaymentsSection ? paymentsHeaderMainContent : isDojoSection ? dojoHeaderMainContent : undefined}
         headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
