@@ -35,6 +35,8 @@ interface AuthContextValue {
   refreshUser: () => Promise<void>;
   showPostConfirmation: boolean;
   dismissPostConfirmation: () => void;
+  justLoggedIn: boolean;
+  consumeJustLoggedIn: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -57,6 +59,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<User | null>(null);
   const [showPostConfirmation, setShowPostConfirmation] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   const persistAuthenticatedUser = async (nextUser: User) => {
     const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
@@ -131,6 +134,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(response.user);
         setShowPostConfirmation(false);
         setStatus("authenticated");
+        setJustLoggedIn(true);
       },
       registerAcademy: async (payload) => {
         return authApi.registerAcademy(payload);
@@ -146,6 +150,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(response.user);
         setShowPostConfirmation(true);
         setStatus("authenticated");
+        setJustLoggedIn(true);
       },
       redeemPendingAcademySession: async (pendingRegistration) => {
         const response = await authApi.redeemAcademyPendingSession({
@@ -160,6 +165,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(response.user);
         setShowPostConfirmation(false);
         setStatus("authenticated");
+        setJustLoggedIn(true);
       },
       resendAcademyConfirmation: async (email) =>
         authApi.resendAcademyConfirmation({ email: email.trim().toLowerCase() }),
@@ -176,6 +182,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setUser(null);
         setShowPostConfirmation(false);
         setStatus("unauthenticated");
+        setJustLoggedIn(false);
       },
       completeFirstTimeTutorial: async () => {
         const updatedUser = await authApi.updateTutorialState({ first_time: false });
@@ -204,8 +211,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       },
       showPostConfirmation,
       dismissPostConfirmation: () => setShowPostConfirmation(false),
+      justLoggedIn,
+      consumeJustLoggedIn: () => setJustLoggedIn(false),
     }),
-    [showPostConfirmation, status, user]
+    [justLoggedIn, showPostConfirmation, status, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

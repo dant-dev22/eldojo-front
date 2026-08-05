@@ -1083,13 +1083,13 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   return (
     <View
       nativeID="screens-auth-public-root"
-      style={styles.publicRoot}
+      style={[styles.publicRoot, page === "home" ? styles.publicRootStatic : null]}
       testID="screens-auth-public-root"
       {...getWebClassNameProps("screens-auth-public-root")}
     >
         <ScrollView
-          style={styles.mainScroll}
-          contentContainerStyle={styles.scrollContent}
+          style={[styles.mainScroll, page === "home" ? styles.mainScrollStatic : null]}
+          contentContainerStyle={[styles.scrollContent, page === "home" ? styles.scrollContentStatic : null]}
           keyboardShouldPersistTaps="handled"
           nativeID="screens-auth-public-scroll-view"
           nestedScrollEnabled={true}
@@ -1797,6 +1797,12 @@ const styles = StyleSheet.create({
     minHeight: 0,
     width: "100%",
   },
+  publicRootStatic: {
+    flex: 0,
+    flexGrow: 0,
+    minHeight: 0,
+    width: "100%",
+  },
   safeArea: {
     backgroundColor: colors.background,
     flex: 1,
@@ -1980,8 +1986,15 @@ const styles = StyleSheet.create({
   mainScroll: {
     flex: 1,
   },
+  mainScrollStatic: {
+    flex: 0,
+    flexGrow: 0,
+  },
   scrollContent: {
     flexGrow: 1,
+  },
+  scrollContentStatic: {
+    flexGrow: 0,
   },
   heroSection: {
     backgroundColor: "#151410",

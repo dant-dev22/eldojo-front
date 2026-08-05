@@ -1,5 +1,7 @@
 import { NavigationContainer, DefaultTheme, LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useEffect } from "react";
+import { Platform } from "react-native";
 
 import { StatusView } from "@/components/StatusView";
 import { colors } from "@/constants/theme";
@@ -129,8 +131,29 @@ function AdminFlow() {
 }
 
 export function AppNavigator() {
-  const { showPostConfirmation, status, user } = useAuth();
+  const { showPostConfirmation, status, user, justLoggedIn, consumeJustLoggedIn } = useAuth();
   const publicAttendanceRoute = getPublicAttendanceRoute();
+
+  useEffect(() => {
+    if (!justLoggedIn) {
+      return;
+    }
+    if (status !== "authenticated" || !user) {
+      return;
+    }
+    if (showPostConfirmation) {
+      return;
+    }
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const adminPath = "/admin";
+      if (window.location.pathname !== adminPath) {
+        window.history.replaceState(window.history.state, "", adminPath);
+      }
+    }
+
+    consumeJustLoggedIn();
+  }, [justLoggedIn, status, user, showPostConfirmation, consumeJustLoggedIn]);
 
   return (
     <NavigationContainer linking={linking} theme={navigationTheme}>

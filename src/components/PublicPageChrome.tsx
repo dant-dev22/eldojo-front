@@ -134,11 +134,11 @@ export function PublicPageChrome({
   return (
     <Screen
       scrollable={screenScrollable}
-      contentStyle={[styles.screenContent, screenContentStyle]}
+      contentStyle={[styles.screenContent, screenScrollable ? styles.screenContentStatic : null, screenContentStyle]}
       nativeID={`${idPrefix}-screen`}
       testID={`${idPrefix}-screen`}
     >
-      <View nativeID={`${idPrefix}-shell`} style={styles.shell} testID={`${idPrefix}-shell`}>
+      <View nativeID={`${idPrefix}-shell`} style={[styles.shell, screenScrollable ? styles.shellStatic : null]} testID={`${idPrefix}-shell`}>
         {!isMobile ? (
           <View
             nativeID={`${idPrefix}-navbar`}
@@ -347,7 +347,7 @@ export function PublicPageChrome({
         ) : null}
 
         {showFooter ? (
-          <View nativeID={`${idPrefix}-footer`} style={styles.footerShell} testID={`${idPrefix}-footer`}>
+          <View nativeID={`${idPrefix}-footer`} style={[styles.footerShell, screenScrollable ? styles.footerShellStatic : null]} testID={`${idPrefix}-footer`}>
           <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
           <View nativeID={`${idPrefix}-footer-inner`} style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]} testID={`${idPrefix}-footer-inner`}>
             <View nativeID={`${idPrefix}-footer-grid`} style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]} testID={`${idPrefix}-footer-grid`}>
@@ -568,8 +568,19 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
+  screenContentStatic: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   shell: {
     flex: 1,
+    width: "100%",
+  },
+  shellStatic: {
+    flex: 0,
+    flexGrow: 0,
+    minHeight: "100%",
     width: "100%",
   },
   navbar: {
@@ -815,6 +826,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing["2xl"],
     paddingTop: spacing.xl,
     width: "100%",
+  },
+  footerShellStatic: {
+    position: "relative",
+    zIndex: 0,
   },
   footerDividerTop: {
     alignSelf: "center",
