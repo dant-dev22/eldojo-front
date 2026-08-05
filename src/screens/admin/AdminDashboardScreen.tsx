@@ -25,7 +25,7 @@ import { StatusView } from "@/components/StatusView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus } from "@/utils/format";
+import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
 import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
 
 import type { AdminDashboardSection, AdminStackParamList } from "@/navigation/types";
@@ -581,6 +581,43 @@ function getPaymentRecordTone(status: PaymentRecordStatus): "success" | "warning
   }
 }
 
+function getStudentPaymentStatusTone(status: Student["payment_status"]): "success" | "warning" | "danger" | "neutral" {
+  switch (status) {
+    case "up_to_date":
+      return "success";
+    case "due_soon":
+    case "partial":
+      return "warning";
+    case "late":
+    case "overdue":
+      return "danger";
+    case "waived":
+      return "neutral";
+    default:
+      return "neutral";
+  }
+}
+
+function formatStudentStatus(status: Student["status"]): string {
+  switch (status) {
+    case "active":
+      return "Activo";
+    case "frozen":
+      return "Congelado";
+    case "inactive":
+      return "Inactivo";
+    default:
+      return status;
+  }
+}
+
+function formatMonthYear(value: string): string {
+  return new Intl.DateTimeFormat("es-MX", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function formatAttendanceMethod(method: AttendanceMethod): string {
   switch (method) {
     case "manual":
@@ -635,6 +672,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(createEmptyPaymentForm());
   const [paymentErrors, setPaymentErrors] = useState<PaymentFormErrors>({});
+  const [selectedPaymentsStudent, setSelectedPaymentsStudent] = useState<Student | null>(null);
   const [paymentsBranchId, setPaymentsBranchId] = useState<string>(scopedBranchId ? String(scopedBranchId) : "");
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
@@ -1103,18 +1141,74 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         : [],
     [selectedPaymentsBranchId, visiblePayments]
   );
+  const paymentScopedPaymentsByStudentId = useMemo(() => {
+    const paymentsByStudentId = new Map<number, Payment[]>();
+
+    paymentScopedPayments
+      .slice()
+      .sort((left, right) => new Date(right.paid_at).getTime() - new Date(left.paid_at).getTime())
+      .forEach((payment) => {
+        const current = paymentsByStudentId.get(payment.student_id) ?? [];
+        current.push(payment);
+        paymentsByStudentId.set(payment.student_id, current);
+      });
+
+    return paymentsByStudentId;
+  }, [paymentScopedPayments]);
   const paymentScopedPendingPayments = useMemo(
     () => paymentScopedPayments.filter((item) => item.status === "pending").length,
     [paymentScopedPayments]
   );
+  const paymentScopedStudentsSorted = useMemo(
+    () =>
+      paymentScopedStudents
+        .slice()
+        .sort((left, right) => `${left.first_name} ${left.last_name}`.localeCompare(`${right.first_name} ${right.last_name}`, "es-MX")),
+    [paymentScopedStudents]
+  );
   const paymentsPageSize = isMobile ? 6 : 12;
-  const paymentsTotalPages = Math.max(1, Math.ceil(paymentScopedPayments.length / paymentsPageSize));
-  const paginatedPaymentScopedPayments = useMemo(() => {
+  const paymentsTotalPages = Math.max(1, Math.ceil(paymentScopedStudentsSorted.length / paymentsPageSize));
+  const paginatedPaymentScopedStudents = useMemo(() => {
     const startIndex = (paymentsPage - 1) * paymentsPageSize;
-    return paymentScopedPayments.slice(startIndex, startIndex + paymentsPageSize);
-  }, [paymentScopedPayments, paymentsPage, paymentsPageSize]);
-  const paymentsRangeStart = paymentScopedPayments.length === 0 ? 0 : (paymentsPage - 1) * paymentsPageSize + 1;
-  const paymentsRangeEnd = Math.min(paymentsPage * paymentsPageSize, paymentScopedPayments.length);
+    return paymentScopedStudentsSorted.slice(startIndex, startIndex + paymentsPageSize);
+  }, [paymentScopedStudentsSorted, paymentsPage, paymentsPageSize]);
+  const paymentsRangeStart = paymentScopedStudentsSorted.length === 0 ? 0 : (paymentsPage - 1) * paymentsPageSize + 1;
+  const paymentsRangeEnd = Math.min(paymentsPage * paymentsPageSize, paymentScopedStudentsSorted.length);
+  const selectedPaymentsStudentPayments = useMemo(
+    () => (selectedPaymentsStudent ? paymentScopedPaymentsByStudentId.get(selectedPaymentsStudent.id) ?? [] : []),
+    [paymentScopedPaymentsByStudentId, selectedPaymentsStudent]
+  );
+  const selectedPaymentsStudentPaymentGroups = useMemo(() => {
+    const groupedPayments = new Map<string, Payment[]>();
+
+    selectedPaymentsStudentPayments.forEach((payment) => {
+      const groupKey = formatMonthYear(payment.paid_at);
+      const currentGroup = groupedPayments.get(groupKey) ?? [];
+      currentGroup.push(payment);
+      groupedPayments.set(groupKey, currentGroup);
+    });
+
+    return Array.from(groupedPayments.entries()).map(([label, items]) => ({
+      label,
+      items,
+    }));
+  }, [selectedPaymentsStudentPayments]);
+  const paymentScopedStudentRows = useMemo(
+    () =>
+      paginatedPaymentScopedStudents.map((student) => {
+        const studentPayments = paymentScopedPaymentsByStudentId.get(student.id) ?? [];
+        const lastPayment = studentPayments[0] ?? null;
+        const pendingMovements = studentPayments.filter((payment) => payment.status === "pending").length;
+
+        return {
+          student,
+          totalPayments: studentPayments.length,
+          pendingMovements,
+          lastPayment,
+        };
+      }),
+    [paginatedPaymentScopedStudents, paymentScopedPaymentsByStudentId]
+  );
   const visibleAttendanceRecords = useMemo(
     () =>
       attendanceRecords.filter(
@@ -1302,6 +1396,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   }, [paymentsTotalPages]);
 
   useEffect(() => {
+    if (!selectedPaymentsStudent) {
+      return;
+    }
+
+    if (paymentScopedStudents.some((item) => item.id === selectedPaymentsStudent.id)) {
+      return;
+    }
+
+    setSelectedPaymentsStudent(null);
+  }, [paymentScopedStudents, selectedPaymentsStudent]);
+
+  useEffect(() => {
     if (!selectedPaymentStudent) {
       return;
     }
@@ -1415,13 +1521,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     setClassModalVisible(true);
   }
 
-  function openCreatePaymentModal() {
-    const defaultStudent = availablePaymentStudents[0] ?? null;
+  function openCreatePaymentModal(defaultStudent?: Student | null) {
+    const resolvedStudent = defaultStudent ?? availablePaymentStudents[0] ?? null;
     setFeedback(null);
     setPaymentDialogMode("create");
     setEditingPayment(null);
     setPaymentErrors({});
-    setPaymentForm(createEmptyPaymentForm(defaultStudent));
+    setPaymentForm(createEmptyPaymentForm(resolvedStudent));
     setPaymentModalVisible(true);
   }
 
@@ -1774,25 +1880,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               disabled={visibleBranches.length === 0 || disciplineOptions.length === 0}
             />
           </>
-        ) : focusedSection === "payments" ? (
-          <>
-            <AppButton
-              label="Registrar pago"
-              nativeID="screens-admin-dashboard-payments-new-payment-button"
-              onPress={openCreatePaymentModal}
-              testID="screens-admin-dashboard-payments-new-payment-button"
-              variant="success"
-              disabled={!selectedPaymentsBranchId || availablePaymentStudents.length === 0}
-            />
-            <AppButton
-              label="Resumen"
-              nativeID="screens-admin-dashboard-payments-summary-button"
-              onPress={() => navigation.navigate("AdminHome")}
-              testID="screens-admin-dashboard-payments-summary-button"
-              variant="secondary"
-            />
-          </>
-        ) : (
+        ) : focusedSection === "payments" ? null : (
           <>
             {canManageOrganization && organization ? (
               <AppButton
@@ -2395,16 +2483,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">
                       {isPaymentsSection && selectedPaymentsBranch ? `Pagos · ${selectedPaymentsBranch.name}` : "Pagos"}
                     </Text>
-                    <AppButton
-                      label="Agregar pago"
-                      onPress={openCreatePaymentModal}
-                      variant="success"
-                      disabled={isPaymentsSection ? !selectedPaymentsBranchId || availablePaymentStudents.length === 0 : visibleStudents.length === 0}
-                    />
+                    {!isPaymentsSection ? (
+                      <AppButton
+                        label="Agregar pago"
+                        onPress={openCreatePaymentModal}
+                        variant="success"
+                        disabled={visibleStudents.length === 0}
+                      />
+                    ) : null}
                   </View>
                   <View style={styles.paymentSummaryRow}>
                     <AppBadge
-                      label={`${isPaymentsSection ? paymentScopedPayments.length : visiblePayments.length} movimientos`}
+                      label={`${isPaymentsSection ? paymentScopedStudentsSorted.length : visiblePayments.length} ${isPaymentsSection ? "alumnos" : "movimientos"}`}
                       tone="neutral"
                     />
                     <AppBadge
@@ -2412,59 +2502,124 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                       tone={(isPaymentsSection ? paymentScopedPendingPayments : pendingPayments) > 0 ? "warning" : "success"}
                     />
                   </View>
-                  {isPaymentsSection && selectedPaymentsBranch ? (
-                    <View nativeID="screens-admin-dashboard-payments-pagination-summary" style={styles.paymentsPaginationSummary} testID="screens-admin-dashboard-payments-pagination-summary">
-                      <Text nativeID="screens-admin-dashboard-payments-pagination-summary-text" style={styles.helperText} testID="screens-admin-dashboard-payments-pagination-summary-text">
-                        {`Mostrando ${paymentsRangeStart}-${paymentsRangeEnd} de ${paymentScopedPayments.length} movimientos`}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {isPaymentsSection && !selectedPaymentsBranch ? (
-                    <View nativeID="screens-admin-dashboard-payments-select-branch-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-select-branch-block">
-                      <Text nativeID="screens-admin-dashboard-payments-select-branch-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-select-branch-title">Selecciona una sucursal</Text>
-                      <Text nativeID="screens-admin-dashboard-payments-select-branch-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-select-branch-description">
-                        Elige una sucursal desde la parte superior para cargar su alumnado y administrar la cobranza.
-                      </Text>
-                    </View>
-                  ) : (isPaymentsSection ? paginatedPaymentScopedPayments : visiblePayments.slice(0, 6)).length > 0 ? (
-                    <View
-                      nativeID="screens-admin-dashboard-payments-matrix-grid"
-                      style={[styles.paymentsMatrixGrid, isPaymentsSection && !isMobile ? styles.paymentsMatrixGridDesktop : null]}
-                      testID="screens-admin-dashboard-payments-matrix-grid"
-                    >
-                    {(isPaymentsSection ? paginatedPaymentScopedPayments : visiblePayments.slice(0, 6)).map((payment) => {
-                      const student =
-                        (isPaymentsSection ? paymentScopedStudents : visibleStudents).find((item) => item.id === payment.student_id) ?? null;
+                  {isPaymentsSection ? (
+                    <>
+                      {selectedPaymentsBranch ? (
+                        <View nativeID="screens-admin-dashboard-payments-pagination-summary" style={styles.paymentsPaginationSummary} testID="screens-admin-dashboard-payments-pagination-summary">
+                          <Text nativeID="screens-admin-dashboard-payments-pagination-summary-text" style={styles.helperText} testID="screens-admin-dashboard-payments-pagination-summary-text">
+                            {`Mostrando ${paymentsRangeStart}-${paymentsRangeEnd} de ${paymentScopedStudentsSorted.length} alumnos`}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {!selectedPaymentsBranch ? (
+                        <View nativeID="screens-admin-dashboard-payments-select-branch-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-select-branch-block">
+                          <Text nativeID="screens-admin-dashboard-payments-select-branch-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-select-branch-title">Selecciona una sucursal</Text>
+                          <Text nativeID="screens-admin-dashboard-payments-select-branch-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-select-branch-description">
+                            Elige una sucursal desde la parte superior para cargar su alumnado y administrar la cobranza.
+                          </Text>
+                        </View>
+                      ) : paymentScopedStudentRows.length > 0 ? (
+                        <>
+                          <View nativeID="screens-admin-dashboard-payments-student-list" style={styles.paymentsStudentList} testID="screens-admin-dashboard-payments-student-list">
+                            {paymentScopedStudentRows.map(({ student, totalPayments, pendingMovements, lastPayment }) => (
+                              <Pressable
+                                key={student.id}
+                                accessibilityRole="button"
+                                nativeID={`screens-admin-dashboard-payments-student-row-${student.id}`}
+                                onPress={() => setSelectedPaymentsStudent(student)}
+                                style={({ pressed }) => [
+                                  styles.paymentsStudentRow,
+                                  pressed ? styles.paymentsStudentRowPressed : null,
+                                ]}
+                                testID={`screens-admin-dashboard-payments-student-row-${student.id}`}
+                              >
+                                <View nativeID={`screens-admin-dashboard-payments-student-copy-${student.id}`} style={styles.paymentsStudentCopy} testID={`screens-admin-dashboard-payments-student-copy-${student.id}`}>
+                                  <View nativeID={`screens-admin-dashboard-payments-student-head-${student.id}`} style={styles.paymentsStudentHead} testID={`screens-admin-dashboard-payments-student-head-${student.id}`}>
+                                    <Text nativeID={`screens-admin-dashboard-payments-student-name-${student.id}`} style={styles.paymentsStudentName} testID={`screens-admin-dashboard-payments-student-name-${student.id}`}>
+                                      {`${student.first_name} ${student.last_name}`}
+                                    </Text>
+                                    <AppBadge
+                                      label={formatPaymentStatus(student.payment_status)}
+                                      nativeID={`screens-admin-dashboard-payments-student-payment-status-${student.id}`}
+                                      testID={`screens-admin-dashboard-payments-student-payment-status-${student.id}`}
+                                      tone={getStudentPaymentStatusTone(student.payment_status)}
+                                    />
+                                  </View>
+                                  <Text nativeID={`screens-admin-dashboard-payments-student-meta-${student.id}`} style={styles.paymentsStudentMeta} testID={`screens-admin-dashboard-payments-student-meta-${student.id}`}>
+                                    {`${student.unique_code} · ${formatStudentStatus(student.status)} · Próximo pago: ${formatDate(student.next_payment_date)}`}
+                                  </Text>
+                                  <View nativeID={`screens-admin-dashboard-payments-student-summary-${student.id}`} style={styles.paymentsStudentSummary} testID={`screens-admin-dashboard-payments-student-summary-${student.id}`}>
+                                    <Text nativeID={`screens-admin-dashboard-payments-student-fee-${student.id}`} style={styles.paymentsStudentSummaryText} testID={`screens-admin-dashboard-payments-student-fee-${student.id}`}>
+                                      {`Mensualidad: ${formatCurrency(student.monthly_fee, student.currency)}`}
+                                    </Text>
+                                    <Text nativeID={`screens-admin-dashboard-payments-student-total-${student.id}`} style={styles.paymentsStudentSummaryText} testID={`screens-admin-dashboard-payments-student-total-${student.id}`}>
+                                      {`Pagos: ${totalPayments}`}
+                                    </Text>
+                                    <Text nativeID={`screens-admin-dashboard-payments-student-pending-${student.id}`} style={styles.paymentsStudentSummaryText} testID={`screens-admin-dashboard-payments-student-pending-${student.id}`}>
+                                      {`Pendientes: ${pendingMovements}`}
+                                    </Text>
+                                    <Text nativeID={`screens-admin-dashboard-payments-student-last-${student.id}`} style={styles.paymentsStudentSummaryText} testID={`screens-admin-dashboard-payments-student-last-${student.id}`}>
+                                      {`Último movimiento: ${lastPayment ? formatDate(lastPayment.paid_at) : "Sin registros"}`}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View nativeID={`screens-admin-dashboard-payments-student-action-${student.id}`} style={styles.paymentsStudentAction} testID={`screens-admin-dashboard-payments-student-action-${student.id}`}>
+                                  <Text nativeID={`screens-admin-dashboard-payments-student-action-label-${student.id}`} style={styles.paymentsStudentActionLabel} testID={`screens-admin-dashboard-payments-student-action-label-${student.id}`}>
+                                    Ver pagos
+                                  </Text>
+                                  <Feather color={colors.textMuted} name="chevron-right" size={18} />
+                                </View>
+                              </Pressable>
+                            ))}
+                          </View>
+                          {paymentScopedStudentsSorted.length > paymentsPageSize ? (
+                            <View nativeID="screens-admin-dashboard-payments-pagination-controls" style={styles.paymentsPaginationControls} testID="screens-admin-dashboard-payments-pagination-controls">
+                              <AppButton
+                                label="Anterior"
+                                nativeID="screens-admin-dashboard-payments-pagination-prev-button"
+                                onPress={() => setPaymentsPage((current) => Math.max(1, current - 1))}
+                                testID="screens-admin-dashboard-payments-pagination-prev-button"
+                                variant="secondary"
+                                disabled={paymentsPage === 1}
+                              />
+                              <Text nativeID="screens-admin-dashboard-payments-pagination-page-label" style={styles.paymentsPaginationLabel} testID="screens-admin-dashboard-payments-pagination-page-label">
+                                {`Página ${paymentsPage} de ${paymentsTotalPages}`}
+                              </Text>
+                              <AppButton
+                                label="Siguiente"
+                                nativeID="screens-admin-dashboard-payments-pagination-next-button"
+                                onPress={() => setPaymentsPage((current) => Math.min(paymentsTotalPages, current + 1))}
+                                testID="screens-admin-dashboard-payments-pagination-next-button"
+                                variant="secondary"
+                                disabled={paymentsPage === paymentsTotalPages}
+                              />
+                            </View>
+                          ) : null}
+                        </>
+                      ) : (
+                        <View nativeID="screens-admin-dashboard-payments-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-empty-block">
+                          <Text nativeID="screens-admin-dashboard-payments-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-empty-title">Sin alumnos disponibles</Text>
+                          <Text nativeID="screens-admin-dashboard-payments-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-empty-description">
+                            {`No hay alumnos visibles para ${selectedPaymentsBranch.name}.`}
+                          </Text>
+                        </View>
+                      )}
+                    </>
+                  ) : visiblePayments.length > 0 ? (
+                    visiblePayments.slice(0, 6).map((payment) => {
+                      const student = visibleStudents.find((item) => item.id === payment.student_id) ?? null;
                       const branchName =
                         visibleBranches.find((branch) => branch.id === payment.branch_id)?.name ??
                         `Sucursal ${payment.branch_id}`;
 
                       return (
-                        <View
-                          key={payment.id}
-                          nativeID={`screens-admin-dashboard-payment-row-${payment.id}`}
-                          style={[
-                            styles.paymentRow,
-                            isPaymentsSection ? styles.paymentRowCompact : null,
-                            isPaymentsSection && !isMobile ? (isDesktop ? styles.paymentRowDesktop : styles.paymentRowTablet) : null,
-                          ]}
-                          testID={`screens-admin-dashboard-payment-row-${payment.id}`}
-                        >
+                        <View key={payment.id} nativeID={`screens-admin-dashboard-payment-row-${payment.id}`} style={styles.paymentRow} testID={`screens-admin-dashboard-payment-row-${payment.id}`}>
                           <View nativeID={`screens-admin-dashboard-payment-header-row-${payment.id}`} style={styles.paymentHeaderRow} testID={`screens-admin-dashboard-payment-header-row-${payment.id}`}>
                             <View nativeID={`screens-admin-dashboard-payment-amount-block-${payment.id}`} style={styles.paymentAmountBlock} testID={`screens-admin-dashboard-payment-amount-block-${payment.id}`}>
-                              <Text
-                                nativeID={`screens-admin-dashboard-payment-amount-${payment.id}`}
-                                style={[styles.paymentAmount, isPaymentsSection ? styles.paymentAmountCompact : null]}
-                                testID={`screens-admin-dashboard-payment-amount-${payment.id}`}
-                              >
+                              <Text nativeID={`screens-admin-dashboard-payment-amount-${payment.id}`} style={styles.paymentAmount} testID={`screens-admin-dashboard-payment-amount-${payment.id}`}>
                                 {formatCurrency(payment.amount, payment.currency)}
                               </Text>
-                              <Text
-                                nativeID={`screens-admin-dashboard-payment-meta-${payment.id}`}
-                                numberOfLines={isPaymentsSection ? 2 : undefined}
-                                style={[styles.paymentMeta, isPaymentsSection ? styles.paymentMetaCompact : null]}
-                                testID={`screens-admin-dashboard-payment-meta-${payment.id}`}
-                              >
+                              <Text nativeID={`screens-admin-dashboard-payment-meta-${payment.id}`} style={styles.paymentMeta} testID={`screens-admin-dashboard-payment-meta-${payment.id}`}>
                                 {student
                                   ? `${student.first_name} ${student.last_name} · ${student.unique_code}`
                                   : `Alumno ${payment.student_id}`}
@@ -2477,27 +2632,17 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                               tone={getPaymentRecordTone(payment.status)}
                             />
                           </View>
-                          {isPaymentsSection ? (
-                            <View nativeID={`screens-admin-dashboard-payment-compact-details-${payment.id}`} style={styles.paymentCompactDetails} testID={`screens-admin-dashboard-payment-compact-details-${payment.id}`}>
-                              <Text nativeID={`screens-admin-dashboard-payment-date-${payment.id}`} style={styles.paymentCompactDetail} testID={`screens-admin-dashboard-payment-date-${payment.id}`}>{`Fecha: ${formatDate(payment.paid_at)}`}</Text>
-                              <Text nativeID={`screens-admin-dashboard-payment-method-${payment.id}`} style={styles.paymentCompactDetail} testID={`screens-admin-dashboard-payment-method-${payment.id}`}>{`Metodo: ${formatPaymentMethod(payment.method)}`}</Text>
-                              <Text nativeID={`screens-admin-dashboard-payment-period-${payment.id}`} style={styles.paymentCompactDetail} testID={`screens-admin-dashboard-payment-period-${payment.id}`}>{`Periodo: ${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`}</Text>
-                              {payment.notes ? (
-                                <Text nativeID={`screens-admin-dashboard-payment-notes-${payment.id}`} numberOfLines={2} style={[styles.paymentNote, styles.paymentNoteCompact]} testID={`screens-admin-dashboard-payment-notes-${payment.id}`}>{`Notas: ${payment.notes}`}</Text>
-                              ) : null}
-                            </View>
-                          ) : (
-                            <View nativeID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`}>
-                              <EntityField idPrefix={`screens-admin-dashboard-payment-date-${payment.id}`} label="Fecha" value={formatDateTime(payment.paid_at)} />
-                              <EntityField idPrefix={`screens-admin-dashboard-payment-method-${payment.id}`} label="Metodo" value={formatPaymentMethod(payment.method)} />
-                              <EntityField idPrefix={`screens-admin-dashboard-payment-branch-${payment.id}`} label="Sucursal" value={branchName} />
-                              <EntityField
-                                idPrefix={`screens-admin-dashboard-payment-period-${payment.id}`}
-                                label="Periodo"
-                                value={`${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`}
-                              />
-                            </View>
-                          )}
+                          <View nativeID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`} style={styles.paymentMetaGrid} testID={`screens-admin-dashboard-payment-meta-grid-${payment.id}`}>
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-date-${payment.id}`} label="Fecha" value={formatDateTime(payment.paid_at)} />
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-method-${payment.id}`} label="Metodo" value={formatPaymentMethod(payment.method)} />
+                            <EntityField idPrefix={`screens-admin-dashboard-payment-branch-${payment.id}`} label="Sucursal" value={branchName} />
+                            <EntityField
+                              idPrefix={`screens-admin-dashboard-payment-period-${payment.id}`}
+                              label="Periodo"
+                              value={`${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`}
+                            />
+                          </View>
+                          {payment.notes ? <Text nativeID={`screens-admin-dashboard-payment-notes-${payment.id}`} style={styles.paymentNote} testID={`screens-admin-dashboard-payment-notes-${payment.id}`}>Notas: {payment.notes}</Text> : null}
                           <View nativeID={`screens-admin-dashboard-payment-actions-${payment.id}`} style={styles.branchActions} testID={`screens-admin-dashboard-payment-actions-${payment.id}`}>
                             <AppButton label="Editar" nativeID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} onPress={() => openEditPaymentModal(payment)} testID={`screens-admin-dashboard-payment-edit-button-${payment.id}`} variant="secondary" />
                             {payment.status !== "void" ? (
@@ -2507,40 +2652,14 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                         </View>
                       );
                     })
-                    }</View>
                   ) : (
                     <View nativeID="screens-admin-dashboard-payments-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-payments-empty-block">
                       <Text nativeID="screens-admin-dashboard-payments-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-payments-empty-title">Sin pagos registrados</Text>
                       <Text nativeID="screens-admin-dashboard-payments-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-payments-empty-description">
-                        {isPaymentsSection && selectedPaymentsBranch
-                          ? `Todavía no hay movimientos registrados para ${selectedPaymentsBranch.name}.`
-                          : "Registra el primer pago del periodo para que el dashboard empiece a mostrar historial financiero."}
+                        Registra el primer pago del periodo para que el dashboard empiece a mostrar historial financiero.
                       </Text>
                     </View>
                   )}
-                  {isPaymentsSection && selectedPaymentsBranch && paymentScopedPayments.length > paymentsPageSize ? (
-                    <View nativeID="screens-admin-dashboard-payments-pagination-controls" style={styles.paymentsPaginationControls} testID="screens-admin-dashboard-payments-pagination-controls">
-                      <AppButton
-                        label="Anterior"
-                        nativeID="screens-admin-dashboard-payments-pagination-prev-button"
-                        onPress={() => setPaymentsPage((current) => Math.max(1, current - 1))}
-                        testID="screens-admin-dashboard-payments-pagination-prev-button"
-                        variant="secondary"
-                        disabled={paymentsPage === 1}
-                      />
-                      <Text nativeID="screens-admin-dashboard-payments-pagination-page-label" style={styles.paymentsPaginationLabel} testID="screens-admin-dashboard-payments-pagination-page-label">
-                        {`Página ${paymentsPage} de ${paymentsTotalPages}`}
-                      </Text>
-                      <AppButton
-                        label="Siguiente"
-                        nativeID="screens-admin-dashboard-payments-pagination-next-button"
-                        onPress={() => setPaymentsPage((current) => Math.min(paymentsTotalPages, current + 1))}
-                        testID="screens-admin-dashboard-payments-pagination-next-button"
-                        variant="secondary"
-                        disabled={paymentsPage === paymentsTotalPages}
-                      />
-                    </View>
-                  ) : null}
                   </AppCard>
                 </AnimatedSurface>
                 ) : null}
@@ -2989,6 +3108,104 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             />
           </View>
         </View>
+      </AppModal>
+
+      <AppModal
+        visible={Boolean(selectedPaymentsStudent)}
+        title={selectedPaymentsStudent ? `${selectedPaymentsStudent.first_name} ${selectedPaymentsStudent.last_name}` : ""}
+        description={selectedPaymentsStudent ? `Historial de pagos agrupado por mes para ${selectedPaymentsStudent.first_name}.` : undefined}
+        onClose={() => {
+          setSelectedPaymentsStudent(null);
+        }}
+      >
+        {selectedPaymentsStudent ? (
+          <>
+            <View style={styles.paymentContextBox}>
+              <Text style={styles.paymentContextText}>{`Código: ${selectedPaymentsStudent.unique_code}`}</Text>
+              <Text style={styles.paymentContextText}>{`Mensualidad: ${formatCurrency(selectedPaymentsStudent.monthly_fee, selectedPaymentsStudent.currency)}`}</Text>
+              <Text style={styles.paymentContextText}>{`Próximo pago: ${formatDate(selectedPaymentsStudent.next_payment_date)}`}</Text>
+            </View>
+            <View style={styles.paymentsHistoryHeaderActions}>
+              <AppButton
+                label="Registrar pago"
+                nativeID="screens-admin-dashboard-payments-history-register-button"
+                onPress={() => {
+                  setSelectedPaymentsStudent(null);
+                  openCreatePaymentModal(selectedPaymentsStudent);
+                }}
+                testID="screens-admin-dashboard-payments-history-register-button"
+                variant="success"
+              />
+            </View>
+            {selectedPaymentsStudentPaymentGroups.length > 0 ? (
+              <View style={styles.paymentsHistoryGroupList}>
+                {selectedPaymentsStudentPaymentGroups.map((group) => (
+                  <View key={group.label} nativeID={`screens-admin-dashboard-payments-history-group-${group.label}`} style={styles.paymentsHistoryGroup} testID={`screens-admin-dashboard-payments-history-group-${group.label}`}>
+                    <Text nativeID={`screens-admin-dashboard-payments-history-group-title-${group.label}`} style={styles.paymentsHistoryGroupTitle} testID={`screens-admin-dashboard-payments-history-group-title-${group.label}`}>
+                      {group.label}
+                    </Text>
+                    <View style={styles.paymentsHistoryRows}>
+                      {group.items.map((payment) => (
+                        <View key={payment.id} nativeID={`screens-admin-dashboard-payments-history-row-${payment.id}`} style={styles.paymentsHistoryRow} testID={`screens-admin-dashboard-payments-history-row-${payment.id}`}>
+                          <View nativeID={`screens-admin-dashboard-payments-history-copy-${payment.id}`} style={styles.paymentsHistoryCopy} testID={`screens-admin-dashboard-payments-history-copy-${payment.id}`}>
+                            <View nativeID={`screens-admin-dashboard-payments-history-head-${payment.id}`} style={styles.paymentsHistoryHead} testID={`screens-admin-dashboard-payments-history-head-${payment.id}`}>
+                              <Text nativeID={`screens-admin-dashboard-payments-history-amount-${payment.id}`} style={styles.paymentsHistoryAmount} testID={`screens-admin-dashboard-payments-history-amount-${payment.id}`}>
+                                {formatCurrency(payment.amount, payment.currency)}
+                              </Text>
+                              <AppBadge
+                                label={formatPaymentRecordStatus(payment.status)}
+                                nativeID={`screens-admin-dashboard-payments-history-status-${payment.id}`}
+                                testID={`screens-admin-dashboard-payments-history-status-${payment.id}`}
+                                tone={getPaymentRecordTone(payment.status)}
+                              />
+                            </View>
+                            <Text nativeID={`screens-admin-dashboard-payments-history-meta-${payment.id}`} style={styles.paymentsHistoryMeta} testID={`screens-admin-dashboard-payments-history-meta-${payment.id}`}>
+                              {`${formatDate(payment.paid_at)} · ${formatPaymentMethod(payment.method)} · ${formatDate(payment.period_start)} - ${formatDate(payment.period_end)}`}
+                            </Text>
+                            {payment.notes ? (
+                              <Text nativeID={`screens-admin-dashboard-payments-history-notes-${payment.id}`} style={styles.paymentsHistoryNotes} testID={`screens-admin-dashboard-payments-history-notes-${payment.id}`}>
+                                {`Notas: ${payment.notes}`}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <View nativeID={`screens-admin-dashboard-payments-history-actions-${payment.id}`} style={styles.paymentsHistoryActions} testID={`screens-admin-dashboard-payments-history-actions-${payment.id}`}>
+                            <AppButton
+                              label="Editar"
+                              nativeID={`screens-admin-dashboard-payments-history-edit-button-${payment.id}`}
+                              onPress={() => {
+                                setSelectedPaymentsStudent(null);
+                                openEditPaymentModal(payment);
+                              }}
+                              testID={`screens-admin-dashboard-payments-history-edit-button-${payment.id}`}
+                              variant="secondary"
+                            />
+                            {payment.status !== "void" ? (
+                              <AppButton
+                                label="Anular"
+                                nativeID={`screens-admin-dashboard-payments-history-void-button-${payment.id}`}
+                                onPress={() => {
+                                  setSelectedPaymentsStudent(null);
+                                  openEditPaymentModal(payment);
+                                }}
+                                testID={`screens-admin-dashboard-payments-history-void-button-${payment.id}`}
+                                variant="danger"
+                              />
+                            ) : null}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyBlock}>
+                <Text style={styles.emptyTitle}>Sin pagos registrados</Text>
+                <Text style={styles.emptyDescription}>Todavía no hay movimientos cargados para este alumno.</Text>
+              </View>
+            )}
+          </>
+        ) : null}
       </AppModal>
 
       <AppModal
@@ -3938,6 +4155,72 @@ const styles = StyleSheet.create({
   paymentsPaginationSummary: {
     alignItems: "flex-start",
   },
+  paymentsStudentList: {
+    gap: spacing.sm,
+  },
+  paymentsStudentRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    padding: spacing.md,
+  },
+  paymentsStudentRowPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.995 }],
+  },
+  paymentsStudentCopy: {
+    flex: 1,
+    gap: 6,
+    minWidth: 0,
+  },
+  paymentsStudentHead: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  paymentsStudentName: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  paymentsStudentMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  paymentsStudentSummary: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  paymentsStudentSummaryText: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 19,
+  },
+  paymentsStudentAction: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  paymentsStudentActionLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
   paymentsMatrixGrid: {
     gap: spacing.sm,
   },
@@ -4033,6 +4316,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
+  },
+  paymentsHistoryHeaderActions: {
+    alignItems: "flex-start",
+  },
+  paymentsHistoryGroupList: {
+    gap: spacing.md,
+  },
+  paymentsHistoryGroup: {
+    gap: spacing.sm,
+  },
+  paymentsHistoryGroupTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    textTransform: "capitalize",
+  },
+  paymentsHistoryRows: {
+    gap: spacing.sm,
+  },
+  paymentsHistoryRow: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  paymentsHistoryCopy: {
+    gap: 4,
+    minWidth: 0,
+  },
+  paymentsHistoryHead: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  paymentsHistoryAmount: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  paymentsHistoryMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  paymentsHistoryNotes: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  paymentsHistoryActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "flex-end",
   },
   paymentContextBox: {
     backgroundColor: colors.surfaceAlt,
