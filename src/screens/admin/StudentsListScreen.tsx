@@ -1424,11 +1424,11 @@ const styles = StyleSheet.create({
   },
   feedbackSuccess: {
     backgroundColor: colors.successSoft,
-    borderColor: "#B7E4C7",
+    borderColor: colors.success,
   },
   feedbackDanger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F0B6B6",
+    borderColor: colors.danger,
   },
   feedbackCopy: {
     flex: 1,
@@ -1793,7 +1793,7 @@ const styles = StyleSheet.create({
   },
   compactActionButtonDanger: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F0B6B6",
+    borderColor: colors.danger,
   },
   compactActionButtonPressed: {
     opacity: 0.78,
@@ -1872,7 +1872,7 @@ const styles = StyleSheet.create({
   },
   formStepDotCompleted: {
     backgroundColor: colors.metricMint,
-    borderColor: "#BFE9D9",
+    borderColor: colors.success,
   },
   formGrid: {
     gap: spacing.md,

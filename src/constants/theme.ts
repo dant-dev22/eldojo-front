@@ -4,50 +4,116 @@ const webBodyStack = '"Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 const webDisplayStack = '"Montserrat", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 const webMonoStack = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace';
 
+const LIGHT_MODE = true;
+
+export const judogiRed = "#C62828";
+export const judogiRedHover = "#A81F1F";
+export const judogiRedSoft = "rgba(198, 40, 40, 0.10)";
+
+export const indigoBlue = "#1A237E";
+export const indigoBlueHover = "#151C66";
+export const indigoBlueSoft = "rgba(26, 35, 126, 0.10)";
+
+export const tatamiGreen = "#558B2F";
+export const tatamiGreenHover = "#456E25";
+export const tatamiGreenSoft = "rgba(85, 139, 47, 0.12)";
+
+export const goldenYellow = "#F9A825";
+export const goldenYellowHover = "#D98E1A";
+export const goldenYellowSoft = "rgba(249, 168, 37, 0.14)";
+
+export const agedWood = "#8D6E63";
+export const agedWoodLight = "#A1887F";
+export const agedWoodSoft = "rgba(141, 110, 99, 0.12)";
+export const agedWoodStrong = "#6D4C41";
+
+export const bgLight = "#FFFFFF";
+export const bgDark = "#0A0A0A";
+
+export const textPrimaryLight = "#1A1A1A";
+export const textPrimaryDark = "#E8E0D8";
+
+export const textSecondaryLight = "#6D6D6D";
+export const textSecondaryDark = "#999999";
+
+export const borderLight = "rgba(141, 110, 99, 0.22)";
+export const borderStrongLight = "rgba(141, 110, 99, 0.42)";
+
 export const colors = {
-  background: "#F7F7F5",
+  background: bgLight,
   surface: "#FFFFFF",
-  surfaceAlt: "#F7F7F7",
+  surfaceAlt: "#FAFAFA",
   surfaceStrong: "#FFFFFF",
   panel: "#FFFFFF",
-  panelSoft: "#F7F7F7",
-  primary: "#8A6748",
-  primarySoft: "rgba(138, 103, 72, 0.08)",
-  accent: "#A07A57",
-  action: "#2563EB",
-  actionHover: "#1D4ED8",
-  actionSoft: "#DBEAFE",
-  gold: "#111111",
-  goldSoft: "#F7F7F7",
-  text: "#17181A",
-  textMuted: "#626974",
+  panelSoft: "#FAFAFA",
+
+  primary: judogiRed,
+  primaryHover: judogiRedHover,
+  primarySoft: judogiRedSoft,
+
+  accent: agedWood,
+  accentSoft: agedWoodSoft,
+
+  action: judogiRed,
+  actionHover: judogiRedHover,
+  actionSoft: judogiRedSoft,
+
+  secondary: indigoBlue,
+  secondaryHover: indigoBlueHover,
+  secondarySoft: indigoBlueSoft,
+
+  gold: goldenYellow,
+  goldSoft: goldenYellowSoft,
+
+  text: LIGHT_MODE ? textPrimaryLight : textPrimaryDark,
+  textMuted: LIGHT_MODE ? textSecondaryLight : textSecondaryDark,
+
   onPrimary: "#FFFFFF",
-  onPrimaryMuted: "#F5F7F9",
-  border: "#111111",
-  borderStrong: "#111111",
-  danger: "#B42318",
-  dangerHover: "#912018",
-  dangerSoft: "#FEE4E2",
-  success: "#15803D",
-  successHover: "#166534",
-  successSoft: "#DCFCE7",
-  warning: "#A16207",
-  warningSoft: "#FEF3C7",
-  info: "#1D4ED8",
-  infoSoft: "#E8F0FF",
-  overlay: "rgba(17, 17, 17, 0.22)",
-  ink: "#111827",
-  hover: "rgba(138, 103, 72, 0.08)",
-  hoverStrong: "rgba(138, 103, 72, 0.14)",
-  sidebar: "#111111",
-  sidebarSoft: "#17181A",
-  sidebarBorder: "rgba(255, 255, 255, 0.08)",
-  sidebarText: "#F5F7F9",
-  sidebarMuted: "#A1A7B3",
-  metricLavender: "#F5EEE7",
-  metricMint: "#EEF6EE",
-  metricAmber: "#FBF1DA",
-  metricBlue: "#EDF3FB",
+  onPrimaryMuted: "rgba(255, 255, 255, 0.88)",
+
+  border: borderLight,
+  borderStrong: borderStrongLight,
+
+  wood: agedWood,
+  woodLight: agedWoodLight,
+  woodSoft: agedWoodSoft,
+  woodStrong: agedWoodStrong,
+
+  danger: judogiRed,
+  dangerHover: judogiRedHover,
+  dangerSoft: judogiRedSoft,
+
+  success: tatamiGreen,
+  successHover: tatamiGreenHover,
+  successSoft: tatamiGreenSoft,
+
+  warning: goldenYellow,
+  warningHover: goldenYellowHover,
+  warningSoft: goldenYellowSoft,
+
+  info: indigoBlue,
+  infoHover: indigoBlueHover,
+  infoSoft: indigoBlueSoft,
+
+  overlay: "rgba(26, 26, 26, 0.32)",
+  ink: textPrimaryLight,
+
+  hover: agedWoodSoft,
+  hoverStrong: "rgba(141, 110, 99, 0.20)",
+
+  sidebar: "#FFFFFF",
+  sidebarSoft: "#FAFAFA",
+  sidebarBorder: borderLight,
+  sidebarText: textPrimaryLight,
+  sidebarMuted: textSecondaryLight,
+
+  activeIndicator: judogiRed,
+  focusRing: judogiRed,
+
+  metricLavender: indigoBlueSoft,
+  metricMint: tatamiGreenSoft,
+  metricAmber: goldenYellowSoft,
+  metricBlue: indigoBlueSoft,
 };
 
 export const spacing = {
@@ -60,9 +126,9 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 14,
-  md: 20,
-  lg: 26,
+  sm: 10,
+  md: 14,
+  lg: 20,
   pill: 999,
 };
 
@@ -93,16 +159,31 @@ export const typography = {
 export const shadows = {
   card: {
     elevation: 0,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: "#1A1A1A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+  },
+  cardElevated: {
+    elevation: 0,
+    shadowColor: "#1A1A1A",
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
-    shadowRadius: 28,
+    shadowRadius: 20,
   },
   focus: {
     elevation: 0,
-    shadowColor: "#4F73D9",
+    shadowColor: judogiRed,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.0,
     shadowRadius: 0,
   },
 };
+
+export const transitions = {
+  fast: 150,
+  base: 200,
+  slow: 250,
+};
+
+export const activeBorderWidth = 3;

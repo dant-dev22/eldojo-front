@@ -5,7 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { activeBorderWidth, colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 
@@ -441,8 +441,8 @@ const styles = StyleSheet.create({
   },
   logoMark: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderColor: colors.sidebarBorder,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
     borderRadius: 20,
     borderWidth: 1,
     height: 56,
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     width: 56,
   },
   logoMarkText: {
-    color: colors.sidebarText,
+    color: colors.onPrimary,
     fontFamily: typography.headingFamily,
     fontSize: 22,
     fontWeight: "800",
@@ -482,11 +482,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   navItemActive: {
-    backgroundColor: "#D9DEE5",
-    borderColor: "#C4CBD4",
+    backgroundColor: colors.primarySoft,
+    borderLeftColor: colors.activeIndicator,
+    borderLeftWidth: activeBorderWidth,
   },
   navItemHovered: {
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: colors.hover,
     borderColor: colors.sidebarBorder,
   },
   navItemPressed: {
@@ -514,14 +515,14 @@ const styles = StyleSheet.create({
   },
   navItemIconWrap: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: colors.woodSoft,
     borderRadius: 12,
     height: 36,
     justifyContent: "center",
     width: 36,
   },
   navItemIconWrapActive: {
-    backgroundColor: "rgba(17, 24, 26, 0.08)",
+    backgroundColor: colors.primarySoft,
   },
   navItemCopy: {
     flex: 1,
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     marginTop: "auto",
   },
   profileCard: {
-    backgroundColor: colors.sidebarSoft,
+    backgroundColor: colors.surfaceAlt,
     borderColor: colors.sidebarBorder,
     borderRadius: 24,
     borderWidth: 1,
@@ -547,14 +548,14 @@ const styles = StyleSheet.create({
   },
   profileAvatar: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: colors.secondary,
     borderRadius: radius.pill,
     height: 42,
     justifyContent: "center",
     width: 42,
   },
   profileAvatarLabel: {
-    color: colors.sidebarText,
+    color: colors.onPrimary,
     fontFamily: typography.headingFamily,
     fontSize: 16,
     fontWeight: "800",
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   pageKicker: {
     alignSelf: "flex-start",
     backgroundColor: colors.infoSoft,
-    borderColor: "#CBD9FF",
+    borderColor: colors.info,
     borderRadius: radius.pill,
     borderWidth: 1,
     marginBottom: 4,

@@ -1,6 +1,6 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
 interface AppButtonProps {
   label: string;
@@ -72,7 +72,11 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === "secondary" ? colors.ink : variant === "danger" ? colors.danger : colors.onPrimary
+            variant === "secondary"
+              ? colors.secondary
+              : variant === "danger"
+                ? colors.danger
+                : colors.onPrimary
           }
           nativeID={`${baseId}-spinner`}
           testID={`${baseId}-spinner`}
@@ -108,23 +112,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   primary: {
-    backgroundColor: colors.action,
-    borderColor: colors.action,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   primaryHovered: {
-    backgroundColor: colors.actionHover,
-    borderColor: colors.actionHover,
+    backgroundColor: colors.primaryHover,
+    borderColor: colors.primaryHover,
+    ...shadows.cardElevated,
   },
   secondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
+    backgroundColor: "transparent",
+    borderColor: "transparent",
   },
   secondaryHovered: {
-    backgroundColor: colors.hoverStrong,
-    borderColor: colors.action,
+    backgroundColor: colors.secondarySoft,
+    borderColor: "transparent",
   },
   danger: {
-    backgroundColor: colors.dangerSoft,
+    backgroundColor: "transparent",
     borderColor: colors.danger,
   },
   dangerHovered: {
@@ -138,9 +143,10 @@ const styles = StyleSheet.create({
   successHovered: {
     backgroundColor: colors.successHover,
     borderColor: colors.successHover,
+    ...shadows.cardElevated,
   },
   disabled: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   pressed: {
     opacity: 0.96,
@@ -154,7 +160,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.15,
   },
   secondaryLabel: {
-    color: colors.text,
+    color: colors.secondary,
   },
   dangerLabel: {
     color: colors.danger,

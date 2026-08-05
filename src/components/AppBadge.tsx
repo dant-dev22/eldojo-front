@@ -49,28 +49,28 @@ const styles = StyleSheet.create({
   },
   successContainer: {
     backgroundColor: colors.successSoft,
-    borderColor: "#BFE9D9",
+    borderColor: colors.success,
   },
   successLabel: {
     color: colors.success,
   },
   warningContainer: {
     backgroundColor: colors.warningSoft,
-    borderColor: "#F0D89B",
+    borderColor: colors.warning,
   },
   warningLabel: {
     color: colors.warning,
   },
   dangerContainer: {
     backgroundColor: colors.dangerSoft,
-    borderColor: "#F2BCC5",
+    borderColor: colors.danger,
   },
   dangerLabel: {
     color: colors.danger,
   },
   infoContainer: {
     backgroundColor: colors.infoSoft,
-    borderColor: "#C6D7FF",
+    borderColor: colors.info,
   },
   infoLabel: {
     color: colors.info,

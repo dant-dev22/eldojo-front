@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   },
   successCard: {
     backgroundColor: colors.successSoft,
-    borderColor: "#B7E4C7",
+    borderColor: colors.success,
     gap: spacing.sm,
   },
   successTitle: {

@@ -210,7 +210,7 @@ const datePickerStyles = `
 
 .app-datepicker-popper .react-datepicker__day:hover,
 .app-datepicker-popper .react-datepicker__day--keyboard-selected {
-  background: ${colors.primarySoft ?? "#F8FAFC"};
+  background: ${colors.primarySoft};
   color: ${colors.text};
 }
 
@@ -225,7 +225,7 @@ const datePickerStyles = `
 }
 
 .app-datepicker-popper .react-datepicker__day--outside-month {
-  color: #9CA3AF;
+  color: ${colors.textMuted};
 }
 
 .app-datepicker-popper .react-datepicker__navigation {
