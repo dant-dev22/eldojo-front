@@ -719,6 +719,83 @@ export function StudentsListScreen({ navigation, route }: Props) {
           />
         ) : null}
       </View>
+      <AppCard nativeID="screens-admin-students-list-results-panel" style={styles.resultsPanel} testID="screens-admin-students-list-results-panel">
+        {students.length > 0 ? (
+          <View nativeID="screens-admin-students-list-table" style={styles.table} testID="screens-admin-students-list-table">
+            {isDesktop ? (
+              <View nativeID="screens-admin-students-list-table-head" style={styles.tableHead} testID="screens-admin-students-list-table-head">
+                <Text nativeID="screens-admin-students-list-table-head-student" style={[styles.tableHeadCell, styles.studentColumn]} testID="screens-admin-students-list-table-head-student">Alumno</Text>
+                <Text nativeID="screens-admin-students-list-table-head-branch" style={[styles.tableHeadCell, styles.branchColumn]} testID="screens-admin-students-list-table-head-branch">Sede</Text>
+                <Text nativeID="screens-admin-students-list-table-head-payment" style={[styles.tableHeadCell, styles.paymentColumn]} testID="screens-admin-students-list-table-head-payment">Próximo pago</Text>
+                <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
+                <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
+                <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
+              </View>
+            ) : null}
+
+            <ScrollView
+              contentContainerStyle={styles.tableBody}
+              nativeID="screens-admin-students-list-table-scroll"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+              style={[styles.tableScroll, isDesktop ? desktopStyles.tableScroll : mobileStyles.tableScroll]}
+              testID="screens-admin-students-list-table-scroll"
+            >
+              {paginatedStudents.map((item) => (
+                <StudentListRow
+                  key={item.id}
+                  isDesktop={isDesktop}
+                  onDelete={() => {
+                    setFeedbackMessage(null);
+                    setStudentToDelete(item);
+                  }}
+                  onEdit={() => handleOpenEdit(item)}
+                  onViewDetail={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                  student={item}
+                  studentStatusLabel={getStudentStatusLabel(item.status)}
+                  studentStatusTone={getStudentStatusTone(item.status)}
+                  paymentLabel={formatPaymentStatus(item.payment_status)}
+                  paymentTone={getPaymentTone(item.payment_status)}
+                  branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
+                />
+              ))}
+            </ScrollView>
+
+            {totalStudentsPages > 1 ? (
+              <View nativeID="screens-admin-students-list-pagination" style={[styles.pagination, isDesktop ? desktopStyles.pagination : mobileStyles.pagination]} testID="screens-admin-students-list-pagination">
+                <AppButton
+                  disabled={currentStudentsPage === 1}
+                  label="Anterior"
+                  nativeID="screens-admin-students-list-pagination-prev-button"
+                  onPress={() => setCurrentStudentsPage((current) => Math.max(1, current - 1))}
+                  testID="screens-admin-students-list-pagination-prev-button"
+                  variant="secondary"
+                />
+                <Text nativeID="screens-admin-students-list-pagination-label" style={styles.paginationLabel} testID="screens-admin-students-list-pagination-label">
+                  Página {currentStudentsPage} de {totalStudentsPages}
+                </Text>
+                <AppButton
+                  disabled={currentStudentsPage === totalStudentsPages}
+                  label="Siguiente"
+                  nativeID="screens-admin-students-list-pagination-next-button"
+                  onPress={() => setCurrentStudentsPage((current) => Math.min(totalStudentsPages, current + 1))}
+                  testID="screens-admin-students-list-pagination-next-button"
+                  variant="secondary"
+                />
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <View nativeID="screens-admin-students-list-empty-state" style={styles.emptyState} testID="screens-admin-students-list-empty-state">
+            <Text nativeID="screens-admin-students-list-empty-title" style={styles.emptyTitle} testID="screens-admin-students-list-empty-title">No hay alumnos para mostrar</Text>
+            <Text nativeID="screens-admin-students-list-empty-description" style={styles.emptyDescription} testID="screens-admin-students-list-empty-description">
+              {hasActiveSearch
+                ? "Prueba con otro nombre o limpia la búsqueda para ver más resultados."
+                : "Aún no hay alumnos disponibles en esta organización o sucursal."}
+            </Text>
+          </View>
+        )}
+      </AppCard>
     </View>
   ) : null;
 
@@ -773,85 +850,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
             />
             <AppButton label="Reintentar" nativeID="screens-admin-students-list-retry-button" onPress={() => studentsQuery.refetch()} testID="screens-admin-students-list-retry-button" />
           </View>
-        ) : (
-          <AppCard nativeID="screens-admin-students-list-results-panel" style={styles.resultsPanel} testID="screens-admin-students-list-results-panel">
-            {students.length > 0 ? (
-              <View nativeID="screens-admin-students-list-table" style={styles.table} testID="screens-admin-students-list-table">
-                {isDesktop ? (
-                  <View nativeID="screens-admin-students-list-table-head" style={styles.tableHead} testID="screens-admin-students-list-table-head">
-                    <Text nativeID="screens-admin-students-list-table-head-student" style={[styles.tableHeadCell, styles.studentColumn]} testID="screens-admin-students-list-table-head-student">Alumno</Text>
-                    <Text nativeID="screens-admin-students-list-table-head-branch" style={[styles.tableHeadCell, styles.branchColumn]} testID="screens-admin-students-list-table-head-branch">Sede</Text>
-                    <Text nativeID="screens-admin-students-list-table-head-payment" style={[styles.tableHeadCell, styles.paymentColumn]} testID="screens-admin-students-list-table-head-payment">Próximo pago</Text>
-                    <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
-                    <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
-                    <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
-                  </View>
-                ) : null}
-
-                <ScrollView
-                  contentContainerStyle={styles.tableBody}
-                  nativeID="screens-admin-students-list-table-scroll"
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={false}
-                  style={[styles.tableScroll, isDesktop ? desktopStyles.tableScroll : mobileStyles.tableScroll]}
-                  testID="screens-admin-students-list-table-scroll"
-                >
-                  {paginatedStudents.map((item) => (
-                    <StudentListRow
-                      key={item.id}
-                      isDesktop={isDesktop}
-                      onDelete={() => {
-                        setFeedbackMessage(null);
-                        setStudentToDelete(item);
-                      }}
-                      onEdit={() => handleOpenEdit(item)}
-                      onViewDetail={() => navigation.navigate("StudentDetail", { studentId: item.id })}
-                      student={item}
-                      studentStatusLabel={getStudentStatusLabel(item.status)}
-                      studentStatusTone={getStudentStatusTone(item.status)}
-                      paymentLabel={formatPaymentStatus(item.payment_status)}
-                      paymentTone={getPaymentTone(item.payment_status)}
-                      branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
-                    />
-                  ))}
-                </ScrollView>
-
-                {totalStudentsPages > 1 ? (
-                  <View nativeID="screens-admin-students-list-pagination" style={[styles.pagination, isDesktop ? desktopStyles.pagination : mobileStyles.pagination]} testID="screens-admin-students-list-pagination">
-                    <AppButton
-                      disabled={currentStudentsPage === 1}
-                      label="Anterior"
-                      nativeID="screens-admin-students-list-pagination-prev-button"
-                      onPress={() => setCurrentStudentsPage((current) => Math.max(1, current - 1))}
-                      testID="screens-admin-students-list-pagination-prev-button"
-                      variant="secondary"
-                    />
-                    <Text nativeID="screens-admin-students-list-pagination-label" style={styles.paginationLabel} testID="screens-admin-students-list-pagination-label">
-                      Página {currentStudentsPage} de {totalStudentsPages}
-                    </Text>
-                    <AppButton
-                      disabled={currentStudentsPage === totalStudentsPages}
-                      label="Siguiente"
-                      nativeID="screens-admin-students-list-pagination-next-button"
-                      onPress={() => setCurrentStudentsPage((current) => Math.min(totalStudentsPages, current + 1))}
-                      testID="screens-admin-students-list-pagination-next-button"
-                      variant="secondary"
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <View nativeID="screens-admin-students-list-empty-state" style={styles.emptyState} testID="screens-admin-students-list-empty-state">
-                <Text nativeID="screens-admin-students-list-empty-title" style={styles.emptyTitle} testID="screens-admin-students-list-empty-title">No hay alumnos para mostrar</Text>
-                <Text nativeID="screens-admin-students-list-empty-description" style={styles.emptyDescription} testID="screens-admin-students-list-empty-description">
-                  {hasActiveSearch
-                    ? "Prueba con otro nombre o limpia la búsqueda para ver más resultados."
-                    : "Aún no hay alumnos disponibles en esta organización o sucursal."}
-                </Text>
-              </View>
-            )}
-          </AppCard>
-        )}
+        ) : null}
       </View>
       </AdminShell>
 
