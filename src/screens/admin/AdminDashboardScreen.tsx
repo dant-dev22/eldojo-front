@@ -2111,6 +2111,62 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         )}
       </View>
     );
+  const overviewHeaderBottomContent = isOverviewSection ? (
+    <View
+      collapsable={false}
+      nativeID="screens-admin-dashboard-hero-tutorial-anchor"
+      onLayout={() => {
+        if (activeTutorialStep?.id === "hero") {
+          syncActiveTutorialAnchor("hero");
+        }
+      }}
+      ref={(node) => {
+        tutorialAnchorRefs.current.hero = node;
+      }}
+      style={styles.tutorialAnchorTarget}
+      testID="screens-admin-dashboard-hero-tutorial-anchor"
+    >
+      <View nativeID="screens-admin-dashboard-hero-card" style={styles.overviewHeroHeaderBlock} testID="screens-admin-dashboard-hero-card">
+        <View nativeID="screens-admin-dashboard-hero-top" style={styles.heroTop} testID="screens-admin-dashboard-hero-top">
+          <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
+            <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
+            <Text
+              nativeID="screens-admin-dashboard-hero-title"
+              style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
+              testID="screens-admin-dashboard-hero-title"
+            >
+              {heroTitle}
+            </Text>
+            <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
+              Vista general del dojo con indicadores visuales y foco rápido en la estructura activa.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  ) : null;
+  const overviewHeaderMainContent = isOverviewSection && !isLoading && !hasError ? (
+    <View nativeID="screens-admin-dashboard-overview-central-content" style={styles.overviewCentralContent} testID="screens-admin-dashboard-overview-central-content">
+      <View nativeID="screens-admin-dashboard-chart-grid" style={[styles.chartGrid, isDesktop ? desktopStyles.chartGrid : mobileStyles.chartGrid]} testID="screens-admin-dashboard-chart-grid">
+        <OverviewCircularGraphCard
+          compact={!isDesktop}
+          delay={120}
+          idPrefix="screens-admin-dashboard-students-graph"
+          items={overviewGraphData}
+          subtitle="Distribución actual del alumnado visible en el resumen."
+          title="Estado del alumnado"
+        />
+        <OverviewCircularGraphCard
+          compact
+          delay={150}
+          idPrefix="screens-admin-dashboard-structure-graph"
+          items={structureGraphData}
+          subtitle={visibleBranches.length === 1 ? "Estructura actual de tu sucursal visible." : "Panorama general de sucursales y clases activas del dojo."}
+          title="Estructura operativa"
+        />
+      </View>
+    </View>
+  ) : null;
   const branchesHeaderBottomContent = isBranchesSection ? (
     <AdminSectionDashboardTemplate
       idPrefix="screens-admin-dashboard-branches-central-dashboard"
@@ -2779,8 +2835,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
-        headerBottomContent={isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
-        headerMainContent={isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
+        headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
+        headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
         headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
@@ -2793,48 +2849,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         title={pageTitle}
       >
         <View nativeID="screens-admin-dashboard-content" style={styles.container} testID="screens-admin-dashboard-content">
-          {isOverviewSection ? (
-            <AnimatedSurface delay={40}>
-            <View
-              collapsable={false}
-              nativeID="screens-admin-dashboard-hero-tutorial-anchor"
-              onLayout={() => {
-                if (activeTutorialStep?.id === "hero") {
-                  syncActiveTutorialAnchor("hero");
-                }
-              }}
-              ref={(node) => {
-                tutorialAnchorRefs.current.hero = node;
-              }}
-              style={styles.tutorialAnchorTarget}
-              testID="screens-admin-dashboard-hero-tutorial-anchor"
-            >
-              <AppCard
-                nativeID="screens-admin-dashboard-hero-card"
-                style={[styles.heroCard, isDesktop ? desktopStyles.heroCard : mobileStyles.heroCard]}
-                testID="screens-admin-dashboard-hero-card"
-              >
-              <View nativeID="screens-admin-dashboard-hero-top" style={styles.heroTop} testID="screens-admin-dashboard-hero-top">
-                <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
-                  <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
-                  <Text
-                    nativeID="screens-admin-dashboard-hero-title"
-                    style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
-                    testID="screens-admin-dashboard-hero-title"
-                  >
-                    {heroTitle}
-                  </Text>
-                  <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
-                    Vista general del dojo con indicadores visuales y sin acciones operativas.
-                  </Text>
-                </View>
-              </View>
-
-              </AppCard>
-            </View>
-            </AnimatedSurface>
-          ) : null}
-
           {feedback && !isOverviewSection ? (
             <AnimatedSurface
               delay={90}
@@ -2876,26 +2890,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             </AnimatedSurface>
           ) : (
             <>
-              {isOverviewSection ? (
-                <>
-                  <View nativeID="screens-admin-dashboard-chart-grid" style={[styles.chartGrid, isDesktop ? desktopStyles.chartGrid : mobileStyles.chartGrid]} testID="screens-admin-dashboard-chart-grid">
-                    <OverviewGraphCard
-                      delay={120}
-                      idPrefix="screens-admin-dashboard-students-graph"
-                      items={overviewGraphData}
-                      subtitle="Distribución actual del alumnado visible en el resumen."
-                      title="Estado del alumnado"
-                    />
-                    <OverviewGraphCard
-                      delay={150}
-                      idPrefix="screens-admin-dashboard-structure-graph"
-                      items={structureGraphData}
-                      subtitle={visibleBranches.length === 1 ? "Estructura actual de tu sucursal visible." : "Panorama general de sucursales y clases activas del dojo."}
-                      title="Estructura operativa"
-                    />
-                  </View>
-                </>
-              ) : !isBranchesSection && !isPaymentsSection && !isOperationsSection ? (
+              {!isOverviewSection && !isBranchesSection && !isPaymentsSection && !isOperationsSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -4303,6 +4298,101 @@ function OverviewGraphCard({
   );
 }
 
+function CircularStat({
+  idPrefix,
+  label,
+  value,
+  total,
+  tone,
+  compact = false,
+}: {
+  idPrefix: string;
+  label: string;
+  value: number;
+  total: number;
+  tone: string;
+  compact?: boolean;
+}) {
+  const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+
+  return (
+    <View nativeID={idPrefix} style={[styles.circularStatCard, compact ? styles.circularStatCardCompact : null]} testID={idPrefix}>
+      <View nativeID={`${idPrefix}-ring-wrap`} style={styles.circularStatRingWrap} testID={`${idPrefix}-ring-wrap`}>
+        <View
+          nativeID={`${idPrefix}-ring`}
+          style={[
+            styles.circularStatRing,
+            compact ? styles.circularStatRingCompact : null,
+            { borderColor: tone },
+          ]}
+          testID={`${idPrefix}-ring`}
+        >
+          <View
+            nativeID={`${idPrefix}-ring-inner`}
+            style={[styles.circularStatRingInner, compact ? styles.circularStatRingInnerCompact : null]}
+            testID={`${idPrefix}-ring-inner`}
+          >
+            <Text nativeID={`${idPrefix}-value`} style={[styles.circularStatValue, compact ? styles.circularStatValueCompact : null]} testID={`${idPrefix}-value`}>
+              {value}
+            </Text>
+            <Text nativeID={`${idPrefix}-percentage`} style={styles.circularStatPercentage} testID={`${idPrefix}-percentage`}>
+              {`${percentage}%`}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View nativeID={`${idPrefix}-copy`} style={styles.circularStatCopy} testID={`${idPrefix}-copy`}>
+        <Text nativeID={`${idPrefix}-label`} style={styles.circularStatLabel} testID={`${idPrefix}-label`}>{label}</Text>
+        <Text nativeID={`${idPrefix}-meta`} style={styles.circularStatMeta} testID={`${idPrefix}-meta`}>
+          {`De ${total} visibles`}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function OverviewCircularGraphCard({
+  delay,
+  idPrefix,
+  items,
+  subtitle,
+  title,
+  compact = false,
+}: {
+  delay: number;
+  idPrefix: string;
+  items: Array<{ key: string; label: string; value: number; tone: string }>;
+  subtitle: string;
+  title: string;
+  compact?: boolean;
+}) {
+  const totalValue = Math.max(items.reduce((accumulator, item) => accumulator + item.value, 0), 1);
+
+  return (
+    <AnimatedSurface delay={delay}>
+      <AppCard nativeID={idPrefix} style={styles.graphCard} testID={idPrefix}>
+        <View nativeID={`${idPrefix}-header`} style={styles.graphCardHeader} testID={`${idPrefix}-header`}>
+          <Text nativeID={`${idPrefix}-title`} style={styles.sectionTitle} testID={`${idPrefix}-title`}>{title}</Text>
+          <Text nativeID={`${idPrefix}-subtitle`} style={styles.helperText} testID={`${idPrefix}-subtitle`}>{subtitle}</Text>
+        </View>
+        <View nativeID={`${idPrefix}-circles`} style={[styles.circularStatsGrid, compact ? styles.circularStatsGridCompact : null]} testID={`${idPrefix}-circles`}>
+          {items.map((item) => (
+            <CircularStat
+              key={item.key}
+              compact={compact}
+              idPrefix={`${idPrefix}-circle-${item.key}`}
+              label={item.label}
+              tone={item.tone}
+              total={totalValue}
+              value={item.value}
+            />
+          ))}
+        </View>
+      </AppCard>
+    </AnimatedSurface>
+  );
+}
+
 function QuickAction({
   label,
   description,
@@ -4503,6 +4593,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minWidth: 0,
   },
+  overviewHeroHeaderBlock: {
+    width: "100%",
+  },
+  overviewCentralContent: {
+    width: "100%",
+  },
   tutorialBubble: {
     backgroundColor: colors.surface,
     borderColor: colors.action,
@@ -4676,6 +4772,91 @@ const styles = StyleSheet.create({
   },
   graphCardHeader: {
     gap: spacing.xs,
+  },
+  circularStatsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    justifyContent: "center",
+  },
+  circularStatsGridCompact: {
+    gap: spacing.sm,
+  },
+  circularStatCard: {
+    alignItems: "center",
+    flexGrow: 1,
+    gap: spacing.sm,
+    minWidth: 150,
+  },
+  circularStatCardCompact: {
+    minWidth: 132,
+  },
+  circularStatRingWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circularStatRing: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 999,
+    borderWidth: 10,
+    height: 118,
+    justifyContent: "center",
+    width: 118,
+  },
+  circularStatRingCompact: {
+    borderWidth: 8,
+    height: 96,
+    width: 96,
+  },
+  circularStatRingInner: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    gap: 2,
+    height: 82,
+    justifyContent: "center",
+    width: 82,
+  },
+  circularStatRingInnerCompact: {
+    height: 66,
+    width: 66,
+  },
+  circularStatValue: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 30,
+  },
+  circularStatValueCompact: {
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  circularStatPercentage: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  circularStatCopy: {
+    alignItems: "center",
+    gap: 2,
+  },
+  circularStatLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  circularStatMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
   },
   graphRows: {
     gap: spacing.sm,
