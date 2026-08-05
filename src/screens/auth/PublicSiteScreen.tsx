@@ -26,7 +26,7 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { PUBLIC_PAGE_META, PUBLIC_PAGE_TO_SCREEN, PUBLIC_SCROLL_TARGET_KEY, navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
-import type { AuthStackParamList } from "@/navigation/types";
+import type { AdminStackParamList, AuthStackParamList } from "@/navigation/types";
 import type { PendingAcademyRegistration } from "@/types/api";
 import {
   clearPendingAcademyRegistration,
@@ -1617,7 +1617,7 @@ function buildChromeNavItems(
 
 function buildHomeSpaNavItems(
   scrollRef: MutableRefObject<PublicSiteScrollControls | null>,
-  navigation: ReturnType<typeof useNavigation<NativeStackNavigationProp<AuthStackParamList>>>
+  navigation: ReturnType<typeof useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>>
 ) {
   const pages: Array<{ key: PublicSiteSectionKey; label: string; fallbackNavigate?: PublicPageKey }> = [
     { key: "home", label: "Inicio" },
@@ -1646,8 +1646,9 @@ type HomeScreenProps = {
 };
 
 export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenProps = {}) {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
   const route = useRoute();
+  const { user, status } = useAuth();
   const routeParams = (route.params as { initialSection?: PublicSiteSectionKey } | undefined) ?? {};
   const initialSection = initialSectionProp ?? routeParams.initialSection;
 
@@ -1673,13 +1674,26 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readyTick]);
 
+  const handleGoDashboard = useCallback(() => {
+    const isAdmin =
+      status === "authenticated" &&
+      user !== null &&
+      user !== undefined &&
+      ["org_admin", "branch_admin"].includes(user.role);
+    if (isAdmin) {
+      navigation.navigate("AdminHome");
+      return;
+    }
+    scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home");
+  }, [navigation, status, user]);
+
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-home"
       navItems={spaNavItems}
       onBrandPress={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
       onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
-      onGoDashboard={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
+      onGoDashboard={handleGoDashboard}
       onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
       screenScrollable={true}
     >
