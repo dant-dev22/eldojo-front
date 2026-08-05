@@ -4913,10 +4913,16 @@ const styles = StyleSheet.create({
     minWidth: 150,
   },
   circularStatInlineLink: {
+    alignContent: "center",
+    alignItems: "center",
     alignSelf: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
   },
   circularStatInlineLinkLabel: {
     textAlign: "center",
+    width: "100%",
   },
   circularStatCard: {
     alignItems: "center",
