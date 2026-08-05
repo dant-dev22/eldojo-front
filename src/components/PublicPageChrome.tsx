@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { PropsWithChildren, useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
+import { Linking, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
@@ -21,6 +21,9 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { navigateToPublicPageKey } from "@/navigation/publicRoutes";
+import type { User } from "@/types/api";
+import { buildAppUrl } from "@/utils/domains";
+import { readSessionHint, type SessionHint } from "@/utils/sessionHint";
 
 type PublicChromeNavItem = {
   key: string;
@@ -76,20 +79,71 @@ export function PublicPageChrome({
   const { contentMaxWidth: responsiveContentMaxWidth, isMobile, width } = useResponsiveLayout();
   const { status, user, signOut } = useAuth();
   const [isMobileMenuVisible, setIsMobileMenuVisible] = useState(false);
+  const [hintSnapshot, setHintSnapshot] = useState<SessionHint | undefined>(() =>
+    Platform.OS === "web" ? readSessionHint() : undefined
+  );
   const resolvedContentMaxWidth = contentMaxWidth ?? responsiveContentMaxWidth;
-  const isAuthenticated = status === "authenticated" && Boolean(user);
+  const locallyAuthenticated = status === "authenticated" && Boolean(user);
+
+  const hintShowsAuth = useMemo(() => {
+    if (locallyAuthenticated) return true;
+    if (!hintSnapshot) return false;
+    return Boolean(hintSnapshot.userId && Number(hintSnapshot.userId) > 0);
+  }, [hintSnapshot, locallyAuthenticated]);
+
+  const displayUser = useMemo<User | null>(() => {
+    if (user) return user;
+    if (!hintSnapshot?.userId) return null;
+    return {
+      id: Number(hintSnapshot.userId),
+      first_name: hintSnapshot.userFullName?.split(" ")[0] ?? null,
+      last_name:
+        hintSnapshot.userFullName && hintSnapshot.userFullName.includes(" ")
+          ? (hintSnapshot.userFullName.split(" ").slice(1).join(" ") as string)
+          : null,
+      email: hintSnapshot.userEmail ?? "",
+      role: "org_admin",
+      is_active: true,
+      first_time: false,
+      last_login_at: hintSnapshot.updatedAt,
+      created_at: hintSnapshot.updatedAt,
+      updated_at: hintSnapshot.updatedAt,
+      admin_assignments: [],
+    } satisfies User;
+  }, [user, hintSnapshot]);
+
+  const handleGoDashboard = useCallback(() => {
+    if (onGoDashboard) {
+      onGoDashboard();
+      return;
+    }
+    const destination = buildAppUrl("admin");
+    if (Platform.OS === "web") {
+      window.location.assign(destination);
+    } else {
+      void Linking.openURL(destination);
+    }
+  }, [onGoDashboard]);
+
+  useEffect(() => {
+    if (!showAuthControls) return;
+    if (Platform.OS !== "web") return;
+    const refresh = () => setHintSnapshot(readSessionHint());
+    refresh();
+    const interval = setInterval(refresh, 2500);
+    const storageListener = () => refresh();
+    window.addEventListener("storage", storageListener);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("storage", storageListener);
+    };
+  }, [showAuthControls]);
 
   const adminActions = useMemo(() => {
     return [
       {
-        label: "Dashboard",
-        onPress: () => {
-          if (onGoDashboard) {
-            onGoDashboard();
-            return;
-          }
-          navigateToPublicPageKey("home");
-        },
+        label: "Ir al panel",
+        onPress: handleGoDashboard,
       },
       ...(onGoSettings
         ? [
@@ -102,12 +156,12 @@ export function PublicPageChrome({
       {
         label: "Cerrar sesión",
         onPress: () => {
-          void signOut();
+          void signOut(true);
         },
         tone: "danger" as const,
       },
     ];
-  }, [onGoDashboard, onGoSettings, signOut]);
+  }, [handleGoDashboard, onGoSettings, signOut]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -225,8 +279,8 @@ export function PublicPageChrome({
                   ))}
 
                   {actionItems.length === 0 ? (
-                    isAuthenticated ? (
-                      <AdminUserMenu actions={adminActions} user={user} />
+                    hintShowsAuth ? (
+                      <AdminUserMenu actions={adminActions} user={displayUser} />
                     ) : (
                       <View style={styles.publicAuthActionsRow}>
                         <Pressable
@@ -306,10 +360,10 @@ export function PublicPageChrome({
             style={styles.mobileFloatingBar}
             testID={`${idPrefix}-mobile-floating-bar`}
           >
-            {showAuthControls && isAuthenticated ? (
+            {showAuthControls && hintShowsAuth ? (
               <View style={styles.mobileMiniAvatar} nativeID={`${idPrefix}-mobile-mini-avatar`} testID={`${idPrefix}-mobile-mini-avatar`}>
                 <Text style={styles.mobileMiniAvatarInitial}>
-                  {(user?.first_name?.charAt(0) ?? user?.email?.charAt(0) ?? "A").toUpperCase()}
+                  {(displayUser?.first_name?.charAt(0) ?? displayUser?.email?.charAt(0) ?? "A").toUpperCase()}
                 </Text>
               </View>
             ) : null}
@@ -500,22 +554,22 @@ export function PublicPageChrome({
               />
             ))}
             {showAuthControls && actionItems.length === 0 ? (
-              isAuthenticated ? (
+              hintShowsAuth ? (
                 <>
                   <View style={styles.mobileMenuProfileCard}>
                     <View style={styles.mobileMenuAvatar}>
                       <Text style={styles.mobileMenuAvatarInitial}>
-                        {(user?.first_name?.charAt(0) ?? user?.email?.charAt(0) ?? "A").toUpperCase()}
+                        {(displayUser?.first_name?.charAt(0) ?? displayUser?.email?.charAt(0) ?? "A").toUpperCase()}
                       </Text>
                     </View>
                     <View style={styles.mobileMenuProfileCopy}>
                       <Text style={styles.mobileMenuProfileName}>
-                        {user?.first_name
-                          ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ""}`
-                          : user?.email ?? "Administrador"}
+                        {displayUser?.first_name
+                          ? `${displayUser.first_name}${displayUser.last_name ? ` ${displayUser.last_name}` : ""}`
+                          : displayUser?.email ?? "Administrador"}
                       </Text>
                       <Text style={styles.mobileMenuProfileEmail}>
-                        {user?.email ?? "Sesión iniciada"}
+                        {displayUser?.email ?? "Sesión iniciada"}
                       </Text>
                     </View>
                   </View>

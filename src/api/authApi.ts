@@ -229,4 +229,39 @@ export const authApi = {
     const { data } = await http.patch<User>("/auth/me/tutorial-state", payload);
     return data;
   },
+
+  async createSessionSyncTicket(): Promise<{ ticket: string; ttl_seconds: number }> {
+    if (shouldUseWebFetch()) {
+      const accessToken = await getAccessToken();
+      return requestJson<{ ticket: string; ttl_seconds: number }>("/auth/session-ticket/create", {
+        headers: accessToken
+          ? {
+              Authorization: `Bearer ${accessToken}`,
+            }
+          : undefined,
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<{ ticket: string; ttl_seconds: number }>(
+      "/auth/session-ticket/create"
+    );
+    return data;
+  },
+
+  async redeemSessionSyncTicket(ticket: string): Promise<LoginResponse> {
+    const payload = { ticket };
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/session-ticket/redeem", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/session-ticket/redeem", payload);
+    return data;
+  },
 };
