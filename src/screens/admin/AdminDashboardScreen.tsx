@@ -4464,7 +4464,7 @@ function OverviewCircularGraphCard({
                     accessibilityRole="link"
                     nativeID={`${idPrefix}-circle-${item.key}-link`}
                     onPress={circleLink.onPress}
-                    style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                    style={({ pressed }) => [styles.operationsInlineLink, styles.circularStatInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
                     testID={`${idPrefix}-circle-${item.key}-link`}
                   >
                     <Text
@@ -4904,6 +4904,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.sm,
     minWidth: 150,
+  },
+  circularStatInlineLink: {
+    alignSelf: "center",
   },
   circularStatCard: {
     alignItems: "center",
