@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
 
+export const PUBLIC_SCROLL_TARGET_KEY = "eldojo-public-scroll-target";
+
 export function slugifyRouteSegment(value: string): string {
   return value
     .normalize("NFD")
@@ -88,11 +90,19 @@ export function navigateToPublicPageKey(page: PublicPageKey): void {
   }
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
-    const currentPath = window.location.pathname;
-    const targetPath = meta.path;
+    const sectionKey = page === "about" || page === "events" || page === "stores" ? page : null;
 
-    if (currentPath !== targetPath) {
-      window.location.assign(targetPath);
+    if (sectionKey) {
+      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, sectionKey);
+    } else {
+      window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
+    }
+
+    const currentPath = window.location.pathname;
+    const homePath = PUBLIC_PAGE_META.home.path;
+
+    if (currentPath !== homePath) {
+      window.location.assign(homePath);
       return;
     }
 

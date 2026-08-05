@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import {
@@ -25,7 +25,7 @@ import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { PUBLIC_PAGE_META, PUBLIC_PAGE_TO_SCREEN, navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
+import { PUBLIC_PAGE_META, PUBLIC_PAGE_TO_SCREEN, PUBLIC_SCROLL_TARGET_KEY, navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
 import type { AuthStackParamList } from "@/navigation/types";
 import type { PendingAcademyRegistration } from "@/types/api";
 import {
@@ -70,7 +70,6 @@ function isSectionKey(value: string): value is SectionKey {
   return value === "about" || value === "events" || value === "stores";
 }
 
-const PUBLIC_SCROLL_TARGET_KEY = "eldojo-public-scroll-target";
 const PUBLIC_WEB_STYLE_TAG_ID = "eldojo-public-web-desktop-styles";
 const MASKED_REGISTERED_PASSWORD = "********";
 
@@ -1232,13 +1231,31 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                       testID="screens-auth-public-mobile-section-nav"
                     >
                       {MOBILE_SECTION_NAV_ITEMS.map((item) => {
-                        const isActive = page === item.page;
+                        const isActive =
+                          page === item.page ||
+                          (page === "home" && item.key !== "home" && PAGE_SECTIONS.home.includes(item.key as SectionKey));
                         return (
                           <Pressable
                             key={item.page}
                             accessibilityRole="link"
                             nativeID={`screens-auth-public-mobile-section-chip-${item.key}`}
-                            onPress={() => navigateToPage(item.page)}
+                            onPress={() => {
+                              if (page === "home") {
+                                if (item.key === "home") {
+                                  scrollToTop();
+                                } else if (PAGE_SECTIONS.home.includes(item.key as SectionKey)) {
+                                  scrollToSection(item.key as SectionKey);
+                                } else {
+                                  navigateToPage(item.page);
+                                }
+                              } else if (item.key === "home") {
+                                navigateToPage("home");
+                              } else {
+                                navigation.navigate("Home", {
+                                  initialSection: item.key as PublicSiteSectionKey,
+                                });
+                              }
+                            }}
                             style={({ pressed }) => [
                               styles.mobileSectionChip,
                               isActive ? styles.mobileSectionChipActive : null,
@@ -1623,14 +1640,31 @@ function buildHomeSpaNavItems(
   }));
 }
 
-export function HomeScreen() {
+type HomeScreenProps = {
+  initialSection?: PublicSiteSectionKey;
+};
+
+export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const route = useRoute();
+  const routeParams = (route.params as { initialSection?: PublicSiteSectionKey } | undefined) ?? {};
+  const initialSection = initialSectionProp ?? routeParams.initialSection;
+
   const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
   const [readyTick, setReadyTick] = useState(0);
+  const initialSectionAppliedRef = useRef(false);
 
   const handleReady = useCallback((controls: PublicSiteScrollControls) => {
     scrollControlsRef.current = controls;
     setReadyTick((tick) => (tick + 1) % 10_000);
+
+    if (initialSection && !initialSectionAppliedRef.current) {
+      initialSectionAppliedRef.current = true;
+      requestAnimationFrame(() => {
+        controls.scrollToSection(initialSection);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const spaNavItems = useMemo(() => {
@@ -1654,64 +1688,46 @@ export function HomeScreen() {
 }
 
 export function AboutScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-
-  return (
-    <PublicPageChrome
-      idPrefix="screens-auth-public-about"
-      navItems={buildChromeNavItems(navigation, "about")}
-      onBrandPress={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.home)}
-      onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
-      onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
-      screenScrollable={false}
-    >
-      <PublicSiteScreen page="about" />
-    </PublicPageChrome>
-  );
+  return <HomeScreen initialSection="about" />;
 }
 
 export function EventsScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-
-  return (
-    <PublicPageChrome
-      idPrefix="screens-auth-public-events"
-      navItems={buildChromeNavItems(navigation, "events")}
-      onBrandPress={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.home)}
-      onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
-      onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
-      screenScrollable={false}
-    >
-      <PublicSiteScreen page="events" />
-    </PublicPageChrome>
-  );
+  return <HomeScreen initialSection="events" />;
 }
 
 export function StoresScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-
-  return (
-    <PublicPageChrome
-      idPrefix="screens-auth-public-stores"
-      navItems={buildChromeNavItems(navigation, "stores")}
-      onBrandPress={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.home)}
-      onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
-      onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
-      screenScrollable={false}
-    >
-      <PublicSiteScreen page="stores" />
-    </PublicPageChrome>
-  );
+  return <HomeScreen initialSection="stores" />;
 }
 
 export function CreateAccountScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
+  const spaNavItems = useMemo(() => {
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      {
+        key: "about",
+        label: "Acerca de",
+        onPress: () => navigation.navigate("Home", { initialSection: "about" }),
+      },
+      {
+        key: "events",
+        label: "Eventos",
+        onPress: () => navigation.navigate("Home", { initialSection: "events" }),
+      },
+      {
+        key: "stores",
+        label: "Tiendas",
+        onPress: () => navigation.navigate("Home", { initialSection: "stores" }),
+      },
+    ];
+  }, [navigation]);
+
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-create-account"
-      navItems={buildChromeNavItems(navigation, "createAccount")}
-      onBrandPress={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.home)}
+      navItems={spaNavItems}
+      onBrandPress={() => navigation.navigate("Home")}
       onGoCreateAccount={() => {}}
       onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
       screenScrollable={false}
@@ -1724,11 +1740,32 @@ export function CreateAccountScreen() {
 export function SignInScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
+  const spaNavItems = useMemo(() => {
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      {
+        key: "about",
+        label: "Acerca de",
+        onPress: () => navigation.navigate("Home", { initialSection: "about" }),
+      },
+      {
+        key: "events",
+        label: "Eventos",
+        onPress: () => navigation.navigate("Home", { initialSection: "events" }),
+      },
+      {
+        key: "stores",
+        label: "Tiendas",
+        onPress: () => navigation.navigate("Home", { initialSection: "stores" }),
+      },
+    ];
+  }, [navigation]);
+
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-signin"
-      navItems={buildChromeNavItems(navigation, "signIn")}
-      onBrandPress={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.home)}
+      navItems={spaNavItems}
+      onBrandPress={() => navigation.navigate("Home")}
       onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
       onGoSignIn={() => {}}
       screenScrollable={false}

@@ -1,7 +1,9 @@
 export type AdminDashboardSection = "overview" | "branches" | "operations" | "payments" | "dojo";
 
+export type HomeInitialSection = "home" | "about" | "events" | "stores";
+
 export type AuthStackParamList = {
-  Home: undefined;
+  Home: { initialSection?: HomeInitialSection } | undefined;
   About: undefined;
   Events: undefined;
   Stores: undefined;
