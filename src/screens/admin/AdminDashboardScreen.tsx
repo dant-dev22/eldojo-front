@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Linking, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
+import { Animated, Easing, Image, Linking, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -2477,8 +2477,12 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 ) : null}
 
                 {isOverviewSection || isPaymentsSection ? (
-                <AnimatedSurface delay={390}>
-                  <AppCard nativeID="screens-admin-dashboard-payments-card" style={styles.panelCard} testID="screens-admin-dashboard-payments-card">
+                <AnimatedSurface delay={390} style={isPaymentsSection ? styles.fullWidthPanel : null}>
+                  <AppCard
+                    nativeID="screens-admin-dashboard-payments-card"
+                    style={[styles.panelCard, isPaymentsSection ? styles.fullWidthPanel : null]}
+                    testID="screens-admin-dashboard-payments-card"
+                  >
                   <View nativeID="screens-admin-dashboard-payments-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-payments-header">
                     <Text nativeID="screens-admin-dashboard-payments-title" style={styles.sectionTitle} testID="screens-admin-dashboard-payments-title">
                       {isPaymentsSection && selectedPaymentsBranch ? `Pagos · ${selectedPaymentsBranch.name}` : "Pagos"}
@@ -2533,6 +2537,22 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                                 ]}
                                 testID={`screens-admin-dashboard-payments-student-row-${student.id}`}
                               >
+                                <View nativeID={`screens-admin-dashboard-payments-student-avatar-wrap-${student.id}`} style={styles.paymentsStudentAvatarWrap} testID={`screens-admin-dashboard-payments-student-avatar-wrap-${student.id}`}>
+                                  {student.photo_url ? (
+                                    <Image
+                                      nativeID={`screens-admin-dashboard-payments-student-avatar-${student.id}`}
+                                      source={{ uri: student.photo_url }}
+                                      style={styles.paymentsStudentAvatar}
+                                      testID={`screens-admin-dashboard-payments-student-avatar-${student.id}`}
+                                    />
+                                  ) : (
+                                    <View nativeID={`screens-admin-dashboard-payments-student-avatar-fallback-${student.id}`} style={styles.paymentsStudentAvatarFallback} testID={`screens-admin-dashboard-payments-student-avatar-fallback-${student.id}`}>
+                                      <Text nativeID={`screens-admin-dashboard-payments-student-avatar-label-${student.id}`} style={styles.paymentsStudentAvatarLabel} testID={`screens-admin-dashboard-payments-student-avatar-label-${student.id}`}>
+                                        {`${student.first_name.charAt(0)}${student.last_name.charAt(0)}`.trim().toUpperCase()}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
                                 <View nativeID={`screens-admin-dashboard-payments-student-copy-${student.id}`} style={styles.paymentsStudentCopy} testID={`screens-admin-dashboard-payments-student-copy-${student.id}`}>
                                   <View nativeID={`screens-admin-dashboard-payments-student-head-${student.id}`} style={styles.paymentsStudentHead} testID={`screens-admin-dashboard-payments-student-head-${student.id}`}>
                                     <Text nativeID={`screens-admin-dashboard-payments-student-name-${student.id}`} style={styles.paymentsStudentName} testID={`screens-admin-dashboard-payments-student-name-${student.id}`}>
@@ -3935,6 +3955,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
     width: "100%",
   },
+  fullWidthPanel: {
+    flexBasis: "100%",
+    width: "100%",
+  },
   cardHeaderRow: {
     alignItems: "flex-start",
     flexDirection: "row",
@@ -4156,7 +4180,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   paymentsStudentList: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   paymentsStudentRow: {
     alignItems: "center",
@@ -4166,48 +4190,78 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
     justifyContent: "space-between",
-    padding: spacing.md,
+    minHeight: 82,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   paymentsStudentRowPressed: {
     opacity: 0.94,
     transform: [{ scale: 0.995 }],
   },
+  paymentsStudentAvatarWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paymentsStudentAvatar: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    width: 36,
+  },
+  paymentsStudentAvatarFallback: {
+    alignItems: "center",
+    backgroundColor: colors.infoSoft,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  paymentsStudentAvatarLabel: {
+    color: colors.info,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "800",
+  },
   paymentsStudentCopy: {
     flex: 1,
-    gap: 6,
+    gap: 4,
     minWidth: 0,
   },
   paymentsStudentHead: {
     alignItems: "center",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   paymentsStudentName: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
   },
   paymentsStudentMeta: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
   },
   paymentsStudentSummary: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   paymentsStudentSummaryText: {
     color: colors.text,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
-    lineHeight: 19,
+    lineHeight: 16,
   },
   paymentsStudentAction: {
     alignItems: "center",
@@ -4217,7 +4271,7 @@ const styles = StyleSheet.create({
   paymentsStudentActionLabel: {
     color: colors.textMuted,
     fontFamily: typography.headingFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
   },
