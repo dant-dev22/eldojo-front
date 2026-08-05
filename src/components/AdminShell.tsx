@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { PropsWithChildren, ReactNode, useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
@@ -109,6 +109,11 @@ export function AdminShell({
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showQuickActionsSheet, setShowQuickActionsSheet] = useState(false);
+
+  const viewportHeight = Dimensions.get("window").height;
+  const shellPadding = spacing.md;
+  const desktopSidebarWidth = 300;
+  const tabletSidebarWidth = 272;
 
   const navItems = useMemo<NavItem[]>(
     () => {
@@ -508,10 +513,38 @@ export function AdminShell({
       testID="components-admin-shell-shell"
     >
       {isDesktop ? (
-        <View nativeID="components-admin-shell-sidebar" style={desktopStyles.sidebar} testID="components-admin-shell-sidebar">
-          {renderSidebarContent("desktop")}
+        <View
+          nativeID="components-admin-shell-sidebar"
+          style={{
+            left: shellPadding,
+            position: "absolute",
+            top: shellPadding,
+            width: desktopSidebarWidth,
+            zIndex: 10,
+          }}
+          testID="components-admin-shell-sidebar"
+        >
+          <View style={{ height: viewportHeight - shellPadding * 2 - insets.top - insets.bottom }}>
+            {renderSidebarContent("desktop")}
+          </View>
         </View>
-      ) : isTablet ? renderTabletSidebar() : null}
+      ) : isTablet ? (
+        <View
+          nativeID="components-admin-shell-sidebar"
+          style={{
+            left: shellPadding,
+            position: "absolute",
+            top: shellPadding,
+            width: tabletSidebarWidth,
+            zIndex: 10,
+          }}
+          testID="components-admin-shell-sidebar"
+        >
+          <View style={{ height: viewportHeight - shellPadding * 2 - insets.top - insets.bottom }}>
+            {renderSidebarContent("desktop")}
+          </View>
+        </View>
+      ) : null}
 
       {isMobile ? (
         <>
@@ -550,7 +583,9 @@ export function AdminShell({
           {renderMobileContent()}
         </>
       ) : (
-        renderDesktopContent()
+        <View style={{ flex: 1, paddingLeft: (isDesktop ? desktopSidebarWidth : tabletSidebarWidth) + spacing.md }}>
+          {renderDesktopContent()}
+        </View>
       )}
 
       <MobileDrawerNavigation
@@ -607,7 +642,8 @@ const styles = StyleSheet.create({
     borderColor: colors.sidebarBorder,
     borderRadius: 30,
     borderWidth: 1,
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 0,
     gap: spacing.xl,
     height: "100%",
     padding: spacing.xl,
