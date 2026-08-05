@@ -661,39 +661,64 @@ export function StudentsListScreen({ navigation, route }: Props) {
     </View>
   );
   const studentsHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
-    <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-students-list-metrics-grid">
-      <DashboardMetricCard
-        description={hasActiveSearch ? `Filtro: ${debouncedSearch.trim()}` : "Sin filtro activo"}
-        icon="users"
-        idPrefix="screens-admin-students-list-metric-found"
-        tone="info"
-        title="Encontrados"
-        value={String(students.length)}
-      />
-      <DashboardMetricCard
-        description="Con estatus activo"
-        icon="check-circle"
-        idPrefix="screens-admin-students-list-metric-active"
-        tone="success"
-        title="Activos"
-        value={String(activeStudentsCount)}
-      />
-      <DashboardMetricCard
-        description="Vencidos o parciales"
-        icon="alert-circle"
-        idPrefix="screens-admin-students-list-metric-payment"
-        tone="warning"
-        title="Cobranza"
-        value={String(paymentAttentionCount)}
-      />
-      <DashboardMetricCard
-        description="Congelados o inactivos"
-        icon="pause-circle"
-        idPrefix="screens-admin-students-list-metric-inactive"
-        tone="neutral"
-        title="No activos"
-        value={String(inactiveStudentsCount)}
-      />
+    <View nativeID="screens-admin-students-list-header-main-content" style={styles.headerMainContent} testID="screens-admin-students-list-header-main-content">
+      <View nativeID="screens-admin-students-list-metrics-grid" style={[styles.metricsGrid, isDesktop ? desktopStyles.metricsGrid : mobileStyles.metricsGrid]} testID="screens-admin-students-list-metrics-grid">
+        <DashboardMetricCard
+          description={hasActiveSearch ? `Filtro: ${debouncedSearch.trim()}` : "Sin filtro activo"}
+          icon="users"
+          idPrefix="screens-admin-students-list-metric-found"
+          tone="info"
+          title="Encontrados"
+          value={String(students.length)}
+        />
+        <DashboardMetricCard
+          description="Con estatus activo"
+          icon="check-circle"
+          idPrefix="screens-admin-students-list-metric-active"
+          tone="success"
+          title="Activos"
+          value={String(activeStudentsCount)}
+        />
+        <DashboardMetricCard
+          description="Vencidos o parciales"
+          icon="alert-circle"
+          idPrefix="screens-admin-students-list-metric-payment"
+          tone="warning"
+          title="Cobranza"
+          value={String(paymentAttentionCount)}
+        />
+        <DashboardMetricCard
+          description="Congelados o inactivos"
+          icon="pause-circle"
+          idPrefix="screens-admin-students-list-metric-inactive"
+          tone="neutral"
+          title="No activos"
+          value={String(inactiveStudentsCount)}
+        />
+      </View>
+      <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
+        <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
+          <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Listado de alumnos</Text>
+          <Text nativeID="screens-admin-students-list-results-description" style={styles.resultsDescription} testID="screens-admin-students-list-results-description">
+            {hasActiveSearch
+              ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
+              : `Mostrando ${students.length} alumnos disponibles en una sola vista.`}
+          </Text>
+          {students.length > 0 ? (
+            <Text nativeID="screens-admin-students-list-results-meta" style={styles.resultsMeta} testID="screens-admin-students-list-results-meta">
+              Mostrando {currentStudentsPageStart}-{currentStudentsPageEnd} de {students.length}
+            </Text>
+          ) : null}
+        </View>
+        {studentsQuery.isRefetching ? (
+          <AppBadge
+            label="Actualizando"
+            nativeID="screens-admin-students-list-results-refresh-badge"
+            testID="screens-admin-students-list-results-refresh-badge"
+            tone="info"
+          />
+        ) : null}
+      </View>
     </View>
   ) : null;
 
@@ -750,30 +775,6 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </View>
         ) : (
           <AppCard nativeID="screens-admin-students-list-results-panel" style={styles.resultsPanel} testID="screens-admin-students-list-results-panel">
-            <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
-              <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
-                <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Listado de alumnos</Text>
-                <Text nativeID="screens-admin-students-list-results-description" style={styles.resultsDescription} testID="screens-admin-students-list-results-description">
-                  {hasActiveSearch
-                    ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
-                    : `Mostrando ${students.length} alumnos disponibles en una sola vista.`}
-                </Text>
-                {students.length > 0 ? (
-                  <Text nativeID="screens-admin-students-list-results-meta" style={styles.resultsMeta} testID="screens-admin-students-list-results-meta">
-                    Mostrando {currentStudentsPageStart}-{currentStudentsPageEnd} de {students.length}
-                  </Text>
-                ) : null}
-              </View>
-              {studentsQuery.isRefetching ? (
-                <AppBadge
-                  label="Actualizando"
-                  nativeID="screens-admin-students-list-results-refresh-badge"
-                  testID="screens-admin-students-list-results-refresh-badge"
-                  tone="info"
-                />
-              ) : null}
-            </View>
-
             {students.length > 0 ? (
               <View nativeID="screens-admin-students-list-table" style={styles.table} testID="screens-admin-students-list-table">
                 {isDesktop ? (
@@ -1505,6 +1506,9 @@ const styles = StyleSheet.create({
   },
   searchInputWrap: {
     flex: 1,
+  },
+  headerMainContent: {
+    gap: spacing.md,
   },
   metricsGrid: {
     gap: spacing.sm,
