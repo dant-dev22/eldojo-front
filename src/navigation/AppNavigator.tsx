@@ -108,6 +108,22 @@ function AdminFlow() {
         component={StudentDetailScreen}
         name="StudentDetail"
       />
+      <AdminStack.Screen
+        component={HomeScreen}
+        name="Home"
+      />
+      <AdminStack.Screen
+        component={AboutScreen}
+        name="About"
+      />
+      <AdminStack.Screen
+        component={EventsScreen}
+        name="Events"
+      />
+      <AdminStack.Screen
+        component={StoresScreen}
+        name="Stores"
+      />
     </AdminStack.Navigator>
   );
 }
