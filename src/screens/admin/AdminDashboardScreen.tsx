@@ -57,6 +57,7 @@ type FeedbackTone = "success" | "danger";
 type AttendanceDialogMode = "create" | "edit";
 type BranchDialogMode = "create" | "edit";
 type ClassDialogMode = "create" | "edit";
+type BranchesDashboardView = "list" | "summary";
 type OperationsDashboardView = "attendance" | "classes" | null;
 type PaymentDialogMode = "create" | "edit";
 type DestructiveActionState = {
@@ -678,6 +679,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [paymentsBranchId, setPaymentsBranchId] = useState<string>(scopedBranchId ? String(scopedBranchId) : "");
   const [paymentsSearchQuery, setPaymentsSearchQuery] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
+  const [branchesDashboardView, setBranchesDashboardView] = useState<BranchesDashboardView>("list");
+  const [selectedBranchDashboardId, setSelectedBranchDashboardId] = useState<string>("");
   const [operationsDashboardView, setOperationsDashboardView] = useState<OperationsDashboardView>(null);
   const [operationsSearchQuery, setOperationsSearchQuery] = useState("");
   const [operationsPage, setOperationsPage] = useState(1);
@@ -1287,6 +1290,38 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const activeClasses = visibleClasses.filter((item) => item.is_active).length;
   const pendingPayments = visiblePayments.filter((item) => item.status === "pending").length;
   const todayAttendanceCount = visibleAttendanceRecords.filter((item) => item.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  const branchDashboardRows = useMemo(
+    () =>
+      visibleBranches.map((branch) => {
+        const branchStudents = visibleStudents.filter((student) => student.branch_id === branch.id);
+        const branchClasses = visibleClasses.filter((classItem) => classItem.branch_id === branch.id);
+        const branchAttendance = visibleAttendanceRecords.filter((attendance) => attendance.branch_id === branch.id);
+        const branchPendingPayments = visiblePayments.filter((payment) => payment.branch_id === branch.id && payment.status === "pending");
+
+        return {
+          branch,
+          studentsCount: branchStudents.length,
+          activeClassesCount: branchClasses.filter((classItem) => classItem.is_active).length,
+          todayAttendanceCount: branchAttendance.filter((attendance) => attendance.check_in_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
+          pendingPaymentsCount: branchPendingPayments.length,
+        };
+      }),
+    [visibleAttendanceRecords, visibleBranches, visibleClasses, visiblePayments, visibleStudents]
+  );
+  const selectedBranchDashboard = useMemo(() => {
+    if (selectedBranchDashboardId) {
+      const explicitBranch = visibleBranches.find((item) => String(item.id) === selectedBranchDashboardId) ?? null;
+      if (explicitBranch) {
+        return explicitBranch;
+      }
+    }
+
+    return currentBranch ?? visibleBranches[0] ?? null;
+  }, [currentBranch, selectedBranchDashboardId, visibleBranches]);
+  const selectedBranchDashboardRow = useMemo(
+    () => branchDashboardRows.find((item) => item.branch.id === selectedBranchDashboard?.id) ?? null,
+    [branchDashboardRows, selectedBranchDashboard]
+  );
   const operationsClassOptions = useMemo(
     () =>
       visibleClasses.map((item) => ({
@@ -1515,6 +1550,41 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   useEffect(() => {
     setPaymentsPage((current) => Math.min(current, paymentsTotalPages));
   }, [paymentsTotalPages]);
+
+  useEffect(() => {
+    if (!isBranchesSection) {
+      return;
+    }
+
+    setBranchesDashboardView("list");
+    setSelectedBranchDashboardId((current) => {
+      if (current) {
+        return current;
+      }
+
+      if (currentBranch) {
+        return String(currentBranch.id);
+      }
+
+      if (visibleBranches[0]) {
+        return String(visibleBranches[0].id);
+      }
+
+      return "";
+    });
+  }, [currentBranch, isBranchesSection, visibleBranches]);
+
+  useEffect(() => {
+    if (!selectedBranchDashboardId) {
+      return;
+    }
+
+    if (visibleBranches.some((item) => String(item.id) === selectedBranchDashboardId)) {
+      return;
+    }
+
+    setSelectedBranchDashboardId(currentBranch ? String(currentBranch.id) : visibleBranches[0] ? String(visibleBranches[0].id) : "");
+  }, [currentBranch, selectedBranchDashboardId, visibleBranches]);
 
   useEffect(() => {
     if (!isOperationsSection) {
@@ -2002,20 +2072,19 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       >
         {focusedSection === "branches" ? (
           <>
-            {canCreateBranches ? (
-              <AppButton
-                label="Nueva sucursal"
-                nativeID="screens-admin-dashboard-new-branch-button"
-                onPress={openCreateBranchModal}
-                testID="screens-admin-dashboard-new-branch-button"
-              />
-            ) : null}
             <AppButton
               label="Resumen"
               nativeID="screens-admin-dashboard-branches-summary-button"
-              onPress={() => navigation.navigate("AdminHome")}
+              onPress={() => {
+                const targetBranch = selectedBranchDashboard ?? currentBranch ?? visibleBranches[0] ?? null;
+                if (targetBranch) {
+                  setSelectedBranchDashboardId(String(targetBranch.id));
+                }
+                setBranchesDashboardView("summary");
+              }}
               testID="screens-admin-dashboard-branches-summary-button"
               variant="secondary"
+              disabled={visibleBranches.length === 0}
             />
           </>
         ) : focusedSection === "operations" || focusedSection === "payments" ? null : (
@@ -2042,6 +2111,170 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         )}
       </View>
     );
+  const branchesHeaderBottomContent = isBranchesSection ? (
+    <AdminSectionDashboardTemplate
+      idPrefix="screens-admin-dashboard-branches-central-dashboard"
+      title={branchesDashboardView === "summary" && selectedBranchDashboard ? `Resumen · ${selectedBranchDashboard.name}` : "Sucursales del dojo"}
+      description={
+        branchesDashboardView === "summary" && selectedBranchDashboard
+          ? "Resumen operativo de la sucursal seleccionada dentro del mismo dashboard central."
+          : "Consulta las sucursales visibles y accede a sus flujos clave sin salir del header central."
+      }
+      actions={null}
+      summary={
+        <View nativeID="screens-admin-dashboard-branches-central-dashboard-meta" style={styles.paymentSummaryRow} testID="screens-admin-dashboard-branches-central-dashboard-meta">
+          <AppBadge label={`${visibleBranches.length} sucursales`} tone="neutral" />
+          <AppBadge label={`${activeBranches} activas`} tone={activeBranches > 0 ? "success" : "neutral"} />
+          <AppBadge
+            label={selectedBranchDashboard ? `Sucursal foco · ${selectedBranchDashboard.name}` : "Sin sucursal foco"}
+            tone="info"
+          />
+        </View>
+      }
+    />
+  ) : null;
+  const branchesHeaderMainContent = isBranchesSection ? (
+    <AnimatedSurface delay={330} style={styles.fullWidthPanel}>
+      <AppCard nativeID="screens-admin-dashboard-branches-central-card" style={[styles.panelCard, styles.fullWidthPanel]} testID="screens-admin-dashboard-branches-central-card">
+        <View nativeID="screens-admin-dashboard-branches-central-header" style={[styles.cardHeaderRow, styles.operationsMainHeader]} testID="screens-admin-dashboard-branches-central-header">
+          <View nativeID="screens-admin-dashboard-branches-central-copy" style={styles.operationsMainCopy} testID="screens-admin-dashboard-branches-central-copy">
+            <Text nativeID="screens-admin-dashboard-branches-central-title" style={styles.sectionTitle} testID="screens-admin-dashboard-branches-central-title">
+              {branchesDashboardView === "summary" && selectedBranchDashboard ? selectedBranchDashboard.name : "Sucursales"}
+            </Text>
+            <View nativeID="screens-admin-dashboard-branches-central-links" style={styles.branchInlineLinkRow} testID="screens-admin-dashboard-branches-central-links">
+              {canCreateBranches ? (
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID="screens-admin-dashboard-branches-add-link"
+                  onPress={openCreateBranchModal}
+                  style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                  testID="screens-admin-dashboard-branches-add-link"
+                >
+                  <Text nativeID="screens-admin-dashboard-branches-add-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-branches-add-link-label">
+                    Agregar sucursal
+                  </Text>
+                </Pressable>
+              ) : null}
+              {branchesDashboardView === "summary" ? (
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID="screens-admin-dashboard-branches-back-to-list-link"
+                  onPress={() => setBranchesDashboardView("list")}
+                  style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                  testID="screens-admin-dashboard-branches-back-to-list-link"
+                >
+                  <Text nativeID="screens-admin-dashboard-branches-back-to-list-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-branches-back-to-list-link-label">
+                    Ver sucursales
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+          <AppBadge
+            label={branchesDashboardView === "summary" && selectedBranchDashboardRow ? `${selectedBranchDashboardRow.studentsCount} alumnos` : `${visibleBranches.length} sedes`}
+            nativeID="screens-admin-dashboard-branches-central-badge"
+            testID="screens-admin-dashboard-branches-central-badge"
+            tone="neutral"
+          />
+        </View>
+        {branchesDashboardView === "summary" && selectedBranchDashboard && selectedBranchDashboardRow ? (
+          <View nativeID="screens-admin-dashboard-branches-summary-content" style={styles.branchSummaryContent} testID="screens-admin-dashboard-branches-summary-content">
+            <View nativeID="screens-admin-dashboard-branches-summary-metrics" style={styles.branchSummaryGrid} testID="screens-admin-dashboard-branches-summary-metrics">
+              <View nativeID="screens-admin-dashboard-branches-summary-students-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-branches-summary-students-card">
+                <Text nativeID="screens-admin-dashboard-branches-summary-students-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-branches-summary-students-label">Alumnos</Text>
+                <Text nativeID="screens-admin-dashboard-branches-summary-students-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-branches-summary-students-value">{selectedBranchDashboardRow.studentsCount}</Text>
+              </View>
+              <View nativeID="screens-admin-dashboard-branches-summary-classes-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-branches-summary-classes-card">
+                <Text nativeID="screens-admin-dashboard-branches-summary-classes-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-branches-summary-classes-label">Clases activas</Text>
+                <Text nativeID="screens-admin-dashboard-branches-summary-classes-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-branches-summary-classes-value">{selectedBranchDashboardRow.activeClassesCount}</Text>
+              </View>
+              <View nativeID="screens-admin-dashboard-branches-summary-attendance-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-branches-summary-attendance-card">
+                <Text nativeID="screens-admin-dashboard-branches-summary-attendance-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-branches-summary-attendance-label">Asistencias hoy</Text>
+                <Text nativeID="screens-admin-dashboard-branches-summary-attendance-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-branches-summary-attendance-value">{selectedBranchDashboardRow.todayAttendanceCount}</Text>
+              </View>
+              <View nativeID="screens-admin-dashboard-branches-summary-payments-card" style={styles.branchSummaryMetricCard} testID="screens-admin-dashboard-branches-summary-payments-card">
+                <Text nativeID="screens-admin-dashboard-branches-summary-payments-label" style={styles.branchSummaryMetricLabel} testID="screens-admin-dashboard-branches-summary-payments-label">Pagos pendientes</Text>
+                <Text nativeID="screens-admin-dashboard-branches-summary-payments-value" style={styles.branchSummaryMetricValue} testID="screens-admin-dashboard-branches-summary-payments-value">{selectedBranchDashboardRow.pendingPaymentsCount}</Text>
+              </View>
+            </View>
+            <View nativeID="screens-admin-dashboard-branches-summary-details" style={styles.branchSummaryDetails} testID="screens-admin-dashboard-branches-summary-details">
+              <Text nativeID="screens-admin-dashboard-branches-summary-location" style={styles.branchMeta} testID="screens-admin-dashboard-branches-summary-location">{`${selectedBranchDashboard.city}, ${selectedBranchDashboard.state} / ${selectedBranchDashboard.country}`}</Text>
+              <Text nativeID="screens-admin-dashboard-branches-summary-address" style={styles.branchMeta} testID="screens-admin-dashboard-branches-summary-address">{selectedBranchDashboard.address}</Text>
+              <Text nativeID="screens-admin-dashboard-branches-summary-timezone" style={styles.branchMeta} testID="screens-admin-dashboard-branches-summary-timezone">{`Zona horaria: ${selectedBranchDashboard.timezone}`}</Text>
+            </View>
+          </View>
+        ) : visibleBranches.length > 0 ? (
+          <View nativeID="screens-admin-dashboard-branches-list" style={styles.branchList} testID="screens-admin-dashboard-branches-list">
+            {branchDashboardRows.map(({ branch, studentsCount, activeClassesCount, todayAttendanceCount: rowAttendanceCount, pendingPaymentsCount }) => (
+              <View key={branch.id} nativeID={`screens-admin-dashboard-branch-row-${branch.id}`} style={styles.branchDashboardRow} testID={`screens-admin-dashboard-branch-row-${branch.id}`}>
+                <View nativeID={`screens-admin-dashboard-branch-copy-${branch.id}`} style={styles.branchDashboardCopy} testID={`screens-admin-dashboard-branch-copy-${branch.id}`}>
+                  <View nativeID={`screens-admin-dashboard-branch-title-row-${branch.id}`} style={styles.branchTitleRow} testID={`screens-admin-dashboard-branch-title-row-${branch.id}`}>
+                    <Text nativeID={`screens-admin-dashboard-branch-name-${branch.id}`} style={styles.branchName} testID={`screens-admin-dashboard-branch-name-${branch.id}`}>{branch.name}</Text>
+                    <AppBadge label={branch.is_active ? "Activa" : "Inactiva"} nativeID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} testID={`screens-admin-dashboard-branch-status-badge-${branch.id}`} tone={branch.is_active ? "success" : "warning"} />
+                  </View>
+                  <Text nativeID={`screens-admin-dashboard-branch-location-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-location-${branch.id}`}>{`${branch.city}, ${branch.state} / ${branch.country}`}</Text>
+                  <Text nativeID={`screens-admin-dashboard-branch-address-${branch.id}`} style={styles.branchMeta} testID={`screens-admin-dashboard-branch-address-${branch.id}`}>{branch.address}</Text>
+                  <View nativeID={`screens-admin-dashboard-branch-summary-${branch.id}`} style={styles.branchSummaryLine} testID={`screens-admin-dashboard-branch-summary-${branch.id}`}>
+                    <Text nativeID={`screens-admin-dashboard-branch-students-${branch.id}`} style={styles.branchSummaryLineText} testID={`screens-admin-dashboard-branch-students-${branch.id}`}>{`${studentsCount} alumnos`}</Text>
+                    <Text nativeID={`screens-admin-dashboard-branch-classes-${branch.id}`} style={styles.branchSummaryLineText} testID={`screens-admin-dashboard-branch-classes-${branch.id}`}>{`${activeClassesCount} clases activas`}</Text>
+                    <Text nativeID={`screens-admin-dashboard-branch-attendance-${branch.id}`} style={styles.branchSummaryLineText} testID={`screens-admin-dashboard-branch-attendance-${branch.id}`}>{`${rowAttendanceCount} asistencias hoy`}</Text>
+                    <Text nativeID={`screens-admin-dashboard-branch-payments-${branch.id}`} style={styles.branchSummaryLineText} testID={`screens-admin-dashboard-branch-payments-${branch.id}`}>{`${pendingPaymentsCount} pagos pendientes`}</Text>
+                  </View>
+                </View>
+                <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActionLinks} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
+                  {organization ? (
+                    <Pressable
+                      accessibilityRole="link"
+                      nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                      onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                      style={({ pressed }) => [styles.operationsInlineLink, (!branch.is_active || pressed) ? styles.operationsInlineLinkPressed : null]}
+                      testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                      disabled={!branch.is_active}
+                    >
+                      <Text nativeID={`screens-admin-dashboard-branch-open-attendance-label-${branch.id}`} style={styles.operationsInlineLinkLabel} testID={`screens-admin-dashboard-branch-open-attendance-label-${branch.id}`}>
+                        Ir rapido a asistencias
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`}
+                    onPress={() => openEditBranchModal(branch)}
+                    style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                    testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`}
+                  >
+                    <Text nativeID={`screens-admin-dashboard-branch-edit-label-${branch.id}`} style={styles.operationsInlineLinkLabel} testID={`screens-admin-dashboard-branch-edit-label-${branch.id}`}>
+                      Editar
+                    </Text>
+                  </Pressable>
+                  {canDeactivateBranches && branch.is_active ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`}
+                      onPress={() => openEditBranchModal(branch)}
+                      style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                      testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`}
+                    >
+                      <Text nativeID={`screens-admin-dashboard-branch-deactivate-label-${branch.id}`} style={styles.branchDangerLinkLabel} testID={`screens-admin-dashboard-branch-deactivate-label-${branch.id}`}>
+                        Desactivar
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View nativeID="screens-admin-dashboard-branches-empty-block" style={styles.emptyBlock} testID="screens-admin-dashboard-branches-empty-block">
+            <Text nativeID="screens-admin-dashboard-branches-empty-title" style={styles.emptyTitle} testID="screens-admin-dashboard-branches-empty-title">Sin sucursales registradas</Text>
+            <Text nativeID="screens-admin-dashboard-branches-empty-description" style={styles.emptyDescription} testID="screens-admin-dashboard-branches-empty-description">
+              Da de alta tu primera sucursal para poder operar alumnos, clases y asistencia en este panel.
+            </Text>
+          </View>
+        )}
+      </AppCard>
+    </AnimatedSurface>
+  ) : null;
   const operationsHeaderBottomContent = isOperationsSection ? (
     <AdminSectionDashboardTemplate
       idPrefix="screens-admin-dashboard-operations-central-dashboard"
@@ -2546,8 +2779,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AdminShell
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
-        headerBottomContent={isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
-        headerMainContent={isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
+        headerBottomContent={isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : paymentsHeaderBottomContent}
+        headerMainContent={isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : paymentsHeaderMainContent}
         headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
@@ -2662,7 +2895,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                     />
                   </View>
                 </>
-              ) : !isPaymentsSection && !isOperationsSection ? (
+              ) : !isBranchesSection && !isPaymentsSection && !isOperationsSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -2816,7 +3049,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
               ) : null}
 
-              {!isOverviewSection && !isOperationsSection && !isPaymentsSection ? (
+              {!isOverviewSection && !isBranchesSection && !isOperationsSection && !isPaymentsSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
@@ -2946,7 +3179,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
                 ) : null}
 
-                {isOverviewSection || isBranchesSection ? (
+                {isOverviewSection ? (
                 <AnimatedSurface delay={330}>
                   <View
                     collapsable={false}
@@ -4600,6 +4833,11 @@ const styles = StyleSheet.create({
     gap: 4,
     minWidth: 0,
   },
+  branchInlineLinkRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
   operationsInlineLink: {
     alignSelf: "flex-start",
   },
@@ -4608,6 +4846,13 @@ const styles = StyleSheet.create({
   },
   operationsInlineLinkLabel: {
     color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  branchDangerLinkLabel: {
+    color: colors.danger,
     fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
@@ -4855,6 +5100,78 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
     width: "100%",
+  },
+  branchList: {
+    gap: spacing.sm,
+  },
+  branchDashboardRow: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  branchDashboardCopy: {
+    gap: 6,
+    minWidth: 0,
+  },
+  branchSummaryLine: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  branchSummaryLineText: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  branchActionLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+  },
+  branchSummaryContent: {
+    gap: spacing.md,
+  },
+  branchSummaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  branchSummaryMetricCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexGrow: 1,
+    gap: 4,
+    minWidth: 150,
+    padding: spacing.md,
+  },
+  branchSummaryMetricLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    textTransform: "uppercase",
+  },
+  branchSummaryMetricValue: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 26,
+    fontWeight: "800",
+  },
+  branchSummaryDetails: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md,
   },
   publicRouteBlock: {
     backgroundColor: colors.surface,
