@@ -129,20 +129,8 @@ export function navigateToPublicPageKey(page: PublicPageKey): void {
     }
 
     if (isSectionPage) {
-      const sectionKey = page as "about" | "events" | "stores";
-      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, sectionKey);
-      if (!onHomeLikePath) {
-        window.location.assign(homePath);
-        return;
-      }
-      if (_registeredHomeScrollControls) {
-        _registeredHomeScrollControls(sectionKey);
-        window.history.replaceState(window.history.state, "", `${homePath}#${sectionKey}`);
-        window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
-      } else {
-        window.history.replaceState(window.history.state, "", `${homePath}#${sectionKey}`);
-        window.location.reload();
-      }
+      window.sessionStorage.removeItem(PUBLIC_SCROLL_TARGET_KEY);
+      window.location.assign(meta.path);
       return;
     }
 

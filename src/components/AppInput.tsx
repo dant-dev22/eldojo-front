@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textMuted,
     fontFamily: typography.headingFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.35,
     textTransform: "uppercase",
@@ -111,14 +111,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
+    minHeight: 48,
   },
   input: {
     color: colors.text,
     flex: 1,
     fontFamily: typography.bodyFamily,
-    fontSize: 15,
-    minHeight: 56,
+    fontSize: 14,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
   },
   inputError: {
@@ -130,6 +130,6 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     fontFamily: typography.bodyFamily,
-    fontSize: 12,
+    fontSize: 11,
   },
 });

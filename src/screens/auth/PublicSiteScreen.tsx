@@ -157,10 +157,10 @@ const MOBILE_SECTION_NAV_ITEMS: Array<{ key: SectionKey | "home"; label: string;
 
 const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
   about: ["about"],
-  createAccount: ["about"],
+  createAccount: [],
   events: [],
-  home: ["about"],
-  signIn: ["about"],
+  home: [],
+  signIn: [],
   stores: [],
 };
 
@@ -595,7 +595,8 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
       }
 
       .eldojo-public-desktop-form-fade-in {
-        animation: eldojoPublicDesktopFormFadeIn 1500ms ease both;
+        animation: eldojoPublicDesktopFormFadeIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: 40ms;
       }
 
       @keyframes eldojoPublicDesktopFadeIn {
@@ -613,10 +614,12 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
       @keyframes eldojoPublicDesktopFormFadeIn {
         from {
           opacity: 0;
+          transform: translateY(12px) scale(0.985);
         }
 
         to {
           opacity: 1;
+          transform: translateY(0) scale(1);
         }
       }
     `;
@@ -626,15 +629,15 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
 
   const heroHeight = useMemo(() => {
     if (effectiveShowAuthCard && isDesktop) {
-      return 860;
-    }
-    if (isDesktop) {
-      return 760;
-    }
-    if (isTablet) {
       return 720;
     }
-    return effectiveShowAuthCard ? 980 : 700;
+    if (isDesktop) {
+      return 640;
+    }
+    if (isTablet) {
+      return 620;
+    }
+    return effectiveShowAuthCard ? 820 : 580;
   }, [effectiveShowAuthCard, isDesktop, isTablet]);
 
   const layoutWidth = Math.min(contentMaxWidth, 1200);
@@ -773,18 +776,21 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
       return;
     }
 
+    if (target === "about") {
+      if (page === "about") {
+        scrollToTop(PUBLIC_PAGE_META.about.path);
+        return;
+      }
+      navigateToPage("about");
+      return;
+    }
+
     if (section && PAGE_SECTIONS[page].includes(section)) {
       scrollToSection(section);
       return;
     }
 
-    pendingScrollTargetRef.current = section;
-
-    if (section && Platform.OS === "web" && typeof window !== "undefined") {
-      window.sessionStorage.setItem(PUBLIC_SCROLL_TARGET_KEY, section);
-    }
-
-    navigateToPage("home");
+    navigateToPage(target === "about" ? "about" : "home");
   };
 
   useEffect(() => {
@@ -1008,29 +1014,21 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                       testID="screens-auth-public-mobile-section-nav"
                     >
                       {MOBILE_SECTION_NAV_ITEMS.map((item) => {
-                        const isActive =
-                          page === item.page ||
-                          (page === "home" && item.key !== "home" && PAGE_SECTIONS.home.includes(item.key as SectionKey));
+                        const isActive = page === item.page;
                         return (
                           <Pressable
                             key={item.page}
                             accessibilityRole="link"
                             nativeID={`screens-auth-public-mobile-section-chip-${item.key}`}
                             onPress={() => {
-                              if (page === "home") {
-                                if (item.key === "home") {
+                              if (item.key === "home") {
+                                if (page === "home") {
                                   scrollToTop();
-                                } else if (PAGE_SECTIONS.home.includes(item.key as SectionKey)) {
-                                  scrollToSection(item.key as SectionKey);
                                 } else {
-                                  navigateToPage(item.page);
+                                  navigateToPage("home");
                                 }
-                              } else if (item.key === "home") {
-                                navigateToPage("home");
                               } else {
-                                navigation.navigate("Home", {
-                                  initialSection: item.key as PublicSiteSectionKey,
-                                });
+                                navigateToPage(item.page);
                               }
                             }}
                             style={({ pressed }) => [
@@ -1454,29 +1452,21 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                       testID="screens-auth-public-mobile-section-nav"
                     >
                       {MOBILE_SECTION_NAV_ITEMS.map((item) => {
-                        const isActive =
-                          page === item.page ||
-                          (page === "home" && item.key !== "home" && PAGE_SECTIONS.home.includes(item.key as SectionKey));
+                        const isActive = page === item.page;
                         return (
                           <Pressable
                             key={item.page}
                             accessibilityRole="link"
                             nativeID={`screens-auth-public-mobile-section-chip-${item.key}`}
                             onPress={() => {
-                              if (page === "home") {
-                                if (item.key === "home") {
+                              if (item.key === "home") {
+                                if (page === "home") {
                                   scrollToTop();
-                                } else if (PAGE_SECTIONS.home.includes(item.key as SectionKey)) {
-                                  scrollToSection(item.key as SectionKey);
                                 } else {
-                                  navigateToPage(item.page);
+                                  navigateToPage("home");
                                 }
-                              } else if (item.key === "home") {
-                                navigateToPage("home");
                               } else {
-                                navigation.navigate("Home", {
-                                  initialSection: item.key as PublicSiteSectionKey,
-                                });
+                                navigateToPage(item.page);
                               }
                             }}
                             style={({ pressed }) => [
@@ -1831,6 +1821,10 @@ function buildHomeSpaNavItems(
     key: page.key,
     label: page.label,
     onPress: () => {
+      if (page.key === "about") {
+        navigation.navigate(PUBLIC_PAGE_TO_SCREEN.about);
+        return;
+      }
       if (scrollRef.current) {
         scrollRef.current.scrollToSection(page.key);
         return;
@@ -1911,15 +1905,111 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
 }
 
 export function AboutScreen() {
-  return <HomeScreen initialSection="about" />;
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
+  const publicSiteRef = useRef<PublicSiteScreenRef>(null);
+  const [readyTick, setReadyTick] = useState(0);
+
+  const handleReady = useCallback((controls: PublicSiteScrollControls) => {
+    scrollControlsRef.current = controls;
+    setReadyTick((tick) => (tick + 1) % 10_000);
+  }, []);
+
+  const spaNavItems = useMemo(() => {
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      { key: "about", label: "Acerca de nosotros", onPress: () => {} },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyTick]);
+
+  return (
+    <PublicPageChrome
+      idPrefix="screens-auth-public-about"
+      navItems={spaNavItems}
+      onBrandPress={() => navigation.navigate("Home")}
+      screenScrollable={true}
+    >
+      <PublicSiteScreen
+        ref={publicSiteRef}
+        disableInternalScroll={true}
+        onReadyScrollControls={handleReady}
+        page="about"
+      />
+    </PublicPageChrome>
+  );
 }
 
 export function EventsScreen() {
-  return <HomeScreen initialSection="about" />;
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
+  const publicSiteRef = useRef<PublicSiteScreenRef>(null);
+  const [readyTick, setReadyTick] = useState(0);
+
+  const handleReady = useCallback((controls: PublicSiteScrollControls) => {
+    scrollControlsRef.current = controls;
+    setReadyTick((tick) => (tick + 1) % 10_000);
+  }, []);
+
+  const spaNavItems = useMemo(() => {
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      { key: "about", label: "Acerca de nosotros", onPress: () => navigation.navigate("About") },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyTick]);
+
+  return (
+    <PublicPageChrome
+      idPrefix="screens-auth-public-events"
+      navItems={spaNavItems}
+      onBrandPress={() => navigation.navigate("Home")}
+      screenScrollable={true}
+    >
+      <PublicSiteScreen
+        ref={publicSiteRef}
+        disableInternalScroll={true}
+        onReadyScrollControls={handleReady}
+        page="events"
+      />
+    </PublicPageChrome>
+  );
 }
 
 export function StoresScreen() {
-  return <HomeScreen initialSection="about" />;
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
+  const publicSiteRef = useRef<PublicSiteScreenRef>(null);
+  const [readyTick, setReadyTick] = useState(0);
+
+  const handleReady = useCallback((controls: PublicSiteScrollControls) => {
+    scrollControlsRef.current = controls;
+    setReadyTick((tick) => (tick + 1) % 10_000);
+  }, []);
+
+  const spaNavItems = useMemo(() => {
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      { key: "about", label: "Acerca de nosotros", onPress: () => navigation.navigate("About") },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyTick]);
+
+  return (
+    <PublicPageChrome
+      idPrefix="screens-auth-public-stores"
+      navItems={spaNavItems}
+      onBrandPress={() => navigation.navigate("Home")}
+      screenScrollable={true}
+    >
+      <PublicSiteScreen
+        ref={publicSiteRef}
+        disableInternalScroll={true}
+        onReadyScrollControls={handleReady}
+        page="stores"
+      />
+    </PublicPageChrome>
+  );
 }
 
 export function CreateAccountScreen() {
@@ -1931,7 +2021,7 @@ export function CreateAccountScreen() {
       {
         key: "about",
         label: "Acerca de",
-        onPress: () => navigation.navigate("Home", { initialSection: "about" }),
+        onPress: () => navigation.navigate("About"),
       },
     ];
   }, [navigation]);
@@ -1959,7 +2049,7 @@ export function SignInScreen() {
       {
         key: "about",
         label: "Acerca de",
-        onPress: () => navigation.navigate("Home", { initialSection: "about" }),
+        onPress: () => navigation.navigate("About"),
       },
     ];
   }, [navigation]);
@@ -2374,10 +2464,10 @@ const styles = StyleSheet.create({
   },
   formCard: {
     backgroundColor: "rgba(255, 255, 255, 0.96)",
-    gap: spacing.md,
-    marginBottom: 32,
+    gap: spacing.sm,
+    marginBottom: 24,
     maxWidth: 520,
-    padding: spacing.md,
+    padding: spacing.sm,
   },
   formCardMobile: {
     maxWidth: "100%",
@@ -2395,14 +2485,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    padding: 6,
+    padding: 4,
   },
   tabButton: {
     alignItems: "center",
     borderRadius: radius.pill,
     flex: 1,
     justifyContent: "center",
-    minHeight: 40,
+    minHeight: 36,
     paddingHorizontal: spacing.sm,
   },
   tabButtonActive: {
@@ -2416,7 +2506,7 @@ const styles = StyleSheet.create({
   tabLabel: {
     color: colors.textMuted,
     fontFamily: typography.headingFamily,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.2,
   },
@@ -2426,32 +2516,34 @@ const styles = StyleSheet.create({
   formTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
+    lineHeight: 26,
   },
   formSubtitle: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   helper: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
   },
   error: {
     color: colors.danger,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
   },
   success: {
     color: colors.primary,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
   },
   pendingConfirmationCard: {
     alignItems: "flex-start",
@@ -2460,15 +2552,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
   pendingConfirmationIndicator: {
     backgroundColor: colors.action,
     borderRadius: radius.pill,
-    height: 12,
-    marginTop: 4,
-    width: 12,
+    height: 10,
+    marginTop: 3,
+    width: 10,
   },
   pendingConfirmationCopy: {
     flex: 1,
@@ -2477,15 +2569,15 @@ const styles = StyleSheet.create({
   pendingConfirmationTitle: {
     color: colors.text,
     fontFamily: typography.headingFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 20,
+    lineHeight: 18,
   },
   pendingConfirmationDescription: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
   },
   formActions: {
     gap: spacing.xs,
