@@ -19,6 +19,7 @@ import { AppDateInput } from "@/components/AppDateInput";
 import { AppInput } from "@/components/AppInput";
 import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
+import { AppStatusSwitch } from "@/components/AppStatusSwitch";
 import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboardTemplate";
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
@@ -4053,15 +4054,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             editable={!organizationBusy}
           />
         </View>
-        <AppSelect
+        <AppStatusSwitch
+          entityName={organization?.name}
+          entityType="dojo"
+          enabled={!organizationBusy}
+          error={organizationErrors.status}
           label="Estado"
-          value={organizationForm.status}
+          nativeID="screens-admin-dashboard-organization-form-status-switch"
           onValueChange={(value) =>
             setOrganizationForm((current) => ({ ...current, status: value as OrganizationStatusValue }))
           }
-          items={STATUS_OPTIONS}
-          error={organizationErrors.status}
-          enabled={!organizationBusy}
+          testID="screens-admin-dashboard-organization-form-status-switch"
+          value={organizationForm.status}
         />
         <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null]}>
           <AppButton label="Cancelar" onPress={() => setOrganizationModalVisible(false)} variant="secondary" disabled={organizationBusy} />
@@ -4137,12 +4141,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           />
         </View>
         <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
-          <AppSelect
-            label="Estado"
-            value={branchForm.status}
-            onValueChange={(value) => setBranchForm((current) => ({ ...current, status: value as BranchStatusValue }))}
-            items={STATUS_OPTIONS}
+          <AppStatusSwitch
+            entityName={editingBranch?.name}
+            entityType="sucursal"
             enabled={!branchBusy}
+            label="Estado"
+            nativeID="screens-admin-dashboard-branch-form-status-switch"
+            onValueChange={(value) => setBranchForm((current) => ({ ...current, status: value as BranchStatusValue }))}
+            testID="screens-admin-dashboard-branch-form-status-switch"
+            value={branchForm.status}
           />
           <View style={styles.inlineButtonSlot}>
             <AppButton
@@ -4365,12 +4372,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             error={classErrors.capacity}
             editable={!classBusy}
           />
-          <AppSelect
-            label="Estado"
-            value={classForm.status}
-            onValueChange={(value) => setClassForm((current) => ({ ...current, status: value as ClassStatusValue }))}
-            items={STATUS_OPTIONS}
+          <AppStatusSwitch
+            entityName={editingClass?.name}
+            entityType="clase"
             enabled={!classBusy}
+            label="Estado"
+            nativeID="screens-admin-dashboard-class-form-status-switch"
+            onValueChange={(value) => setClassForm((current) => ({ ...current, status: value as ClassStatusValue }))}
+            testID="screens-admin-dashboard-class-form-status-switch"
+            value={classForm.status}
           />
         </View>
         <AppInput

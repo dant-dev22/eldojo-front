@@ -8,6 +8,7 @@ interface ConfirmActionModalProps {
   title: string;
   message: string;
   confirmLabel: string;
+  confirmVariant?: "primary" | "secondary" | "danger" | "success";
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -19,6 +20,7 @@ export function ConfirmActionModal({
   title,
   message,
   confirmLabel,
+  confirmVariant = "danger",
   cancelLabel = "Cancelar",
   onConfirm,
   onCancel,
@@ -57,7 +59,7 @@ export function ConfirmActionModal({
                 nativeID={`${idPrefix}-confirm-button`}
                 onPress={onConfirm}
                 testID={`${idPrefix}-confirm-button`}
-                variant="danger"
+                variant={confirmVariant}
               />
             </View>
           </View>
