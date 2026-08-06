@@ -629,6 +629,10 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
         padding-top: 0;
         margin-top: 0;
       }
+
+      #screens-auth-public-home-footer {
+        margin-top: 5rem;
+      }
     `;
 
     document.head.appendChild(styleTag);
@@ -944,7 +948,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                   effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
                   styles.heroContentRefreshed,
-                  !isDesktop && !effectiveShowAuthCard ? { paddingTop: 120 } : null,
                 ]}
                 testID="screens-auth-public-hero-content"
                 {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -1392,7 +1395,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                   effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
                   styles.heroContentRefreshed,
-                  !isDesktop && !effectiveShowAuthCard ? { paddingTop: 120 } : null,
                 ]}
                 testID="screens-auth-public-hero-content"
                 {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -2342,14 +2344,12 @@ const styles = StyleSheet.create({
   },
   heroContentDesktop: {
     paddingLeft: spacing["2xl"],
-    paddingTop: 112,
   },
   heroContentAuthDesktop: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     maxWidth: 1040,
-    paddingTop: 96,
   },
   heroCopy: {
     gap: spacing.md,
