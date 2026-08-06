@@ -1930,7 +1930,7 @@ type HomeScreenProps = {
 export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
   const route = useRoute();
-  const { user, status } = useAuth();
+  const { redirectToAppDashboard, user, status } = useAuth();
   const routeParams = (route.params as { initialSection?: PublicSiteSectionKey } | undefined) ?? {};
   const initialSection = initialSectionProp ?? routeParams.initialSection;
 
@@ -1966,17 +1966,8 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
   }, []);
 
   const handleGoDashboard = useCallback(() => {
-    const isAdmin =
-      status === "authenticated" &&
-      user !== null &&
-      user !== undefined &&
-      ["org_admin", "branch_admin"].includes(user.role);
-    if (isAdmin) {
-      navigation.navigate("AdminHome");
-      return;
-    }
-    scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home");
-  }, [navigation, status, user]);
+    redirectToAppDashboard();
+  }, [redirectToAppDashboard]);
 
   return (
     <PublicPageChrome
