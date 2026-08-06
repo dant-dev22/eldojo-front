@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import {
-  DimensionValue,
   Image,
   LayoutChangeEvent,
   Platform,
@@ -20,7 +19,6 @@ import { getErrorMessage } from "@/api/http";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
-import { AppModal } from "@/components/AppModal";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
@@ -43,17 +41,11 @@ import {
 
 type AuthMode = "login" | "academy";
 export type PublicSiteSectionKey = "home" | "about" | "events" | "stores";
-type SectionKey = "about" | "events" | "stores";
-type DesktopNavKey = "home" | "about" | "events" | "stores";
+type SectionKey = "about";
+type DesktopNavKey = "home" | "about";
 
 export type PublicSiteScrollControls = {
   scrollToSection: (section: PublicSiteSectionKey) => void;
-};
-
-type ShowcaseItem = {
-  id: string;
-  title: string;
-  image: string;
 };
 
 type PublicSiteScreenProps = {
@@ -74,7 +66,7 @@ function joinWebClassNames(...classNames: Array<string | false | null | undefine
 }
 
 function isSectionKey(value: string): value is SectionKey {
-  return value === "about" || value === "events" || value === "stores";
+  return value === "about";
 }
 
 const PUBLIC_WEB_STYLE_TAG_ID = "eldojo-public-web-desktop-styles";
@@ -132,63 +124,12 @@ function useWebSeo(page: PublicPageKey) {
   }, [page]);
 }
 
-const logoPlaceholder = buildWebsiteImage(
-  "minimal premium martial arts brand logo mark on light cream background, circular emblem, elegant typography, high contrast, website header asset",
-  "square"
-);
-
 const heroBackground = require("../../img/fondos.jpg");
 
 const aboutImage = buildWebsiteImage(
   "dojo owner reviewing student schedule and payments on a laptop inside a clean martial arts academy, warm neutral palette, premium realistic website illustration",
   "landscape_4_3"
 );
-
-const eventFlyers: ShowcaseItem[] = [
-  {
-    id: "summer-open",
-    title: "Summer Open 2026",
-    image: buildWebsiteImage(
-      "martial arts event flyer, brazilian jiu-jitsu open championship, premium poster design, cream and olive palette, realistic print texture, clean typography space",
-      "portrait_16_9"
-    ),
-  },
-  {
-    id: "fight-night",
-    title: "Fight Night Amateur Series",
-    image: buildWebsiteImage(
-      "mma fight night event flyer, premium promotional poster, warm cream and muted green tones, modern layout, realistic poster mockup",
-      "portrait_16_9"
-    ),
-  },
-  {
-    id: "judo-clinic",
-    title: "Judo Weekend Clinic",
-    image: buildWebsiteImage(
-      "judo seminar flyer, premium martial arts clinic poster, soft cream and olive palette, elegant modern composition, realistic poster mockup",
-      "portrait_16_9"
-    ),
-  },
-];
-
-const storeCards: ShowcaseItem[] = [
-  "Guantes",
-  "Kimonos",
-  "Protectores",
-  "Rashguards",
-  "Cintas",
-  "Tenis",
-  "Mochilas",
-  "Uniformes",
-  "Accesorios",
-].map((title, index) => ({
-  id: `store-${index + 1}`,
-  title,
-  image: buildWebsiteImage(
-    `${title} for martial arts retail catalog, premium ecommerce product tile, warm cream background, soft shadows, realistic product photography`,
-    "square"
-  ),
-}));
 
 const HOME_HIGHLIGHTS = [
   "Controla alumnos, pagos y asistencia en una sola vista.",
@@ -198,25 +139,21 @@ const HOME_HIGHLIGHTS = [
 
 const DESKTOP_NAV_ITEMS: Array<{ key: DesktopNavKey; label: string; page: PublicPageKey; section: SectionKey | null }> = [
   { key: "home", label: "Inicio", page: "home", section: null },
-  { key: "about", label: "¿Qué hace ElDojo?", page: "about", section: "about" },
-  { key: "events", label: "Eventos", page: "events", section: "events" },
-  { key: "stores", label: "Tiendas", page: "stores", section: "stores" },
+  { key: "about", label: "Acerca de nosotros", page: "about", section: "about" },
 ];
 
 const MOBILE_SECTION_NAV_ITEMS: Array<{ key: SectionKey | "home"; label: string; page: PublicPageKey }> = [
   { key: "home", label: "Inicio", page: "home" },
-  { key: "about", label: "¿Qué hace ElDojo?", page: "about" },
-  { key: "events", label: "Eventos", page: "events" },
-  { key: "stores", label: "Tiendas", page: "stores" },
+  { key: "about", label: "Acerca de nosotros", page: "about" },
 ];
 
 const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
   about: ["about"],
   createAccount: ["about"],
-  events: ["events"],
-  home: ["about", "events", "stores"],
+  events: [],
+  home: ["about"],
   signIn: ["about"],
-  stores: ["stores"],
+  stores: [],
 };
 
 const PAGE_COPY: Record<
@@ -238,14 +175,14 @@ const PAGE_COPY: Record<
     title: "Menos caos operativo, mas tiempo para entrenar y dirigir tu academia.",
   },
   events: {
-    description: "Destaca opens, seminarios y funciones proximas con una ruta propia que puedes compartir y posicionar mejor en buscadores.",
-    eyebrow: "Eventos",
-    title: "Una URL dedicada para tus eventos relevantes de academia.",
+    description: "",
+    eyebrow: "",
+    title: "",
   },
   stores: {
-    description: "Presenta aliados, patrocinadores y productos de combate dentro de una pagina publica clara, limpia y facil de compartir.",
-    eyebrow: "Tiendas y aliados",
-    title: "Muestra a tus tiendas y marcas con una ruta pensada para SEO.",
+    description: "",
+    eyebrow: "",
+    title: "",
   },
   createAccount: {
     description: "Registra tu academia y crea la cuenta para administrarla hoy mismo.",
@@ -370,193 +307,6 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
   );
 }
 
-function renderEventsSection(
-  showcaseCardWidth: number,
-  setSelectedShowcaseItem: (item: ShowcaseItem) => void,
-  onLayout?: (event: LayoutChangeEvent) => void
-) {
-  return (
-    <View
-      nativeID="screens-auth-public-events-section"
-      onLayout={onLayout}
-      style={styles.stackedSection}
-      testID="screens-auth-public-events-section"
-      {...getWebClassNameProps("screens-auth-public-events-section")}
-    >
-      <View nativeID="screens-auth-public-events-copy" style={styles.sectionCopyBlock} testID="screens-auth-public-events-copy">
-        <Text nativeID="screens-auth-public-events-eyebrow" style={styles.sectionEyebrow} testID="screens-auth-public-events-eyebrow">
-          Eventos
-        </Text>
-        <Text nativeID="screens-auth-public-events-title" style={styles.sectionTitle} testID="screens-auth-public-events-title">
-          Proximos eventos de tu comunidad.
-        </Text>
-        <Text nativeID="screens-auth-public-events-description" style={styles.sectionDescription} testID="screens-auth-public-events-description">
-          Usa este espacio para destacar opens, seminarios y funciones proximas con una URL dedicada. Dejamos flyers de ejemplo listos para presentacion.
-        </Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.eventsCarousel}
-        horizontal
-        nativeID="screens-auth-public-events-carousel"
-        showsHorizontalScrollIndicator={false}
-        testID="screens-auth-public-events-carousel"
-      >
-        {eventFlyers.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            nativeID={`screens-auth-public-event-card-${item.id}`}
-            onPress={() => setSelectedShowcaseItem(item)}
-            style={({ pressed }) => [
-              styles.cardPressable,
-              styles.showcaseCard,
-              { width: showcaseCardWidth },
-              pressed ? styles.showcaseCardPressed : null,
-            ]}
-            testID={`screens-auth-public-event-card-${item.id}`}
-          >
-            <AppCard
-              nativeID={`screens-auth-public-event-card-shell-${item.id}`}
-              style={styles.marketingCard}
-              testID={`screens-auth-public-event-card-shell-${item.id}`}
-            >
-              <Image
-                nativeID={`screens-auth-public-event-image-${item.id}`}
-                source={{ uri: item.image }}
-                style={styles.showcaseImage}
-                testID={`screens-auth-public-event-image-${item.id}`}
-              />
-              <View
-                nativeID={`screens-auth-public-event-body-${item.id}`}
-                style={styles.cardBody}
-                testID={`screens-auth-public-event-body-${item.id}`}
-              >
-                <Text
-                  nativeID={`screens-auth-public-event-eyebrow-${item.id}`}
-                  style={styles.cardEyebrow}
-                  testID={`screens-auth-public-event-eyebrow-${item.id}`}
-                >
-                  Evento destacado
-                </Text>
-                <Text
-                  nativeID={`screens-auth-public-event-title-${item.id}`}
-                  style={styles.showcaseTitle}
-                  testID={`screens-auth-public-event-title-${item.id}`}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  nativeID={`screens-auth-public-event-caption-${item.id}`}
-                  style={styles.cardCaption}
-                  testID={`screens-auth-public-event-caption-${item.id}`}
-                >
-                  Vista previa con formato promocional y jerarquia visual estandar.
-                </Text>
-              </View>
-            </AppCard>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-function renderStoresSection(
-  isDesktop: boolean,
-  isTablet: boolean,
-  storeCardWidthStyle: { width: DimensionValue },
-  setSelectedShowcaseItem: (item: ShowcaseItem) => void,
-  onLayout?: (event: LayoutChangeEvent) => void
-) {
-  return (
-    <View
-      nativeID="screens-auth-public-stores-section"
-      onLayout={onLayout}
-      style={styles.stackedSection}
-      testID="screens-auth-public-stores-section"
-      {...getWebClassNameProps(
-        joinWebClassNames(
-          "screens-auth-public-stores-section",
-          isDesktop ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-4" : null
-        )
-      )}
-    >
-      <View nativeID="screens-auth-public-stores-copy" style={styles.sectionCopyBlock} testID="screens-auth-public-stores-copy">
-        <Text nativeID="screens-auth-public-stores-eyebrow" style={styles.sectionEyebrow} testID="screens-auth-public-stores-eyebrow">
-          Tiendas
-        </Text>
-        <Text nativeID="screens-auth-public-stores-title" style={styles.sectionTitle} testID="screens-auth-public-stores-title">
-          Una vitrina simple para tus aliados comerciales.
-        </Text>
-        <Text nativeID="screens-auth-public-stores-description" style={styles.sectionDescription} testID="screens-auth-public-stores-description">
-          Aqui puedes mostrar patrocinadores, tiendas de equipo o espacios afiliados con una ruta propia y facil de indexar.
-        </Text>
-      </View>
-
-      <View
-        nativeID="screens-auth-public-stores-grid"
-        style={[
-          styles.storeGrid,
-          isDesktop ? styles.storeGridDesktop : isTablet ? styles.storeGridTablet : styles.storeGridMobile,
-        ]}
-        testID="screens-auth-public-stores-grid"
-      >
-        {storeCards.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            nativeID={`screens-auth-public-store-card-${item.id}`}
-            onPress={() => setSelectedShowcaseItem(item)}
-            style={({ pressed }) => [styles.cardPressable, styles.storeCard, storeCardWidthStyle, pressed ? styles.showcaseCardPressed : null]}
-            testID={`screens-auth-public-store-card-${item.id}`}
-          >
-            <AppCard
-              nativeID={`screens-auth-public-store-card-shell-${item.id}`}
-              style={styles.marketingCard}
-              testID={`screens-auth-public-store-card-shell-${item.id}`}
-            >
-              <Image
-                nativeID={`screens-auth-public-store-image-${item.id}`}
-                source={{ uri: item.image }}
-                style={styles.storeImage}
-                testID={`screens-auth-public-store-image-${item.id}`}
-              />
-              <View
-                nativeID={`screens-auth-public-store-body-${item.id}`}
-                style={styles.cardBody}
-                testID={`screens-auth-public-store-body-${item.id}`}
-              >
-                <Text
-                  nativeID={`screens-auth-public-store-eyebrow-${item.id}`}
-                  style={styles.cardEyebrow}
-                  testID={`screens-auth-public-store-eyebrow-${item.id}`}
-                >
-                  Catalogo
-                </Text>
-                <Text
-                  nativeID={`screens-auth-public-store-title-${item.id}`}
-                  style={styles.storeTitle}
-                  testID={`screens-auth-public-store-title-${item.id}`}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  nativeID={`screens-auth-public-store-caption-${item.id}`}
-                  style={styles.cardCaption}
-                  testID={`screens-auth-public-store-caption-${item.id}`}
-                >
-                  Tarjeta limpia para producto, aliado o patrocinador.
-                </Text>
-              </View>
-            </AppCard>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { redeemPendingAcademySession, resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
@@ -566,14 +316,12 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
 
   useWebSeo(page);
 
-  const [selectedShowcaseItem, setSelectedShowcaseItem] = useState<ShowcaseItem | null>(null);
+  const [landingAuthMode, setLandingAuthMode] = useState<AuthMode | null>(null);
   const [desktopNavSelection, setDesktopNavSelection] = useState<DesktopNavKey>(
-    page === "about" ? "about" : page === "events" ? "events" : "home"
+    page === "about" ? "about" : "home"
   );
   const [sectionOffsets, setSectionOffsets] = useState<Record<SectionKey, number>>({
     about: 0,
-    events: 0,
-    stores: 0,
   });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -645,10 +393,16 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
 
   const content = PAGE_COPY[page];
   const isAuthPage = page === "createAccount" || page === "signIn";
+  const isLandingAuthInline = page === "home" && landingAuthMode !== null;
+  const effectiveShowAuthCard = isAuthPage || isLandingAuthInline;
   const isWebDesktop = Platform.OS === "web" && isDesktop;
-  const showHeroCopy = !(isWebDesktop && isAuthPage);
-  const mode: AuthMode = page === "createAccount" ? "academy" : "login";
+  const showHeroCopy = !isWebDesktop || !effectiveShowAuthCard;
+  const mode: AuthMode = landingAuthMode ?? (page === "createAccount" ? "academy" : "login");
   const isAwaitingConfirmation = mode === "academy" && pendingRegistration !== null;
+
+  useEffect(() => {
+    setLandingAuthMode(null);
+  }, [page]);
 
   useEffect(() => {
     let isMounted = true;
@@ -778,14 +532,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
       return;
     }
 
-    if (page === "events") {
-      setDesktopNavSelection("events");
-      return;
-    }
-
-    if (page === "home") {
-      setDesktopNavSelection("home");
-    }
+    setDesktopNavSelection("home");
   }, [page]);
 
   useEffect(() => {
@@ -859,7 +606,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   }, [isWebDesktop]);
 
   const heroHeight = useMemo(() => {
-    if (isAuthPage && isDesktop) {
+    if (effectiveShowAuthCard && isDesktop) {
       return 860;
     }
     if (isDesktop) {
@@ -868,28 +615,10 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
     if (isTablet) {
       return 720;
     }
-    return isAuthPage ? 980 : 700;
-  }, [isAuthPage, isDesktop, isTablet]);
+    return effectiveShowAuthCard ? 980 : 700;
+  }, [effectiveShowAuthCard, isDesktop, isTablet]);
 
   const layoutWidth = Math.min(contentMaxWidth, 1200);
-  const showcaseCardWidth = useMemo<number>(() => {
-    if (isDesktop) {
-      return 260;
-    }
-
-    if (isTablet) {
-      return 280;
-    }
-
-    return Math.max(Math.min(width - spacing.lg * 2 - spacing.md, 320), 252);
-  }, [isDesktop, isTablet, width]);
-
-  const storeCardWidthStyle = useMemo<{ width: DimensionValue }>(
-    () => ({
-      width: isDesktop ? "31.8%" : isTablet ? "48%" : "100%",
-    }),
-    [isDesktop, isTablet]
-  );
 
   const registerSectionOffset = (section: SectionKey) => (event: LayoutChangeEvent) => {
     const nextOffset = event.nativeEvent.layout.y;
@@ -909,6 +638,14 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   const navigateToPage = (nextPage: PublicPageKey) => {
     setFormError(null);
     setFormFeedback(null);
+    if (nextPage === "createAccount" && page === "home") {
+      setLandingAuthMode("academy");
+      return;
+    }
+    if (nextPage === "signIn" && page === "home") {
+      setLandingAuthMode("login");
+      return;
+    }
     navigation.navigate(PUBLIC_PAGE_TO_SCREEN[nextPage]);
   };
 
@@ -945,6 +682,15 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   const scrollToSectionExternal = useCallback(
     (target: PublicSiteSectionKey) => {
       if (target === "home") {
+        scrollToTop(PUBLIC_PAGE_META.home.path);
+        return;
+      }
+
+      if (target === "events" || target === "stores") {
+        if (PAGE_SECTIONS[page].includes("about")) {
+          scrollToSection("about");
+          return;
+        }
         scrollToTop(PUBLIC_PAGE_META.home.path);
         return;
       }
@@ -1147,9 +893,9 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
               style={[
                 styles.heroContent,
                 isMobile ? styles.heroContentMobile : null,
-                { maxWidth: isAuthPage ? layoutWidth : 860 },
-                isDesktop && !isAuthPage ? styles.heroContentDesktop : null,
-                isAuthPage && isDesktop ? styles.heroContentAuthDesktop : null,
+                { maxWidth: effectiveShowAuthCard ? layoutWidth : 860 },
+                isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
+                effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
               ]}
               testID="screens-auth-public-hero-content"
               {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -1160,14 +906,14 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                   style={[
                     styles.heroCopy,
                     isMobile ? styles.heroCopyMobile : null,
-                    isAuthPage ? styles.heroCopyAuth : null,
-                    isAuthPage && isDesktop ? styles.heroCopyAuthDesktop : null,
+                    effectiveShowAuthCard ? styles.heroCopyAuth : null,
+                    effectiveShowAuthCard && isDesktop ? styles.heroCopyAuthDesktop : null,
                   ]}
                   testID="screens-auth-public-hero-copy"
                   {...getWebClassNameProps(
                     joinWebClassNames(
                       "screens-auth-public-hero-copy",
-                      isWebDesktop && !isAuthPage ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : null
+                      isWebDesktop && !effectiveShowAuthCard ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : null
                     )
                   )}
                 >
@@ -1219,7 +965,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                     </View>
                   ) : null}
 
-                  {!isAuthPage ? (
+                  {!effectiveShowAuthCard ? (
                     <View style={styles.heroActions} {...getWebClassNameProps("screens-auth-public-hero-actions")}>
                       <AppButton
                         label="Crear una cuenta"
@@ -1235,6 +981,19 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                         variant="secondary"
                       />
                     </View>
+                  ) : null}
+
+                  {isLandingAuthInline ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      nativeID="screens-auth-public-close-auth-inline"
+                      onPress={() => setLandingAuthMode(null)}
+                      style={({ pressed }) => [styles.heroBackLink, pressed ? { opacity: 0.8 } : null]}
+                      testID="screens-auth-public-close-auth-inline"
+                    >
+                      <Feather color={colors.onPrimaryMuted} name="arrow-left" size={14} />
+                      <Text style={styles.heroBackLinkLabel}>Volver a la portada</Text>
+                    </Pressable>
                   ) : null}
 
                   {isMobile ? (
@@ -1293,7 +1052,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                 </View>
               ) : null}
 
-              {isAuthPage ? (
+              {effectiveShowAuthCard ? (
                 <AppCard
                   nativeID="screens-auth-public-form-card"
                   className={joinWebClassNames(
@@ -1311,7 +1070,13 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                     <Pressable
                       accessibilityRole="link"
                       nativeID="screens-auth-public-form-tab-create-account"
-                      onPress={() => navigateToPage("createAccount")}
+                      onPress={() => {
+                        if (isLandingAuthInline) {
+                          setLandingAuthMode("academy");
+                        } else {
+                          navigateToPage("createAccount");
+                        }
+                      }}
                       style={({ pressed }) => [
                         styles.tabButton,
                         mode === "academy" ? styles.tabButtonActive : null,
@@ -1330,7 +1095,13 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                     <Pressable
                       accessibilityRole="link"
                       nativeID="screens-auth-public-form-tab-signin"
-                      onPress={() => navigateToPage("signIn")}
+                      onPress={() => {
+                        if (isLandingAuthInline) {
+                          setLandingAuthMode("login");
+                        } else {
+                          navigateToPage("signIn");
+                        }
+                      }}
                       style={({ pressed }) => [
                         styles.tabButton,
                         mode === "login" ? styles.tabButtonActive : null,
@@ -1570,38 +1341,8 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
             {...getWebClassNameProps("screens-auth-public-page-content")}
           >
             {PAGE_SECTIONS[page].includes("about") ? renderAboutSection(isDesktop, registerSectionOffset("about")) : null}
-            {PAGE_SECTIONS[page].includes("events")
-              ? renderEventsSection(showcaseCardWidth, (item) => setSelectedShowcaseItem(item), registerSectionOffset("events"))
-              : null}
-            {PAGE_SECTIONS[page].includes("stores")
-              ? renderStoresSection(
-                isDesktop,
-                isTablet,
-                storeCardWidthStyle,
-                (item) => setSelectedShowcaseItem(item),
-                registerSectionOffset("stores")
-              )
-              : null}
           </View>
         </ScrollView>
-
-        <AppModal
-          description={selectedShowcaseItem?.title}
-          nativeID="screens-auth-public-showcase-modal"
-          onClose={() => setSelectedShowcaseItem(null)}
-          testID="screens-auth-public-showcase-modal"
-          title={selectedShowcaseItem?.title ?? "Vista previa"}
-          visible={Boolean(selectedShowcaseItem)}
-        >
-          {selectedShowcaseItem ? (
-            <Image
-              nativeID="screens-auth-public-showcase-modal-image"
-              source={{ uri: selectedShowcaseItem.image }}
-              style={styles.modalImage}
-              testID="screens-auth-public-showcase-modal-image"
-            />
-          ) : null}
-        </AppModal>
     </View>
   );
 }
@@ -1613,8 +1354,6 @@ function buildChromeNavItems(
   const pages: Array<{ key: PublicPageKey; label: string }> = [
     { key: "home", label: "Inicio" },
     { key: "about", label: "Acerca de" },
-    { key: "events", label: "Eventos" },
-    { key: "stores", label: "Tiendas" },
   ];
 
   return pages.map((page) => ({
@@ -1636,8 +1375,6 @@ function buildHomeSpaNavItems(
   const pages: Array<{ key: PublicSiteSectionKey; label: string; fallbackNavigate?: PublicPageKey }> = [
     { key: "home", label: "Inicio" },
     { key: "about", label: "Acerca de", fallbackNavigate: "about" },
-    { key: "events", label: "Eventos", fallbackNavigate: "events" },
-    { key: "stores", label: "Tiendas", fallbackNavigate: "stores" },
   ];
 
   return pages.map((page) => ({
@@ -1721,11 +1458,11 @@ export function AboutScreen() {
 }
 
 export function EventsScreen() {
-  return <HomeScreen initialSection="events" />;
+  return <HomeScreen initialSection="about" />;
 }
 
 export function StoresScreen() {
-  return <HomeScreen initialSection="stores" />;
+  return <HomeScreen initialSection="about" />;
 }
 
 export function CreateAccountScreen() {
@@ -1738,16 +1475,6 @@ export function CreateAccountScreen() {
         key: "about",
         label: "Acerca de",
         onPress: () => navigation.navigate("Home", { initialSection: "about" }),
-      },
-      {
-        key: "events",
-        label: "Eventos",
-        onPress: () => navigation.navigate("Home", { initialSection: "events" }),
-      },
-      {
-        key: "stores",
-        label: "Tiendas",
-        onPress: () => navigation.navigate("Home", { initialSection: "stores" }),
       },
     ];
   }, [navigation]);
@@ -1776,16 +1503,6 @@ export function SignInScreen() {
         key: "about",
         label: "Acerca de",
         onPress: () => navigation.navigate("Home", { initialSection: "about" }),
-      },
-      {
-        key: "events",
-        label: "Eventos",
-        onPress: () => navigation.navigate("Home", { initialSection: "events" }),
-      },
-      {
-        key: "stores",
-        label: "Tiendas",
-        onPress: () => navigation.navigate("Home", { initialSection: "stores" }),
       },
     ];
   }, [navigation]);
@@ -2132,6 +1849,18 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
+  heroBackLink: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  heroBackLinkLabel: {
+    color: colors.onPrimaryMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
   mobileSectionNavContent: {
     gap: spacing.sm,
     paddingRight: spacing.sm,
@@ -2375,90 +2104,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
-  stackedSection: {
-    alignSelf: "stretch",
-    gap: spacing.lg,
-    width: "100%",
-  },
-  eventsCarousel: {
-    gap: spacing.md,
-    paddingRight: spacing.lg,
-  },
-  cardPressable: {
-    borderRadius: radius.lg,
-  },
-  showcaseCard: {
-    borderRadius: radius.lg,
-  },
-  showcaseCardPressed: {
-    opacity: 0.88,
-  },
-  marketingCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    gap: 0,
-    overflow: "hidden",
-    padding: 0,
-  },
-  cardBody: {
-    gap: spacing.xs,
-    padding: spacing.md,
-  },
-  cardEyebrow: {
-    color: colors.primary,
-    fontFamily: typography.headingFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  cardCaption: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  showcaseImage: {
-    height: 340,
-    width: "100%",
-  },
-  showcaseTitle: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  storeGrid: {
-    alignItems: "stretch",
-    gap: spacing.md,
-    width: "100%",
-  },
-  storeGridDesktop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  storeGridTablet: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  storeGridMobile: {
-    flexDirection: "column",
-  },
-  storeCard: {
-    borderRadius: radius.md,
-  },
-  storeImage: {
-    height: 180,
-    width: "100%",
-  },
-  storeTitle: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 15,
-    fontWeight: "700",
-  },
   footerShell: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
@@ -2529,12 +2174,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
-  },
-  modalImage: {
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    height: 460,
-    width: "100%",
   },
 });

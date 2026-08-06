@@ -439,8 +439,6 @@ export function PublicPageChrome({
                   {[
                     { key: "home", label: "Inicio" },
                     { key: "about", label: "Acerca de ElDojo" },
-                    { key: "events", label: "Eventos" },
-                    { key: "stores", label: "Tiendas y aliados" },
                   ].map((item) => (
                     <Pressable
                       key={item.key}
