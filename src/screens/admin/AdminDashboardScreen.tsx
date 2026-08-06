@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/api/http";
 import { organizationsApi } from "@/api/organizationsApi";
 import { paymentsApi } from "@/api/paymentsApi";
 import { studentsApi } from "@/api/studentsApi";
+import { AnimatedLogoHero } from "@/components/AnimatedLogoHero";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
@@ -2336,23 +2337,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       style={styles.tutorialAnchorTarget}
       testID="screens-admin-dashboard-hero-tutorial-anchor"
     >
-      <View nativeID="screens-admin-dashboard-hero-card" style={styles.overviewHeroHeaderBlock} testID="screens-admin-dashboard-hero-card">
-        <View nativeID="screens-admin-dashboard-hero-top" style={styles.heroTop} testID="screens-admin-dashboard-hero-top">
-          <View nativeID="screens-admin-dashboard-hero-copy" style={styles.heroCopy} testID="screens-admin-dashboard-hero-copy">
-            <AppBadge label="Resumen" nativeID="screens-admin-dashboard-hero-badge" testID="screens-admin-dashboard-hero-badge" tone="info" />
-            <Text
-              nativeID="screens-admin-dashboard-hero-title"
-              style={[styles.title, isCompact ? mobileStyles.titleCompact : null]}
-              testID="screens-admin-dashboard-hero-title"
-            >
-              {heroTitle}
-            </Text>
-            <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
-              Vista general del dojo con indicadores visuales y foco rápido en la estructura activa.
-            </Text>
-          </View>
-        </View>
-      </View>
+      <AnimatedLogoHero testID="screens-admin-dashboard-animated-logo-hero" />
     </View>
   ) : null;
   const overviewHeaderMainContent = isOverviewSection && !isLoading && !hasError ? (
