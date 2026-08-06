@@ -612,19 +612,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   screenContentStatic: {
-    flex: 0,
-    flexGrow: 0,
+    flexGrow: 1,
     flexShrink: 0,
+    flexBasis: "auto",
+    minHeight: "100%",
   },
   shell: {
     flex: 1,
     width: "100%",
   },
   shellStatic: {
-    flex: 0,
-    flexGrow: 0,
     minHeight: "100%",
     width: "100%",
+    flexDirection: "column",
   },
   navbar: {
     position: (Platform.OS === "web" ? "sticky" : "relative") as unknown as ViewStyle["position"],
@@ -863,6 +863,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     width: "100%",
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: "auto",
   },
   footerShell: {
     paddingHorizontal: spacing.lg,
@@ -873,6 +876,8 @@ const styles = StyleSheet.create({
   footerShellStatic: {
     position: "relative",
     zIndex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   footerDividerTop: {
     alignSelf: "center",
