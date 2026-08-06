@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, forwardRef, useImperativeHandle } from "react";
 import {
   Image,
   LayoutChangeEvent,
@@ -48,9 +48,15 @@ export type PublicSiteScrollControls = {
   scrollToSection: (section: PublicSiteSectionKey) => void;
 };
 
+export type PublicSiteScreenRef = {
+  setAuthMode: (mode: AuthMode) => void;
+};
+
 type PublicSiteScreenProps = {
   page: PublicPageKey;
   onReadyScrollControls?: (controls: PublicSiteScrollControls) => void;
+  initialAuthMode?: AuthMode;
+  disableAuthNavigation?: boolean;
 };
 
 function buildWebsiteImage(prompt: string, imageSize: string): string {
@@ -307,7 +313,10 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
   );
 }
 
-export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScreenProps) {
+export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreenProps>(function PublicSiteScreen(
+  { page, onReadyScrollControls, initialAuthMode, disableAuthNavigation = false },
+  ref
+) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { redeemPendingAcademySession, resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
@@ -316,7 +325,9 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
 
   useWebSeo(page);
 
-  const [landingAuthMode, setLandingAuthMode] = useState<AuthMode | null>(null);
+  const [landingAuthMode, setLandingAuthMode] = useState<AuthMode | null>(
+    () => initialAuthMode ?? null
+  );
   const [desktopNavSelection, setDesktopNavSelection] = useState<DesktopNavKey>(
     page === "about" ? "about" : "home"
   );
@@ -333,6 +344,12 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   const [formError, setFormError] = useState<string | null>(null);
   const [formFeedback, setFormFeedback] = useState<string | null>(null);
   const [pendingRegistration, setPendingRegistration] = useState<PendingAcademyRegistration | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setAuthMode: (mode: AuthMode) => {
+      setLandingAuthMode(mode);
+    },
+  }), [page]);
 
   const loginMutation = useMutation({
     mutationFn: signIn,
@@ -638,6 +655,16 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   const navigateToPage = (nextPage: PublicPageKey) => {
     setFormError(null);
     setFormFeedback(null);
+    if (disableAuthNavigation && page === "home") {
+      if (nextPage === "createAccount") {
+        setLandingAuthMode("academy");
+        return;
+      }
+      if (nextPage === "signIn") {
+        setLandingAuthMode("login");
+        return;
+      }
+    }
     if (nextPage === "createAccount" && page === "home") {
       setLandingAuthMode("academy");
       return;
@@ -843,13 +870,13 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
   return (
     <View
       nativeID="screens-auth-public-root"
-      style={[styles.publicRoot, page === "home" ? styles.publicRootStatic : null]}
+      style={[styles.publicRoot]}
       testID="screens-auth-public-root"
       {...getWebClassNameProps("screens-auth-public-root")}
     >
         <ScrollView
-          style={[styles.mainScroll, page === "home" ? styles.mainScrollStatic : null]}
-          contentContainerStyle={[styles.scrollContent, page === "home" ? styles.scrollContentStatic : null]}
+          style={[styles.mainScroll]}
+          contentContainerStyle={[styles.scrollContent]}
           keyboardShouldPersistTaps="handled"
           nativeID="screens-auth-public-scroll-view"
           nestedScrollEnabled={true}
@@ -983,7 +1010,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
                     </View>
                   ) : null}
 
-                  {isLandingAuthInline ? (
+                  {isLandingAuthInline && !disableAuthNavigation ? (
                     <Pressable
                       accessibilityRole="button"
                       nativeID="screens-auth-public-close-auth-inline"
@@ -1345,7 +1372,7 @@ export function PublicSiteScreen({ page, onReadyScrollControls }: PublicSiteScre
         </ScrollView>
     </View>
   );
-}
+});
 
 function buildChromeNavItems(
   navigation: ReturnType<typeof useNavigation<NativeStackNavigationProp<AuthStackParamList>>>,
@@ -1404,6 +1431,7 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
   const initialSection = initialSectionProp ?? routeParams.initialSection;
 
   const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
+  const publicSiteRef = useRef<PublicSiteScreenRef>(null);
   const [readyTick, setReadyTick] = useState(0);
   const initialSectionAppliedRef = useRef(false);
 
@@ -1425,6 +1453,14 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readyTick]);
 
+  const handleGoSignInInline = useCallback(() => {
+    publicSiteRef.current?.setAuthMode("login");
+  }, []);
+
+  const handleGoCreateAccountInline = useCallback(() => {
+    publicSiteRef.current?.setAuthMode("academy");
+  }, []);
+
   const handleGoDashboard = useCallback(() => {
     const isAdmin =
       status === "authenticated" &&
@@ -1443,12 +1479,18 @@ export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenPro
       idPrefix="screens-auth-public-home"
       navItems={spaNavItems}
       onBrandPress={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
-      onGoCreateAccount={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.createAccount)}
+      onGoCreateAccount={handleGoCreateAccountInline}
       onGoDashboard={handleGoDashboard}
-      onGoSignIn={() => navigation.navigate(PUBLIC_PAGE_TO_SCREEN.signIn)}
-      screenScrollable={true}
+      onGoSignIn={handleGoSignInInline}
+      screenScrollable={false}
     >
-      <PublicSiteScreen onReadyScrollControls={handleReady} page="home" />
+      <PublicSiteScreen
+        ref={publicSiteRef}
+        disableAuthNavigation={true}
+        initialAuthMode="login"
+        onReadyScrollControls={handleReady}
+        page="home"
+      />
     </PublicPageChrome>
   );
 }
@@ -1525,12 +1567,6 @@ const styles = StyleSheet.create({
   publicRoot: {
     backgroundColor: colors.background,
     flex: 1,
-    minHeight: 0,
-    width: "100%",
-  },
-  publicRootStatic: {
-    flex: 0,
-    flexGrow: 0,
     minHeight: 0,
     width: "100%",
   },
@@ -1717,15 +1753,8 @@ const styles = StyleSheet.create({
   mainScroll: {
     flex: 1,
   },
-  mainScrollStatic: {
-    flex: 0,
-    flexGrow: 0,
-  },
   scrollContent: {
     flexGrow: 1,
-  },
-  scrollContentStatic: {
-    flexGrow: 0,
   },
   heroSection: {
     backgroundColor: "#151410",
