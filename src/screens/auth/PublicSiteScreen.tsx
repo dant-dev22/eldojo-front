@@ -622,23 +622,30 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
           transform: translateY(0) scale(1);
         }
       }
+
+      .eldojo-public-desktop-hero-full-viewport {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding-top: 0;
+        margin-top: 0;
+      }
     `;
 
     document.head.appendChild(styleTag);
   }, [isWebDesktop]);
 
   const heroHeight = useMemo(() => {
-    if (effectiveShowAuthCard && isDesktop) {
-      return 720;
+    if (page !== "home") {
+      if (effectiveShowAuthCard && isDesktop) return 720;
+      if (isDesktop) return 640;
+      if (isTablet) return 620;
+      return effectiveShowAuthCard ? 820 : 580;
     }
-    if (isDesktop) {
-      return 640;
-    }
-    if (isTablet) {
-      return 620;
-    }
-    return effectiveShowAuthCard ? 820 : 580;
-  }, [effectiveShowAuthCard, isDesktop, isTablet]);
+    if (effectiveShowAuthCard && isDesktop) return 720;
+    if (isDesktop) return -1;
+    if (isTablet) return 620;
+    return effectiveShowAuthCard ? 820 : -1;
+  }, [effectiveShowAuthCard, isDesktop, isTablet, page]);
 
   const layoutWidth = Math.min(contentMaxWidth, 1200);
 
@@ -915,10 +922,17 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                 styles.heroSection,
                 styles.heroSectionRefreshed,
                 isMobile ? styles.heroSectionMobile : null,
-                { minHeight: heroHeight, paddingTop: isDesktop ? 120 : isTablet ? 112 : spacing.xl },
+                heroHeight < 0 ? null : { minHeight: heroHeight },
               ]}
               testID="screens-auth-public-hero-section"
-              {...getWebClassNameProps("screens-auth-public-hero-section")}
+              {...getWebClassNameProps(
+                page === "home" && !effectiveShowAuthCard
+                  ? joinWebClassNames(
+                      "screens-auth-public-hero-section",
+                      Platform.OS === "web" ? "eldojo-public-desktop-hero-full-viewport" : null
+                    )
+                  : "screens-auth-public-hero-section"
+              )}
             >
               <AnimatedPublicHero testID="screens-auth-public-animated-logo-hero" />
               <View
@@ -930,6 +944,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                   effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
                   styles.heroContentRefreshed,
+                  !isDesktop && !effectiveShowAuthCard ? { paddingTop: 120 } : null,
                 ]}
                 testID="screens-auth-public-hero-content"
                 {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -1355,10 +1370,17 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                 styles.heroSection,
                 styles.heroSectionRefreshed,
                 isMobile ? styles.heroSectionMobile : null,
-                { minHeight: heroHeight, paddingTop: isDesktop ? 120 : isTablet ? 112 : spacing.xl },
+                heroHeight < 0 ? null : { minHeight: heroHeight },
               ]}
               testID="screens-auth-public-hero-section"
-              {...getWebClassNameProps("screens-auth-public-hero-section")}
+              {...getWebClassNameProps(
+                page === "home" && !effectiveShowAuthCard
+                  ? joinWebClassNames(
+                      "screens-auth-public-hero-section",
+                      Platform.OS === "web" ? "eldojo-public-desktop-hero-full-viewport" : null
+                    )
+                  : "screens-auth-public-hero-section"
+              )}
             >
               <AnimatedPublicHero testID="screens-auth-public-animated-logo-hero" />
               <View
@@ -1370,6 +1392,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                   effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
                   styles.heroContentRefreshed,
+                  !isDesktop && !effectiveShowAuthCard ? { paddingTop: 120 } : null,
                 ]}
                 testID="screens-auth-public-hero-content"
                 {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -2307,6 +2330,7 @@ const styles = StyleSheet.create({
   heroContent: {
     alignSelf: "center",
     gap: spacing.xl,
+    paddingTop: 0,
     width: "100%",
     zIndex: 1,
   },
@@ -2318,12 +2342,14 @@ const styles = StyleSheet.create({
   },
   heroContentDesktop: {
     paddingLeft: spacing["2xl"],
+    paddingTop: 112,
   },
   heroContentAuthDesktop: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     maxWidth: 1040,
+    paddingTop: 96,
   },
   heroCopy: {
     gap: spacing.md,
