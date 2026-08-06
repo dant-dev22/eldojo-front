@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 
+import { AnimatedPublicHero } from "@/components/AnimatedPublicHero";
 import { authApi } from "@/api/authApi";
 import { getErrorMessage } from "@/api/http";
 import { AppButton } from "@/components/AppButton";
@@ -905,32 +906,14 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
             nativeID="screens-auth-public-hero-section"
             style={[
               styles.heroSection,
+              styles.heroSectionRefreshed,
               isMobile ? styles.heroSectionMobile : null,
               { minHeight: heroHeight, paddingTop: isDesktop ? 120 : isTablet ? 112 : spacing.xl },
             ]}
             testID="screens-auth-public-hero-section"
             {...getWebClassNameProps("screens-auth-public-hero-section")}
           >
-            <View
-              nativeID="screens-auth-public-hero-media"
-              style={styles.heroMedia}
-              testID="screens-auth-public-hero-media"
-              {...getWebClassNameProps("screens-auth-public-hero-media")}
-            >
-              <Image
-                nativeID="screens-auth-public-hero-image"
-                resizeMode="stretch"
-                source={heroBackground}
-                style={styles.heroSectionImage}
-                testID="screens-auth-public-hero-image"
-              />
-            </View>
-            <View
-              nativeID="screens-auth-public-hero-background-overlay"
-              style={styles.heroBackgroundOverlay}
-              testID="screens-auth-public-hero-background-overlay"
-              {...getWebClassNameProps("screens-auth-public-hero-background-overlay")}
-            />
+            <AnimatedPublicHero testID="screens-auth-public-animated-logo-hero" />
             <View
               nativeID="screens-auth-public-hero-content"
               style={[
@@ -939,6 +922,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                 { maxWidth: effectiveShowAuthCard ? layoutWidth : 860 },
                 isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                 effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
+                styles.heroContentRefreshed,
               ]}
               testID="screens-auth-public-hero-content"
               {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -948,7 +932,8 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   nativeID="screens-auth-public-hero-copy"
                   style={[
                     styles.heroCopy,
-                    isMobile ? styles.heroCopyMobile : null,
+                    styles.heroCopyRefreshed,
+                    isMobile ? styles.heroCopyMobileRefreshed : null,
                     effectiveShowAuthCard ? styles.heroCopyAuth : null,
                     effectiveShowAuthCard && isDesktop ? styles.heroCopyAuthDesktop : null,
                   ]}
@@ -960,31 +945,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                     )
                   )}
                 >
-                  <Text
-                    nativeID="screens-auth-public-hero-eyebrow"
-                    style={styles.heroEyebrow}
-                    testID="screens-auth-public-hero-eyebrow"
-                    {...getWebClassNameProps("screens-auth-public-hero-eyebrow")}
-                  >
-                    {content.eyebrow}
-                  </Text>
-                  <Text
-                    nativeID="screens-auth-public-hero-title"
-                    style={[styles.heroTitle, isMobile ? styles.heroTitleMobile : null]}
-                    testID="screens-auth-public-hero-title"
-                    {...getWebClassNameProps("screens-auth-public-hero-title")}
-                  >
-                    {content.title}
-                  </Text>
-                  <Text
-                    nativeID="screens-auth-public-hero-description"
-                    style={[styles.heroDescription, isMobile ? styles.heroDescriptionMobile : null]}
-                    testID="screens-auth-public-hero-description"
-                    {...getWebClassNameProps("screens-auth-public-hero-description")}
-                  >
-                    {content.description}
-                  </Text>
-
                   {page === "home" ? (
                     <View style={styles.heroHighlights} {...getWebClassNameProps("screens-auth-public-hero-highlights")}>
                       {HOME_HIGHLIGHTS.map((item, index) => (
@@ -998,7 +958,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                             {...getWebClassNameProps(`screens-auth-public-hero-highlight-dot-${index + 1}`)}
                           />
                           <Text
-                            style={styles.heroHighlightText}
+                            style={[styles.heroHighlightText, styles.heroHighlightTextRefreshed]}
                             {...getWebClassNameProps(`screens-auth-public-hero-highlight-text-${index + 1}`)}
                           >
                             {item}
@@ -1392,32 +1352,14 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
             nativeID="screens-auth-public-hero-section"
             style={[
               styles.heroSection,
+              styles.heroSectionRefreshed,
               isMobile ? styles.heroSectionMobile : null,
               { minHeight: heroHeight, paddingTop: isDesktop ? 120 : isTablet ? 112 : spacing.xl },
             ]}
             testID="screens-auth-public-hero-section"
             {...getWebClassNameProps("screens-auth-public-hero-section")}
           >
-            <View
-              nativeID="screens-auth-public-hero-media"
-              style={styles.heroMedia}
-              testID="screens-auth-public-hero-media"
-              {...getWebClassNameProps("screens-auth-public-hero-media")}
-            >
-              <Image
-                nativeID="screens-auth-public-hero-image"
-                resizeMode="stretch"
-                source={heroBackground}
-                style={styles.heroSectionImage}
-                testID="screens-auth-public-hero-image"
-              />
-            </View>
-            <View
-              nativeID="screens-auth-public-hero-background-overlay"
-              style={styles.heroBackgroundOverlay}
-              testID="screens-auth-public-hero-background-overlay"
-              {...getWebClassNameProps("screens-auth-public-hero-background-overlay")}
-            />
+            <AnimatedPublicHero testID="screens-auth-public-animated-logo-hero" />
             <View
               nativeID="screens-auth-public-hero-content"
               style={[
@@ -1426,6 +1368,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                 { maxWidth: effectiveShowAuthCard ? layoutWidth : 860 },
                 isDesktop && !effectiveShowAuthCard ? styles.heroContentDesktop : null,
                 effectiveShowAuthCard && isDesktop ? styles.heroContentAuthDesktop : null,
+                styles.heroContentRefreshed,
               ]}
               testID="screens-auth-public-hero-content"
               {...getWebClassNameProps("screens-auth-public-hero-content")}
@@ -1435,7 +1378,8 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                   nativeID="screens-auth-public-hero-copy"
                   style={[
                     styles.heroCopy,
-                    isMobile ? styles.heroCopyMobile : null,
+                    styles.heroCopyRefreshed,
+                    isMobile ? styles.heroCopyMobileRefreshed : null,
                     effectiveShowAuthCard ? styles.heroCopyAuth : null,
                     effectiveShowAuthCard && isDesktop ? styles.heroCopyAuthDesktop : null,
                   ]}
@@ -1447,31 +1391,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                     )
                   )}
                 >
-                  <Text
-                    nativeID="screens-auth-public-hero-eyebrow"
-                    style={styles.heroEyebrow}
-                    testID="screens-auth-public-hero-eyebrow"
-                    {...getWebClassNameProps("screens-auth-public-hero-eyebrow")}
-                  >
-                    {content.eyebrow}
-                  </Text>
-                  <Text
-                    nativeID="screens-auth-public-hero-title"
-                    style={[styles.heroTitle, isMobile ? styles.heroTitleMobile : null]}
-                    testID="screens-auth-public-hero-title"
-                    {...getWebClassNameProps("screens-auth-public-hero-title")}
-                  >
-                    {content.title}
-                  </Text>
-                  <Text
-                    nativeID="screens-auth-public-hero-description"
-                    style={[styles.heroDescription, isMobile ? styles.heroDescriptionMobile : null]}
-                    testID="screens-auth-public-hero-description"
-                    {...getWebClassNameProps("screens-auth-public-hero-description")}
-                  >
-                    {content.description}
-                  </Text>
-
                   {page === "home" ? (
                     <View style={styles.heroHighlights} {...getWebClassNameProps("screens-auth-public-hero-highlights")}>
                       {HOME_HIGHLIGHTS.map((item, index) => (
@@ -1485,7 +1404,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                             {...getWebClassNameProps(`screens-auth-public-hero-highlight-dot-${index + 1}`)}
                           />
                           <Text
-                            style={styles.heroHighlightText}
+                            style={[styles.heroHighlightText, styles.heroHighlightTextRefreshed]}
                             {...getWebClassNameProps(`screens-auth-public-hero-highlight-text-${index + 1}`)}
                           >
                             {item}
@@ -2267,6 +2186,10 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
   },
+  heroSectionRefreshed: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+  },
   heroSectionMobile: {
     justifyContent: "flex-start",
     paddingBottom: spacing["2xl"],
@@ -2295,6 +2218,9 @@ const styles = StyleSheet.create({
   heroContentMobile: {
     gap: spacing.lg,
   },
+  heroContentRefreshed: {
+    marginTop: spacing.md,
+  },
   heroContentDesktop: {
     paddingLeft: spacing["2xl"],
   },
@@ -2308,12 +2234,24 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     maxWidth: 620,
   },
+  heroCopyRefreshed: {
+    alignSelf: "center",
+    alignItems: "center",
+    width: "100%",
+  },
   heroCopyMobile: {
     backgroundColor: "rgba(23, 22, 18, 0.58)",
     borderColor: "rgba(255, 255, 255, 0.18)",
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.lg,
+  },
+  heroCopyMobileRefreshed: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    borderWidth: 0,
+    padding: 0,
+    gap: spacing.md,
   },
   heroCopyAuth: {
     maxWidth: 560,
@@ -2376,6 +2314,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  heroHighlightTextRefreshed: {
+    color: colors.text,
+  },
   heroActions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -2399,8 +2340,8 @@ const styles = StyleSheet.create({
   },
   mobileSectionChip: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
-    borderColor: "rgba(255, 255, 255, 0.22)",
+    backgroundColor: "rgba(26, 35, 126, 0.06)",
+    borderColor: "rgba(26, 35, 126, 0.18)",
     borderRadius: radius.pill,
     borderWidth: 1,
     justifyContent: "center",
@@ -2408,13 +2349,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   mobileSectionChipActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.26)",
+    backgroundColor: "rgba(26, 35, 126, 0.14)",
+    borderColor: "rgba(26, 35, 126, 0.32)",
   },
   mobileSectionChipPressed: {
     opacity: 0.8,
   },
   mobileSectionChipLabel: {
-    color: colors.onPrimary,
+    color: colors.secondary,
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "700",
