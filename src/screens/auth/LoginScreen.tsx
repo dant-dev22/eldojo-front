@@ -319,7 +319,7 @@ export function LoginScreen() {
                   style={styles.navbarLogo}
                   testID="screens-auth-login-navbar-logo-image"
                 >
-                  <LogoSvg size={52} variant="primary" />
+                  <LogoSvg size={52} variant="primary" animated loop />
                 </View>
               </Pressable>
               <View nativeID="screens-auth-login-navbar-brand-copy" style={styles.navbarBrandCopy} testID="screens-auth-login-navbar-brand-copy">

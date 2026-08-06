@@ -218,7 +218,7 @@ export function AdminShell({
       <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
         <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
             <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
-              <LogoSvg size={50} variant="mark-only" />
+              <LogoSvg size={50} variant="mark-only" animated loop />
             </View>
           <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
             <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">

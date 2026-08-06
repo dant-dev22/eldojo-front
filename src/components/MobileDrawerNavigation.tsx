@@ -131,7 +131,7 @@ export function MobileDrawerNavigation({
               <View nativeID={`${idPrefix}-header`} style={styles.panelHeader} testID={`${idPrefix}-header`}>
                 <View nativeID={`${idPrefix}-brand-row`} style={styles.brandRow} testID={`${idPrefix}-brand-row`}>
                   <View nativeID={`${idPrefix}-logo`} style={styles.logoMark} testID={`${idPrefix}-logo`}>
-                    <LogoSvg size={44} variant="mark-only" />
+                    <LogoSvg size={44} variant="mark-only" animated loop />
                   </View>
                   <View nativeID={`${idPrefix}-brand-copy`} style={styles.brandCopy} testID={`${idPrefix}-brand-copy`}>
                     <Text nativeID={`${idPrefix}-brand-title`} style={styles.brandTitle} testID={`${idPrefix}-brand-title`}>
