@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
@@ -8,6 +7,7 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -56,7 +56,7 @@ export function AppSelect({
         baseId={baseId}
         enabled={enabled}
         error={error}
-        hasValue={hasValue as boolean}
+        hasValue={!!hasValue}
         items={items}
         label={label}
         onValueChange={onValueChange}
@@ -76,7 +76,6 @@ export function AppSelect({
       <View
         accessible
         accessibilityState={{ disabled: !enabled }}
-        aria-invalid={error ? "true" : undefined}
         nativeID={`${baseId}-container`}
         style={[styles.container, !enabled ? styles.disabled : null]}
         testID={`${baseId}-container`}
@@ -110,7 +109,6 @@ export function AppSelect({
 
         <Picker
           accessibilityLabel={label}
-          aria-label={label}
           enabled={enabled}
           nativeID={nativeID}
           onValueChange={(itemValue) => onValueChange(String(itemValue))}
@@ -162,6 +160,7 @@ function WebDropdown({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const animatedTranslate = useRef(new Animated.Value(-6)).current;
+  const overlayAnimatedOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!enabled) {
@@ -170,7 +169,7 @@ function WebDropdown({
   }, [enabled]);
 
   useEffect(() => {
-    if (!Platform.OS || Platform.OS !== "web") return;
+    if (Platform.OS !== "web") return;
     const root = typeof document !== "undefined" ? document : null;
     if (!root) return;
 
@@ -214,19 +213,28 @@ function WebDropdown({
   }, []);
 
   useEffect(() => {
-    Animated.timing(animatedOpacity, {
-      duration: transitions.fast,
-      easing: Easing.out(Easing.quad),
-      toValue: open ? 1 : 0,
-      useNativeDriver: false,
-    }).start();
-    Animated.timing(animatedTranslate, {
-      duration: transitions.fast,
-      easing: Easing.out(Easing.quad),
-      toValue: open ? 0 : -6,
-      useNativeDriver: false,
-    }).start();
-  }, [open, animatedOpacity, animatedTranslate]);
+    const duration = transitions.fast;
+    Animated.parallel([
+      Animated.timing(animatedOpacity, {
+        duration,
+        easing: Easing.out(Easing.quad),
+        toValue: open ? 1 : 0,
+        useNativeDriver: false,
+      }),
+      Animated.timing(animatedTranslate, {
+        duration,
+        easing: Easing.out(Easing.quad),
+        toValue: open ? 0 : -6,
+        useNativeDriver: false,
+      }),
+      Animated.timing(overlayAnimatedOpacity, {
+        duration,
+        easing: Easing.out(Easing.quad),
+        toValue: open ? 1 : 0,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [open, animatedOpacity, animatedTranslate, overlayAnimatedOpacity]);
 
   function toggle() {
     if (!enabled) return;
@@ -242,17 +250,19 @@ function WebDropdown({
   }
 
   const containerWebProps = useMemo(
-    () =>
-      Platform.OS === "web"
-        ? ({
-            ref: wrapRef as any,
-          } as { ref: React.MutableRefObject<HTMLDivElement | null> })
-        : {},
+    () => (Platform.OS === "web" ? { ref: wrapRef as any } : {}),
     [],
   );
 
+  const totalOptions = items.length + 1;
+  const estimatedHeight = Math.min(totalOptions * 44 + 12, 300);
+
   return (
-    <View nativeID={`${baseId}-wrapper`} style={styles.wrapper} testID={`${baseId}-wrapper`}>
+    <View
+      nativeID={`${baseId}-wrapper`}
+      style={[styles.wrapper, open ? styles.wrapperOpen : null]}
+      testID={`${baseId}-wrapper`}
+    >
       <WebGlobalStyles />
 
       <Text nativeID={`${baseId}-label`} style={styles.label} testID={`${baseId}-label`}>
@@ -273,7 +283,6 @@ function WebDropdown({
       >
         <Pressable
           accessibilityLabel={label}
-          aria-label={label}
           disabled={!enabled}
           nativeID={`${baseId}-trigger`}
           onPress={toggle}
@@ -320,6 +329,14 @@ function WebDropdown({
           />
         </Pressable>
 
+        {enabled && Platform.OS === "web" ? (
+          <PortalLayer
+            pointerEvents={open ? "auto" : "none"}
+            animatedStyle={{ opacity: overlayAnimatedOpacity }}
+            onPress={() => setOpen(false)}
+          />
+        ) : null}
+
         {enabled ? (
           <Animated.View
             aria-hidden={!open}
@@ -332,57 +349,82 @@ function WebDropdown({
               {
                 opacity: animatedOpacity,
                 transform: [{ translateY: animatedTranslate }],
+                minHeight: open ? 56 : 0,
+                maxHeight: open ? estimatedHeight : 0,
               },
             ]}
             testID={`${baseId}-menu`}
           >
-            {[
-              { __placeholder: true as const, label: placeholder, value: "" },
-              ...items.map((i) => ({ __placeholder: false as const, label: i.label, value: i.value })),
-            ].map((row, idx) => {
-              const selected = row.__placeholder ? !hasValue : value === row.value;
-              return (
-                <Pressable
-                  key={row.__placeholder ? "__placeholder" : row.value}
-                  aria-selected={selected}
-                  nativeID={row.__placeholder ? `${baseId}-option-placeholder` : `${baseId}-option-${idx}`}
-                  onPress={() => choose(row.value)}
-                  role="option"
-                  style={(state: any) => [
-                    styles.option,
-                    selected ? styles.optionSelected : null,
-                    state.hovered || state.pressed ? styles.optionHover : null,
-                  ]}
-                  testID={row.__placeholder ? `${baseId}-option-placeholder` : `${baseId}-option-${row.value}`}
-                >
-                  {(state: any) => {
-                    const isHover = state.hovered || state.pressed;
-                    return (
-                      <>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            styles.optionText,
-                            row.__placeholder && !selected ? styles.placeholderText : null,
-                            selected ? styles.optionTextSelected : null,
-                            isHover ? styles.optionTextHover : null,
-                          ]}
-                        >
-                          {row.label}
-                        </Text>
-                        {selected ? (
-                          <Feather
-                            color={isHover ? "#FFFFFF" : colors.success}
-                            name="check"
-                            size={16}
-                          />
-                        ) : null}
-                      </>
-                    );
-                  }}
-                </Pressable>
-              );
-            })}
+            <ScrollView
+              bounces={false}
+              contentContainerStyle={styles.menuScrollContent}
+              indicatorStyle="black"
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={totalOptions > 6}
+              stickyHeaderIndices={[]}
+              style={{ width: "100%" }}
+            >
+              {[
+                { __placeholder: true as const, label: placeholder, value: "" },
+                ...items.map((i) => ({
+                  __placeholder: false as const,
+                  label: i.label,
+                  value: i.value,
+                })),
+              ].map((row, idx) => {
+                const selected = row.__placeholder ? !hasValue : value === row.value;
+                return (
+                  <Pressable
+                    key={row.__placeholder ? "__placeholder" : row.value}
+                    aria-selected={selected}
+                    nativeID={
+                      row.__placeholder
+                        ? `${baseId}-option-placeholder`
+                        : `${baseId}-option-${idx}`
+                    }
+                    onPress={() => choose(row.value)}
+                    role="option"
+                    style={(state: any) => [
+                      styles.option,
+                      selected ? styles.optionSelected : null,
+                      state.hovered || state.pressed ? styles.optionHover : null,
+                    ]}
+                    testID={
+                      row.__placeholder
+                        ? `${baseId}-option-placeholder`
+                        : `${baseId}-option-${row.value}`
+                    }
+                  >
+                    {(state: any) => {
+                      const isHover = state.hovered || state.pressed;
+                      return (
+                        <>
+                          <Text
+                            numberOfLines={1}
+                            style={[
+                              styles.optionText,
+                              row.__placeholder && !selected ? styles.placeholderText : null,
+                              selected ? styles.optionTextSelected : null,
+                              isHover ? styles.optionTextHover : null,
+                            ]}
+                          >
+                            {row.label}
+                          </Text>
+                          {selected ? (
+                            <Feather
+                              color={isHover ? "#FFFFFF" : colors.success}
+                              name="check"
+                              size={16}
+                            />
+                          ) : null}
+                        </>
+                      );
+                    }}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </Animated.View>
         ) : null}
       </View>
@@ -399,6 +441,27 @@ function WebDropdown({
   );
 }
 
+interface PortalLayerProps {
+  pointerEvents: "auto" | "none";
+  animatedStyle: { opacity: Animated.Value };
+  onPress: () => void;
+}
+
+function PortalLayer({ pointerEvents, animatedStyle, onPress }: PortalLayerProps) {
+  if (Platform.OS !== "web") return null;
+  return (
+    <Animated.View
+      id="app-select-portal-layer"
+      nativeID="app-select-portal-layer"
+      onStartShouldSetResponder={() => true}
+      onResponderRelease={onPress}
+      pointerEvents={pointerEvents}
+      style={[styles.portalOverlay, animatedStyle] as any}
+      testID="components-app-select-overlay"
+    />
+  );
+}
+
 function WebGlobalStyles() {
   if (Platform.OS !== "web") return null;
   return (
@@ -406,6 +469,15 @@ function WebGlobalStyles() {
       @keyframes app-select-menu-in {
         from { opacity: 0; transform: translateY(-6px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+
+      [data-app-select-portal-root] {
+        pointer-events: none;
+      }
+
+      #app-select-portal-layer {
+        position: fixed !important;
+        inset: 0 !important;
       }
     `}</style>
   );
@@ -415,6 +487,10 @@ const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
     gap: spacing.xs,
+    position: "relative",
+  },
+  wrapperOpen: {
+    zIndex: 60,
   },
   label: {
     color: colors.textMuted,
@@ -480,26 +556,47 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
     height: 2,
   },
+  portalOverlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.01)",
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 55,
+  },
   menu: {
-    backgroundColor: colors.surface,
+    backgroundColor: "#FFFFFF",
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     elevation: 12,
-    left: -8,
-    maxHeight: 288,
-    minWidth: 220,
-    overflow: "hidden",
-    padding: 6,
+    left: 0,
+    minWidth: 200,
+    overflow: Platform.OS === "web" ? ("hidden" as any) : "hidden",
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     position: "absolute",
-    right: -8,
+    right: 0,
     shadowColor: "#1A1A1A",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 20,
     top: "100%",
-    width: "auto",
-    zIndex: 50,
+    width: "100%",
+    zIndex: 70,
+    marginTop: 8,
+    ...Platform.select({
+      web: {
+        backdropFilter: "blur(4px)",
+        backfaceVisibility: "hidden",
+      } as any,
+    }),
+  },
+  menuScrollContent: {
+    gap: 2,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   option: {
     alignItems: "center",
@@ -507,9 +604,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "space-between",
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
+    width: "100%",
   },
   optionHover: {
     backgroundColor: colors.success,
