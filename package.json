@@ -26,7 +26,6 @@
     "expo-image-picker": "~56.0.19",
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
-    "framer-motion": "^13.0.0",
     "npx": "^10.2.2",
     "react": "19.2.3",
     "react-datepicker": "^9.1.0",
