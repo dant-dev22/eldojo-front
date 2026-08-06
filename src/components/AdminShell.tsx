@@ -7,6 +7,7 @@ import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
+import { LogoSvg } from "@/components/LogoSvg";
 import { MobileDrawerNavigation } from "@/components/MobileDrawerNavigation";
 import { MobileHeader } from "@/components/MobileHeader";
 import { activeBorderWidth, colors, radius, spacing, typography } from "@/constants/theme";
@@ -216,11 +217,9 @@ export function AdminShell({
     >
       <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
         <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
-          <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
-            <Text nativeID="components-admin-shell-brand-logo-text" style={styles.logoMarkText} testID="components-admin-shell-brand-logo-text">
-              EL
-            </Text>
-          </View>
+            <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
+              <LogoSvg size={50} variant="mark-only" />
+            </View>
           <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
             <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
               ElDojo Admin
@@ -662,10 +661,10 @@ const styles = StyleSheet.create({
   },
   logoMark: {
     alignItems: "center",
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: "transparent",
+    borderColor: "transparent",
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     height: 56,
     justifyContent: "center",
     width: 56,

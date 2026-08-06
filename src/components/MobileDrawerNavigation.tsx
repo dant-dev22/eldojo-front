@@ -3,6 +3,7 @@ import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useMemo, useRef } from "react";
 
+import { LogoSvg } from "@/components/LogoSvg";
 import { activeBorderWidth, colors, radius, spacing, transitions, typography } from "@/constants/theme";
 
 type AdminSection = "dashboard" | "students" | "branches" | "operations" | "payments" | "dojo" | "reports" | "settings";
@@ -130,9 +131,7 @@ export function MobileDrawerNavigation({
               <View nativeID={`${idPrefix}-header`} style={styles.panelHeader} testID={`${idPrefix}-header`}>
                 <View nativeID={`${idPrefix}-brand-row`} style={styles.brandRow} testID={`${idPrefix}-brand-row`}>
                   <View nativeID={`${idPrefix}-logo`} style={styles.logoMark} testID={`${idPrefix}-logo`}>
-                    <Text nativeID={`${idPrefix}-logo-text`} style={styles.logoText} testID={`${idPrefix}-logo-text`}>
-                      EL
-                    </Text>
+                    <LogoSvg size={44} variant="mark-only" />
                   </View>
                   <View nativeID={`${idPrefix}-brand-copy`} style={styles.brandCopy} testID={`${idPrefix}-brand-copy`}>
                     <Text nativeID={`${idPrefix}-brand-title`} style={styles.brandTitle} testID={`${idPrefix}-brand-title`}>
@@ -325,7 +324,7 @@ const styles = StyleSheet.create({
   },
   logoMark: {
     alignItems: "center",
-    backgroundColor: colors.primary,
+    backgroundColor: "transparent",
     borderRadius: 18,
     height: 48,
     justifyContent: "center",

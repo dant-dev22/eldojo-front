@@ -18,6 +18,7 @@ import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
 import { AppModal } from "@/components/AppModal";
+import { LogoSvg } from "@/components/LogoSvg";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
@@ -313,12 +314,13 @@ export function LoginScreen() {
                 style={styles.navbarLogoButton}
                 testID="screens-auth-login-navbar-logo-button"
               >
-                <Image
+                <View
                   nativeID="screens-auth-login-navbar-logo-image"
-                  source={{ uri: logoPlaceholder }}
                   style={styles.navbarLogo}
                   testID="screens-auth-login-navbar-logo-image"
-                />
+                >
+                  <LogoSvg size={52} variant="primary" />
+                </View>
               </Pressable>
               <View nativeID="screens-auth-login-navbar-brand-copy" style={styles.navbarBrandCopy} testID="screens-auth-login-navbar-brand-copy">
                 <Text nativeID="screens-auth-login-navbar-brand-title" style={styles.navbarBrandTitle} testID="screens-auth-login-navbar-brand-title">
@@ -1102,11 +1104,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   navbarLogo: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: 0,
     height: 56,
+    justifyContent: "center",
     width: 56,
   },
   navbarBrandCopy: {
