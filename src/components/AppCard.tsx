@@ -14,6 +14,10 @@ function getWebClassNameProps(className?: string) {
   return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
 }
 
+function joinWebClassNames(...classNames: Array<string | false | null | undefined>) {
+  return classNames.filter(Boolean).join(" ");
+}
+
 export function AppCard({ children, style, nativeID, testID, className }: AppCardProps) {
   const baseId = nativeID ?? testID;
 
@@ -22,7 +26,12 @@ export function AppCard({ children, style, nativeID, testID, className }: AppCar
       nativeID={nativeID}
       style={[styles.card, style]}
       testID={testID}
-      {...getWebClassNameProps(className ?? baseId)}
+      {...getWebClassNameProps(
+        joinWebClassNames(
+          "components-app-card",
+          className ?? baseId
+        )
+      )}
     >
       {children}
     </View>

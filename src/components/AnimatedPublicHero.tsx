@@ -7,6 +7,10 @@ export interface AnimatedPublicHeroProps {
   testID?: string;
 }
 
+function getWebClassNameProps(className?: string) {
+  return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
+}
+
 export const AnimatedPublicHero: React.FC<AnimatedPublicHeroProps> = ({ testID }) => {
   const { width: viewportWidth } = useWindowDimensions();
 
@@ -41,8 +45,12 @@ export const AnimatedPublicHero: React.FC<AnimatedPublicHeroProps> = ({ testID }
       style={styles.wrapper}
       accessibilityRole="image"
       accessibilityLabel="Logo El Dojo animado"
+      {...getWebClassNameProps("screens-auth-public-animated-logo-hero")}
     >
-      <View style={[styles.logoWrap, { width: logoSize, height: logoSize }]}>
+      <View
+        style={[styles.logoWrap, { width: logoSize, height: logoSize }]}
+        {...getWebClassNameProps("screens-auth-public-hero-logo-wrap")}
+      >
         <LogoSvg
           size={logoSize}
           variant="mark-only"
@@ -63,6 +71,7 @@ export const AnimatedPublicHero: React.FC<AnimatedPublicHeroProps> = ({ testID }
           },
         ]}
         numberOfLines={Platform.OS === "web" ? undefined : 3}
+        {...getWebClassNameProps("screens-auth-public-hero-headline")}
       >
         {`La mejor forma de administrar tu academia de combate.`}
       </Text>

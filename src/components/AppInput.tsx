@@ -19,6 +19,10 @@ function getWebClassNameProps(className?: string) {
   return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
 }
 
+function joinWebClassNames(...classNames: Array<string | false | null | undefined>) {
+  return classNames.filter(Boolean).join(" ");
+}
+
 export function AppInput({
   label,
   error,
@@ -42,13 +46,23 @@ export function AppInput({
       nativeID={`${baseId}-wrapper`}
       style={styles.wrapper}
       testID={`${baseId}-wrapper`}
-      {...getWebClassNameProps(wrapperClassName ?? `${baseId}-wrapper`)}
+      {...getWebClassNameProps(
+        joinWebClassNames(
+          "components-app-input-wrapper",
+          wrapperClassName ?? `${baseId}-wrapper`
+        )
+      )}
     >
       <Text
         nativeID={`${baseId}-label`}
         style={styles.label}
         testID={`${baseId}-label`}
-        {...getWebClassNameProps(labelClassName ?? `${baseId}-label`)}
+        {...getWebClassNameProps(
+          joinWebClassNames(
+            "components-app-input-label",
+            labelClassName ?? `${baseId}-label`
+          )
+        )}
       >
         {label}
       </Text>
@@ -56,14 +70,25 @@ export function AppInput({
         nativeID={`${baseId}-container`}
         style={[styles.inputContainer, error ? styles.inputError : null]}
         testID={`${baseId}-container`}
-        {...getWebClassNameProps(containerClassName ?? `${baseId}-container`)}
+        {...getWebClassNameProps(
+          joinWebClassNames(
+            "components-app-input-container",
+            error ? "components-app-input-container--error" : null,
+            containerClassName ?? `${baseId}-container`
+          )
+        )}
       >
         <TextInput
           nativeID={nativeID}
           placeholderTextColor={colors.textMuted}
           style={[styles.input, style]}
           testID={testID}
-          {...getWebClassNameProps(inputClassName ?? baseId)}
+          {...getWebClassNameProps(
+            joinWebClassNames(
+              "components-app-input",
+              inputClassName ?? baseId
+            )
+          )}
           {...props}
         />
         {rightAdornment ? (
@@ -71,7 +96,12 @@ export function AppInput({
             nativeID={`${baseId}-adornment`}
             style={styles.adornment}
             testID={`${baseId}-adornment`}
-            {...getWebClassNameProps(adornmentClassName ?? `${baseId}-adornment`)}
+            {...getWebClassNameProps(
+              joinWebClassNames(
+                "components-app-input-adornment",
+                adornmentClassName ?? `${baseId}-adornment`
+              )
+            )}
           >
             {rightAdornment}
           </View>
@@ -82,7 +112,12 @@ export function AppInput({
           nativeID={`${baseId}-error`}
           style={styles.error}
           testID={`${baseId}-error`}
-          {...getWebClassNameProps(errorClassName ?? `${baseId}-error`)}
+          {...getWebClassNameProps(
+            joinWebClassNames(
+              "components-app-input-error",
+              errorClassName ?? `${baseId}-error`
+            )
+          )}
         >
           {error}
         </Text>

@@ -4,9 +4,14 @@ import { Inter_400Regular } from "@expo-google-fonts/inter";
 import { Montserrat_700Bold, Montserrat_800ExtraBold } from "@expo-google-fonts/montserrat";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
+
+if (Platform.OS === "web") {
+  require("./src/styles/web/index.css");
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

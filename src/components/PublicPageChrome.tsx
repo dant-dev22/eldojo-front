@@ -59,6 +59,10 @@ function getWebClassNameProps(className?: string) {
   return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
 }
 
+function joinWebClassNames(...classNames: Array<string | false | null | undefined>) {
+  return classNames.filter(Boolean).join(" ");
+}
+
 export function PublicPageChrome({
   idPrefix,
   onBrandPress,
@@ -185,7 +189,11 @@ export function PublicPageChrome({
       nativeID={`${idPrefix}-screen`}
       testID={`${idPrefix}-screen`}
     >
-      <View nativeID={`${idPrefix}-shell`} style={[styles.shell, screenScrollable ? styles.shellStatic : null]} testID={`${idPrefix}-shell`}>
+      <View
+        nativeID={`${idPrefix}-shell`}
+        style={[styles.shell, screenScrollable ? styles.shellStatic : null]}
+        testID={`${idPrefix}-shell`}
+      >
         {!isMobile ? (
           <View
             nativeID={`${idPrefix}-navbar`}
@@ -194,12 +202,18 @@ export function PublicPageChrome({
               { paddingHorizontal: outerPaddingHorizontal },
             ]}
             testID={`${idPrefix}-navbar`}
-            {...getWebClassNameProps("public-chrome-navbar eldojo-public-desktop-hover-target")}
+            {...getWebClassNameProps(
+              joinWebClassNames(
+                "public-chrome-navbar",
+                "eldojo-public-desktop-hover-target"
+              )
+            )}
           >
             <View
               nativeID={`${idPrefix}-navbar-inner`}
               style={[styles.navbarInner, { maxWidth: resolvedContentMaxWidth }]}
               testID={`${idPrefix}-navbar-inner`}
+              {...getWebClassNameProps("public-chrome-navbar-inner")}
             >
               <Pressable
                 accessibilityRole="button"
@@ -207,25 +221,61 @@ export function PublicPageChrome({
                 onPress={onBrandPress}
                 style={styles.brandButton}
                 testID={`${idPrefix}-brand-button`}
+                {...getWebClassNameProps("public-chrome-navbar-brand-button")}
               >
-                <View nativeID={`${idPrefix}-brand-mark`} style={styles.brandMark} testID={`${idPrefix}-brand-mark`}>
-                  <View nativeID={`${idPrefix}-brand-mark-inner`} style={styles.brandMarkInner} testID={`${idPrefix}-brand-mark-inner`}>
-                    <Text nativeID={`${idPrefix}-brand-mark-label`} style={styles.brandMarkLabel} testID={`${idPrefix}-brand-mark-label`}>
+                <View
+                  nativeID={`${idPrefix}-brand-mark`}
+                  style={styles.brandMark}
+                  testID={`${idPrefix}-brand-mark`}
+                  {...getWebClassNameProps("public-chrome-navbar-brand-mark")}
+                >
+                  <View
+                    nativeID={`${idPrefix}-brand-mark-inner`}
+                    style={styles.brandMarkInner}
+                    testID={`${idPrefix}-brand-mark-inner`}
+                    {...getWebClassNameProps("public-chrome-navbar-brand-mark-inner")}
+                  >
+                    <Text
+                      nativeID={`${idPrefix}-brand-mark-label`}
+                      style={styles.brandMarkLabel}
+                      testID={`${idPrefix}-brand-mark-label`}
+                      {...getWebClassNameProps("public-chrome-navbar-brand-mark-label")}
+                    >
                       弐
                     </Text>
                   </View>
                 </View>
-                <View nativeID={`${idPrefix}-brand-copy`} style={styles.brandCopy} testID={`${idPrefix}-brand-copy`}>
-                  <Text nativeID={`${idPrefix}-brand-title`} style={styles.brandTitle} testID={`${idPrefix}-brand-title`}>
+                <View
+                  nativeID={`${idPrefix}-brand-copy`}
+                  style={styles.brandCopy}
+                  testID={`${idPrefix}-brand-copy`}
+                  {...getWebClassNameProps("public-chrome-navbar-brand-copy")}
+                >
+                  <Text
+                    nativeID={`${idPrefix}-brand-title`}
+                    style={styles.brandTitle}
+                    testID={`${idPrefix}-brand-title`}
+                    {...getWebClassNameProps("public-chrome-navbar-brand-title")}
+                  >
                     ElDojo
                   </Text>
-                  <Text nativeID={`${idPrefix}-brand-subtitle`} style={styles.brandSubtitle} testID={`${idPrefix}-brand-subtitle`}>
+                  <Text
+                    nativeID={`${idPrefix}-brand-subtitle`}
+                    style={styles.brandSubtitle}
+                    testID={`${idPrefix}-brand-subtitle`}
+                    {...getWebClassNameProps("public-chrome-navbar-brand-subtitle")}
+                  >
                     Sencillez · Orden · Dojo
                   </Text>
                 </View>
               </Pressable>
 
-              <View nativeID={`${idPrefix}-nav-items`} style={styles.navItems} testID={`${idPrefix}-nav-items`}>
+              <View
+                nativeID={`${idPrefix}-nav-items`}
+                style={styles.navItems}
+                testID={`${idPrefix}-nav-items`}
+                {...getWebClassNameProps("public-chrome-navbar-nav-items")}
+              >
                 {navItems.map((item) => (
                   <Pressable
                     key={item.key}
@@ -241,6 +291,7 @@ export function PublicPageChrome({
                       ];
                     }}
                     testID={`${idPrefix}-nav-item-${item.key}`}
+                    {...getWebClassNameProps("public-chrome-navbar-nav-item")}
                   >
                     {(state) => {
                       const hovered = (state as unknown as { hovered?: boolean }).hovered;
@@ -249,6 +300,7 @@ export function PublicPageChrome({
                           nativeID={`${idPrefix}-nav-item-${item.key}-label`}
                           style={[styles.navItemLabel, hovered ? styles.navItemLabelActive : null]}
                           testID={`${idPrefix}-nav-item-${item.key}-label`}
+                          {...getWebClassNameProps("public-chrome-navbar-nav-item-label")}
                         >
                           {item.label}
                         </Text>
@@ -259,7 +311,12 @@ export function PublicPageChrome({
               </View>
 
               {showAuthControls ? (
-                <View nativeID={`${idPrefix}-actions`} style={styles.actions} testID={`${idPrefix}-actions`}>
+                <View
+                  nativeID={`${idPrefix}-actions`}
+                  style={styles.actions}
+                  testID={`${idPrefix}-actions`}
+                  {...getWebClassNameProps("public-chrome-navbar-actions")}
+                >
                   {actionItems.map((item) => (
                     <AppButton
                       key={item.key}
@@ -275,7 +332,10 @@ export function PublicPageChrome({
                     hintShowsAuth ? (
                       <AdminUserMenu actions={adminActions} user={displayUser} />
                     ) : (
-                      <View style={styles.publicAuthActionsRow}>
+                      <View
+                        style={styles.publicAuthActionsRow}
+                        {...getWebClassNameProps("public-chrome-navbar-auth-actions-row")}
+                      >
                         <Pressable
                           accessibilityRole="link"
                           nativeID={`${idPrefix}-auth-signin`}
@@ -290,14 +350,30 @@ export function PublicPageChrome({
                             ];
                           }}
                           testID={`${idPrefix}-auth-signin`}
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "public-chrome-navbar-auth-button",
+                              "public-chrome-navbar-auth-button--ghost"
+                            )
+                          )}
                         >
                           {(state) => {
                             const hovered = (state as unknown as { hovered?: boolean }).hovered;
                             return (
                               <Text
                                 nativeID={`${idPrefix}-auth-signin-label`}
-                                style={[styles.authButtonLabel, styles.authButtonLabelGhost, hovered ? styles.authButtonLabelGhostHover : null]}
+                                style={[
+                                  styles.authButtonLabel,
+                                  styles.authButtonLabelGhost,
+                                  hovered ? styles.authButtonLabelGhostHover : null,
+                                ]}
                                 testID={`${idPrefix}-auth-signin-label`}
+                                {...getWebClassNameProps(
+                                  joinWebClassNames(
+                                    "public-chrome-navbar-auth-button-label",
+                                    "public-chrome-navbar-auth-button-label--ghost"
+                                  )
+                                )}
                               >
                                 Iniciar sesión
                               </Text>
@@ -318,6 +394,12 @@ export function PublicPageChrome({
                             ];
                           }}
                           testID={`${idPrefix}-auth-create`}
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "public-chrome-navbar-auth-button",
+                              "public-chrome-navbar-auth-button--primary"
+                            )
+                          )}
                         >
                           {(state) => {
                             const hovered = (state as unknown as { hovered?: boolean }).hovered;
@@ -328,11 +410,22 @@ export function PublicPageChrome({
                                   name="user-plus"
                                   size={15}
                                   style={styles.authPrimaryIcon}
+                                  {...getWebClassNameProps("public-chrome-navbar-auth-primary-icon")}
                                 />
                                 <Text
                                   nativeID={`${idPrefix}-auth-create-label`}
-                                  style={[styles.authButtonLabel, styles.authButtonLabelPrimary, hovered ? styles.authButtonLabelPrimaryHover : null]}
+                                  style={[
+                                    styles.authButtonLabel,
+                                    styles.authButtonLabelPrimary,
+                                    hovered ? styles.authButtonLabelPrimaryHover : null,
+                                  ]}
                                   testID={`${idPrefix}-auth-create-label`}
+                                  {...getWebClassNameProps(
+                                    joinWebClassNames(
+                                      "public-chrome-navbar-auth-button-label",
+                                      "public-chrome-navbar-auth-button-label--primary"
+                                    )
+                                  )}
                                 >
                                   Crear cuenta
                                 </Text>
@@ -352,10 +445,19 @@ export function PublicPageChrome({
             nativeID={`${idPrefix}-mobile-floating-bar`}
             style={styles.mobileFloatingBar}
             testID={`${idPrefix}-mobile-floating-bar`}
+            {...getWebClassNameProps("public-chrome-navbar-mobile-floating-bar")}
           >
             {showAuthControls && hintShowsAuth ? (
-              <View style={styles.mobileMiniAvatar} nativeID={`${idPrefix}-mobile-mini-avatar`} testID={`${idPrefix}-mobile-mini-avatar`}>
-                <Text style={styles.mobileMiniAvatarInitial}>
+              <View
+                style={styles.mobileMiniAvatar}
+                nativeID={`${idPrefix}-mobile-mini-avatar`}
+                testID={`${idPrefix}-mobile-mini-avatar`}
+                {...getWebClassNameProps("public-chrome-navbar-mobile-mini-avatar")}
+              >
+                <Text
+                  style={styles.mobileMiniAvatarInitial}
+                  {...getWebClassNameProps("public-chrome-navbar-mobile-mini-avatar-initial")}
+                >
                   {(displayUser?.first_name?.charAt(0) ?? displayUser?.email?.charAt(0) ?? "A").toUpperCase()}
                 </Text>
               </View>
@@ -367,6 +469,7 @@ export function PublicPageChrome({
               onPress={() => setIsMobileMenuVisible(true)}
               style={({ pressed }) => [styles.menuTrigger, pressed ? styles.menuTriggerPressed : null]}
               testID={`${idPrefix}-menu-trigger`}
+              {...getWebClassNameProps("public-chrome-navbar-menu-trigger")}
             >
               <Feather color={colors.text} name="menu" size={20} />
             </Pressable>
@@ -394,120 +497,359 @@ export function PublicPageChrome({
         ) : null}
 
         {showFooter ? (
-          <View nativeID={`${idPrefix}-footer`} style={[styles.footerShell, screenScrollable ? styles.footerShellStatic : null, { paddingHorizontal: outerPaddingHorizontal }]} testID={`${idPrefix}-footer`}>
-          {showFooterTopDivider ? (
-            <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
-          ) : null}
-          <View nativeID={`${idPrefix}-footer-inner`} style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]} testID={`${idPrefix}-footer-inner`}>
-            <View nativeID={`${idPrefix}-footer-grid`} style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]} testID={`${idPrefix}-footer-grid`}>
-              <View nativeID={`${idPrefix}-footer-brand-block`} style={styles.footerBrandBlock} testID={`${idPrefix}-footer-brand-block`}>
-                <View nativeID={`${idPrefix}-footer-brand-row`} style={styles.footerBrandRow} testID={`${idPrefix}-footer-brand-row`}>
-                  <View nativeID={`${idPrefix}-footer-brand-mark`} style={styles.footerBrandMark} testID={`${idPrefix}-footer-brand-mark`}>
-                    <Text nativeID={`${idPrefix}-footer-brand-mark-label`} style={styles.footerBrandMarkLabel} testID={`${idPrefix}-footer-brand-mark-label`}>
-                      弐
-                    </Text>
-                  </View>
-                  <View>
-                    <Text nativeID={`${idPrefix}-footer-brand-title`} style={styles.footerBrandTitle} testID={`${idPrefix}-footer-brand-title`}>
-                      ElDojo
-                    </Text>
-                    <Text nativeID={`${idPrefix}-footer-tagline`} style={styles.footerTagline} testID={`${idPrefix}-footer-tagline`}>
-                      Sencillez · Orden · Dojo
-                    </Text>
-                  </View>
-                </View>
-                <Text nativeID={`${idPrefix}-footer-brand-description`} style={styles.footerBrandDescription} testID={`${idPrefix}-footer-brand-description`}>
-                  Software de administración hecho para academias de artes marciales que prefieren la simplicidad antes que el ruido visual.
-                </Text>
-                <View nativeID={`${idPrefix}-footer-values-row`} style={styles.footerValuesRow} testID={`${idPrefix}-footer-values-row`}>
-                  <View style={[styles.footerValuePill, { backgroundColor: judogiRedSoft }]}>
-                    <View style={styles.footerValueDotRed} />
-                    <Text style={styles.footerValueLabel}>Disciplina</Text>
-                  </View>
-                  <View style={[styles.footerValuePill, { backgroundColor: tatamiGreenSoft }]}>
-                    <View style={styles.footerValueDotGreen} />
-                    <Text style={styles.footerValueLabel}>Respeto</Text>
-                  </View>
-                  <View style={[styles.footerValuePill, { backgroundColor: indigoBlueSoft }]}>
-                    <View style={styles.footerValueDotIndigo} />
-                    <Text style={styles.footerValueLabel}>Honor</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.footerColumnsWrap}>
-                <View nativeID={`${idPrefix}-footer-nav-block`} style={styles.footerBlock} testID={`${idPrefix}-footer-nav-block`}>
-                  <Text nativeID={`${idPrefix}-footer-nav-title`} style={styles.footerBlockTitle} testID={`${idPrefix}-footer-nav-title`}>
-                    Navegar
-                  </Text>
-                  {[
-                    { key: "home", label: "Inicio" },
-                    { key: "about", label: "Acerca de ElDojo" },
-                  ].map((item) => (
-                    <Pressable
-                      key={item.key}
-                      nativeID={`${idPrefix}-footer-nav-item-${item.key}`}
-                      onPress={() => navigateToPublicPageKey(item.key as Parameters<typeof navigateToPublicPageKey>[0])}
-                      style={({ pressed }) => [styles.footerLink, pressed ? styles.footerLinkPressed : null]}
-                      testID={`${idPrefix}-footer-nav-item-${item.key}`}
+          <View
+            nativeID={`${idPrefix}-footer`}
+            style={[
+              styles.footerShell,
+              screenScrollable ? styles.footerShellStatic : null,
+              { paddingHorizontal: outerPaddingHorizontal },
+            ]}
+            testID={`${idPrefix}-footer`}
+            {...getWebClassNameProps(
+              joinWebClassNames(
+                "public-chrome-footer-shell",
+                `${idPrefix}-footer`
+              )
+            )}
+          >
+            {showFooterTopDivider ? (
+              <View
+                nativeID={`${idPrefix}-footer-divider-top`}
+                style={styles.footerDividerTop}
+                testID={`${idPrefix}-footer-divider-top`}
+                {...getWebClassNameProps("public-chrome-footer-divider-top")}
+              />
+            ) : null}
+            <View
+              nativeID={`${idPrefix}-footer-inner`}
+              style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]}
+              testID={`${idPrefix}-footer-inner`}
+              {...getWebClassNameProps("public-chrome-footer-inner")}
+            >
+              <View
+                nativeID={`${idPrefix}-footer-grid`}
+                style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]}
+                testID={`${idPrefix}-footer-grid`}
+                {...getWebClassNameProps("public-chrome-footer-grid")}
+              >
+                <View
+                  nativeID={`${idPrefix}-footer-brand-block`}
+                  style={styles.footerBrandBlock}
+                  testID={`${idPrefix}-footer-brand-block`}
+                  {...getWebClassNameProps("public-chrome-footer-brand-block")}
+                >
+                  <View
+                    nativeID={`${idPrefix}-footer-brand-row`}
+                    style={styles.footerBrandRow}
+                    testID={`${idPrefix}-footer-brand-row`}
+                    {...getWebClassNameProps("public-chrome-footer-brand-row")}
+                  >
+                    <View
+                      nativeID={`${idPrefix}-footer-brand-mark`}
+                      style={styles.footerBrandMark}
+                      testID={`${idPrefix}-footer-brand-mark`}
+                      {...getWebClassNameProps("public-chrome-footer-brand-mark")}
                     >
-                      <Feather color={agedWood} name="arrow-right" size={12} style={styles.footerLinkArrow} />
-                      <Text style={styles.footerLinkLabel}>{item.label}</Text>
-                    </Pressable>
-                  ))}
+                      <Text
+                        nativeID={`${idPrefix}-footer-brand-mark-label`}
+                        style={styles.footerBrandMarkLabel}
+                        testID={`${idPrefix}-footer-brand-mark-label`}
+                        {...getWebClassNameProps("public-chrome-footer-brand-mark-label")}
+                      >
+                        弐
+                      </Text>
+                    </View>
+                    <View>
+                      <Text
+                        nativeID={`${idPrefix}-footer-brand-title`}
+                        style={styles.footerBrandTitle}
+                        testID={`${idPrefix}-footer-brand-title`}
+                        {...getWebClassNameProps("public-chrome-footer-brand-title")}
+                      >
+                        ElDojo
+                      </Text>
+                      <Text
+                        nativeID={`${idPrefix}-footer-tagline`}
+                        style={styles.footerTagline}
+                        testID={`${idPrefix}-footer-tagline`}
+                        {...getWebClassNameProps("public-chrome-footer-tagline")}
+                      >
+                        Sencillez · Orden · Dojo
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    nativeID={`${idPrefix}-footer-brand-description`}
+                    style={styles.footerBrandDescription}
+                    testID={`${idPrefix}-footer-brand-description`}
+                    {...getWebClassNameProps("public-chrome-footer-brand-description")}
+                  >
+                    Software de administración hecho para academias de artes marciales que prefieren la simplicidad antes que el ruido visual.
+                  </Text>
+                  <View
+                    nativeID={`${idPrefix}-footer-values-row`}
+                    style={styles.footerValuesRow}
+                    testID={`${idPrefix}-footer-values-row`}
+                    {...getWebClassNameProps("public-chrome-footer-values-row")}
+                  >
+                    <View
+                      style={[styles.footerValuePill, { backgroundColor: judogiRedSoft }]}
+                      {...getWebClassNameProps(
+                        joinWebClassNames(
+                          "public-chrome-footer-value-pill",
+                          "public-chrome-footer-value-pill--red"
+                        )
+                      )}
+                    >
+                      <View
+                        style={styles.footerValueDotRed}
+                        {...getWebClassNameProps("public-chrome-footer-value-dot-red")}
+                      />
+                      <Text
+                        style={styles.footerValueLabel}
+                        {...getWebClassNameProps("public-chrome-footer-value-label")}
+                      >
+                        Disciplina
+                      </Text>
+                    </View>
+                    <View
+                      style={[styles.footerValuePill, { backgroundColor: tatamiGreenSoft }]}
+                      {...getWebClassNameProps(
+                        joinWebClassNames(
+                          "public-chrome-footer-value-pill",
+                          "public-chrome-footer-value-pill--green"
+                        )
+                      )}
+                    >
+                      <View
+                        style={styles.footerValueDotGreen}
+                        {...getWebClassNameProps("public-chrome-footer-value-dot-green")}
+                      />
+                      <Text
+                        style={styles.footerValueLabel}
+                        {...getWebClassNameProps("public-chrome-footer-value-label")}
+                      >
+                        Respeto
+                      </Text>
+                    </View>
+                    <View
+                      style={[styles.footerValuePill, { backgroundColor: indigoBlueSoft }]}
+                      {...getWebClassNameProps(
+                        joinWebClassNames(
+                          "public-chrome-footer-value-pill",
+                          "public-chrome-footer-value-pill--indigo"
+                        )
+                      )}
+                    >
+                      <View
+                        style={styles.footerValueDotIndigo}
+                        {...getWebClassNameProps("public-chrome-footer-value-dot-indigo")}
+                      />
+                      <Text
+                        style={styles.footerValueLabel}
+                        {...getWebClassNameProps("public-chrome-footer-value-label")}
+                      >
+                        Honor
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View nativeID={`${idPrefix}-footer-contact-block`} style={styles.footerBlock} testID={`${idPrefix}-footer-contact-block`}>
-                  <Text nativeID={`${idPrefix}-footer-contact-title`} style={styles.footerBlockTitle} testID={`${idPrefix}-footer-contact-title`}>
-                    Contacto
-                  </Text>
-                  <View style={styles.footerContactRow}>
-                    <View style={styles.footerContactIconWrap}>
-                      <Feather color={judogiRed} name="mail" size={13} />
-                    </View>
-                    <Text style={styles.footerContactText}>hola@eldojo.tech</Text>
+                <View style={styles.footerColumnsWrap}>
+                  <View
+                    nativeID={`${idPrefix}-footer-nav-block`}
+                    style={styles.footerBlock}
+                    testID={`${idPrefix}-footer-nav-block`}
+                    {...getWebClassNameProps("public-chrome-footer-nav-block")}
+                  >
+                    <Text
+                      nativeID={`${idPrefix}-footer-nav-title`}
+                      style={styles.footerBlockTitle}
+                      testID={`${idPrefix}-footer-nav-title`}
+                      {...getWebClassNameProps("public-chrome-footer-nav-title")}
+                    >
+                      Navegar
+                    </Text>
+                    {[
+                      { key: "home", label: "Inicio" },
+                      { key: "about", label: "Acerca de ElDojo" },
+                    ].map((item) => (
+                      <Pressable
+                        key={item.key}
+                        nativeID={`${idPrefix}-footer-nav-item-${item.key}`}
+                        onPress={() => navigateToPublicPageKey(item.key as Parameters<typeof navigateToPublicPageKey>[0])}
+                        style={({ pressed }) => [styles.footerLink, pressed ? styles.footerLinkPressed : null]}
+                        testID={`${idPrefix}-footer-nav-item-${item.key}`}
+                        {...getWebClassNameProps(`public-chrome-footer-nav-item-${item.key}`)}
+                      >
+                        <Feather
+                          color={agedWood}
+                          name="arrow-right"
+                          size={12}
+                          style={styles.footerLinkArrow}
+                          {...getWebClassNameProps("public-chrome-footer-link-arrow")}
+                        />
+                        <Text
+                          style={styles.footerLinkLabel}
+                          {...getWebClassNameProps("public-chrome-footer-link-label")}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    ))}
                   </View>
-                  <View style={styles.footerContactRow}>
-                    <View style={styles.footerContactIconWrap}>
-                      <Feather color={judogiRed} name="phone" size={13} />
+
+                  <View
+                    nativeID={`${idPrefix}-footer-contact-block`}
+                    style={styles.footerBlock}
+                    testID={`${idPrefix}-footer-contact-block`}
+                    {...getWebClassNameProps("public-chrome-footer-contact-block")}
+                  >
+                    <Text
+                      nativeID={`${idPrefix}-footer-contact-title`}
+                      style={styles.footerBlockTitle}
+                      testID={`${idPrefix}-footer-contact-title`}
+                      {...getWebClassNameProps("public-chrome-footer-contact-title")}
+                    >
+                      Contacto
+                    </Text>
+                    <View
+                      style={styles.footerContactRow}
+                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
+                    >
+                      <View
+                        style={styles.footerContactIconWrap}
+                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
+                      >
+                        <Feather color={judogiRed} name="mail" size={13} />
+                      </View>
+                      <Text
+                        style={styles.footerContactText}
+                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
+                      >
+                        hola@eldojo.tech
+                      </Text>
                     </View>
-                    <Text style={styles.footerContactText}>+52 81 0000 0000</Text>
+                    <View
+                      style={styles.footerContactRow}
+                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
+                    >
+                      <View
+                        style={styles.footerContactIconWrap}
+                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
+                      >
+                        <Feather color={judogiRed} name="phone" size={13} />
+                      </View>
+                      <Text
+                        style={styles.footerContactText}
+                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
+                      >
+                        +52 81 0000 0000
+                      </Text>
+                    </View>
+                    <View
+                      style={styles.footerContactRow}
+                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
+                    >
+                      <View
+                        style={styles.footerContactIconWrap}
+                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
+                      >
+                        <Feather color={judogiRed} name="map-pin" size={13} />
+                      </View>
+                      <Text
+                        style={styles.footerContactText}
+                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
+                      >
+                        Monterrey, N.L. · México
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.footerContactRow}>
-                    <View style={styles.footerContactIconWrap}>
-                      <Feather color={judogiRed} name="map-pin" size={13} />
-                    </View>
-                    <Text style={styles.footerContactText}>Monterrey, N.L. · México</Text>
+                </View>
+              </View>
+
+              <View
+                nativeID={`${idPrefix}-footer-divider`}
+                style={styles.footerDivider}
+                testID={`${idPrefix}-footer-divider`}
+                {...getWebClassNameProps("public-chrome-footer-divider")}
+              />
+
+              <View
+                nativeID={`${idPrefix}-footer-bottom`}
+                style={[styles.footerBottom, !isMobile ? styles.footerBottomDesktop : null]}
+                testID={`${idPrefix}-footer-bottom`}
+                {...getWebClassNameProps("public-chrome-footer-bottom")}
+              >
+                <Text
+                  nativeID={`${idPrefix}-footer-copyright`}
+                  style={styles.footerCopyright}
+                  testID={`${idPrefix}-footer-copyright`}
+                  {...getWebClassNameProps("public-chrome-footer-copyright")}
+                >
+                  © {new Date().getFullYear()} ElDojo. Todos los derechos reservados.
+                </Text>
+                <View
+                  style={styles.footerLegalRow}
+                  {...getWebClassNameProps("public-chrome-footer-legal-row")}
+                >
+                  <Pressable
+                    style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}
+                    {...getWebClassNameProps("public-chrome-footer-legal-link")}
+                  >
+                    <Text
+                      style={styles.footerLegalLabel}
+                      {...getWebClassNameProps("public-chrome-footer-legal-label")}
+                    >
+                      Términos
+                    </Text>
+                  </Pressable>
+                  <View
+                    style={styles.footerLegalSeparator}
+                    {...getWebClassNameProps("public-chrome-footer-legal-separator")}
+                  />
+                  <Pressable
+                    style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}
+                    {...getWebClassNameProps("public-chrome-footer-legal-link")}
+                  >
+                    <Text
+                      style={styles.footerLegalLabel}
+                      {...getWebClassNameProps("public-chrome-footer-legal-label")}
+                    >
+                      Privacidad
+                    </Text>
+                  </Pressable>
+                  <View
+                    style={styles.footerLegalSeparator}
+                    {...getWebClassNameProps("public-chrome-footer-legal-separator")}
+                  />
+                  <View
+                    style={styles.footerMadeIn}
+                    {...getWebClassNameProps("public-chrome-footer-made-in")}
+                  >
+                    <Text
+                      style={styles.footerMadeInLabel}
+                      {...getWebClassNameProps("public-chrome-footer-made-in-label")}
+                    >
+                      Hecho con
+                    </Text>
+                    <Feather
+                      color={goldenYellow}
+                      name="award"
+                      size={12}
+                      style={styles.footerMadeInIcon}
+                      {...getWebClassNameProps("public-chrome-footer-made-in-icon")}
+                    />
+                    <Text
+                      style={styles.footerMadeInLabel}
+                      {...getWebClassNameProps("public-chrome-footer-made-in-label")}
+                    >
+                      en México
+                    </Text>
                   </View>
                 </View>
               </View>
             </View>
-
-            <View nativeID={`${idPrefix}-footer-divider`} style={styles.footerDivider} testID={`${idPrefix}-footer-divider`} />
-
-            <View nativeID={`${idPrefix}-footer-bottom`} style={[styles.footerBottom, !isMobile ? styles.footerBottomDesktop : null]} testID={`${idPrefix}-footer-bottom`}>
-              <Text nativeID={`${idPrefix}-footer-copyright`} style={styles.footerCopyright} testID={`${idPrefix}-footer-copyright`}>
-                © {new Date().getFullYear()} ElDojo. Todos los derechos reservados.
-              </Text>
-              <View style={styles.footerLegalRow}>
-                <Pressable style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}>
-                  <Text style={styles.footerLegalLabel}>Términos</Text>
-                </Pressable>
-                <View style={styles.footerLegalSeparator} />
-                <Pressable style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}>
-                  <Text style={styles.footerLegalLabel}>Privacidad</Text>
-                </Pressable>
-                <View style={styles.footerLegalSeparator} />
-                <View style={styles.footerMadeIn}>
-                  <Text style={styles.footerMadeInLabel}>
-                    Hecho con
-                  </Text>
-                  <Feather color={goldenYellow} name="award" size={12} style={styles.footerMadeInIcon} />
-                  <Text style={styles.footerMadeInLabel}>en México</Text>
-                </View>
-              </View>
-            </View>
-          </View>
           </View>
         ) : null}
 
@@ -519,7 +861,12 @@ export function PublicPageChrome({
           onClose={() => setIsMobileMenuVisible(false)}
           testID={`${idPrefix}-mobile-menu`}
         >
-          <View nativeID={`${idPrefix}-mobile-menu-content`} style={styles.mobileMenuContent} testID={`${idPrefix}-mobile-menu-content`}>
+          <View
+            nativeID={`${idPrefix}-mobile-menu-content`}
+            style={styles.mobileMenuContent}
+            testID={`${idPrefix}-mobile-menu-content`}
+            {...getWebClassNameProps("public-chrome-mobile-menu-content")}
+          >
             {navItems.map((item) => (
               <AppButton
                 key={item.key}
@@ -549,19 +896,37 @@ export function PublicPageChrome({
             {showAuthControls && actionItems.length === 0 ? (
               hintShowsAuth ? (
                 <>
-                  <View style={styles.mobileMenuProfileCard}>
-                    <View style={styles.mobileMenuAvatar}>
-                      <Text style={styles.mobileMenuAvatarInitial}>
+                  <View
+                    style={styles.mobileMenuProfileCard}
+                    {...getWebClassNameProps("public-chrome-mobile-menu-profile-card")}
+                  >
+                    <View
+                      style={styles.mobileMenuAvatar}
+                      {...getWebClassNameProps("public-chrome-mobile-menu-avatar")}
+                    >
+                      <Text
+                        style={styles.mobileMenuAvatarInitial}
+                        {...getWebClassNameProps("public-chrome-mobile-menu-avatar-initial")}
+                      >
                         {(displayUser?.first_name?.charAt(0) ?? displayUser?.email?.charAt(0) ?? "A").toUpperCase()}
                       </Text>
                     </View>
-                    <View style={styles.mobileMenuProfileCopy}>
-                      <Text style={styles.mobileMenuProfileName}>
+                    <View
+                      style={styles.mobileMenuProfileCopy}
+                      {...getWebClassNameProps("public-chrome-mobile-menu-profile-copy")}
+                    >
+                      <Text
+                        style={styles.mobileMenuProfileName}
+                        {...getWebClassNameProps("public-chrome-mobile-menu-profile-name")}
+                      >
                         {displayUser?.first_name
                           ? `${displayUser.first_name}${displayUser.last_name ? ` ${displayUser.last_name}` : ""}`
                           : displayUser?.email ?? "Administrador"}
                       </Text>
-                      <Text style={styles.mobileMenuProfileEmail}>
+                      <Text
+                        style={styles.mobileMenuProfileEmail}
+                        {...getWebClassNameProps("public-chrome-mobile-menu-profile-email")}
+                      >
                         {displayUser?.email ?? "Sesión iniciada"}
                       </Text>
                     </View>

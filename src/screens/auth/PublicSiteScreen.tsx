@@ -272,18 +272,44 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
         source={{ uri: aboutImage }}
         style={[styles.sectionImage, isDesktop ? styles.sectionImageDesktop : null]}
         testID="screens-auth-public-about-image"
+        {...getWebClassNameProps("screens-auth-public-about-image")}
       />
-      <View nativeID="screens-auth-public-about-copy" style={styles.aboutCopy} testID="screens-auth-public-about-copy">
-        <Text nativeID="screens-auth-public-about-eyebrow" style={styles.sectionEyebrow} testID="screens-auth-public-about-eyebrow">
+      <View
+        nativeID="screens-auth-public-about-copy"
+        style={styles.aboutCopy}
+        testID="screens-auth-public-about-copy"
+        {...getWebClassNameProps("screens-auth-public-about-copy")}
+      >
+        <Text
+          nativeID="screens-auth-public-about-eyebrow"
+          style={styles.sectionEyebrow}
+          testID="screens-auth-public-about-eyebrow"
+          {...getWebClassNameProps("screens-auth-public-about-eyebrow")}
+        >
           Acerca de nosotros
         </Text>
-        <Text nativeID="screens-auth-public-about-title" style={styles.sectionTitle} testID="screens-auth-public-about-title">
+        <Text
+          nativeID="screens-auth-public-about-title"
+          style={styles.sectionTitle}
+          testID="screens-auth-public-about-title"
+          {...getWebClassNameProps("screens-auth-public-about-title")}
+        >
           ElDojo ayuda a academias a ordenar la operacion diaria.
         </Text>
-        <Text nativeID="screens-auth-public-about-description" style={styles.sectionDescription} testID="screens-auth-public-about-description">
+        <Text
+          nativeID="screens-auth-public-about-description"
+          style={styles.sectionDescription}
+          testID="screens-auth-public-about-description"
+          {...getWebClassNameProps("screens-auth-public-about-description")}
+        >
           ElDojo ayuda a dueños de academias de MMA, BJJ y judo a ordenar su operacion diaria sin hojas sueltas ni mensajes perdidos. Lleva control de alumnos, pagos, asistencia, clases y sucursales desde una interfaz clara para recepcion, coordinacion y direccion.
         </Text>
-        <View nativeID="screens-auth-public-about-highlights" style={styles.highlightsList} testID="screens-auth-public-about-highlights">
+        <View
+          nativeID="screens-auth-public-about-highlights"
+          style={styles.highlightsList}
+          testID="screens-auth-public-about-highlights"
+          {...getWebClassNameProps("screens-auth-public-about-highlights")}
+        >
           {[
             "Cobro y seguimiento de mensualidades en un solo lugar.",
             "Control de asistencia y clases para todo tu equipo.",
@@ -294,16 +320,19 @@ function renderAboutSection(isDesktop: boolean, onLayout?: (event: LayoutChangeE
               nativeID={`screens-auth-public-about-highlight-${index + 1}`}
               style={styles.highlightItem}
               testID={`screens-auth-public-about-highlight-${index + 1}`}
+              {...getWebClassNameProps(`screens-auth-public-about-highlight-${index + 1}`)}
             >
               <View
                 nativeID={`screens-auth-public-about-highlight-dot-${index + 1}`}
                 style={styles.highlightDot}
                 testID={`screens-auth-public-about-highlight-dot-${index + 1}`}
+                {...getWebClassNameProps(`screens-auth-public-about-highlight-dot-${index + 1}`)}
               />
               <Text
                 nativeID={`screens-auth-public-about-highlight-text-${index + 1}`}
                 style={styles.highlightText}
                 testID={`screens-auth-public-about-highlight-text-${index + 1}`}
+                {...getWebClassNameProps(`screens-auth-public-about-highlight-text-${index + 1}`)}
               >
                 {item}
               </Text>
@@ -554,89 +583,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
     setDesktopNavSelection("home");
   }, [page]);
 
-  useEffect(() => {
-    if (!isWebDesktop || typeof document === "undefined") {
-      return;
-    }
 
-    if (document.getElementById(PUBLIC_WEB_STYLE_TAG_ID)) {
-      return;
-    }
-
-    const styleTag = document.createElement("style");
-    styleTag.id = PUBLIC_WEB_STYLE_TAG_ID;
-    styleTag.textContent = `
-      .eldojo-public-desktop-scroll-root {
-        scroll-behavior: smooth;
-      }
-
-      .eldojo-public-desktop-hover-target {
-        transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 220ms ease, opacity 180ms ease;
-      }
-
-      .eldojo-public-desktop-fade-in {
-        animation: eldojoPublicDesktopFadeIn 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
-      }
-
-      .eldojo-public-desktop-fade-in-delay-1 {
-        animation-delay: 70ms;
-      }
-
-      .eldojo-public-desktop-fade-in-delay-2 {
-        animation-delay: 120ms;
-      }
-
-      .eldojo-public-desktop-fade-in-delay-3 {
-        animation-delay: 180ms;
-      }
-
-      .eldojo-public-desktop-fade-in-delay-4 {
-        animation-delay: 240ms;
-      }
-
-      .eldojo-public-desktop-form-fade-in {
-        animation: eldojoPublicDesktopFormFadeIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-        animation-delay: 40ms;
-      }
-
-      @keyframes eldojoPublicDesktopFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(18px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      @keyframes eldojoPublicDesktopFormFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(12px) scale(0.985);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
-      .eldojo-public-desktop-hero-full-viewport {
-        min-height: 100vh;
-        min-height: 100dvh;
-        padding-top: 0;
-        margin-top: 0;
-      }
-
-      #screens-auth-public-home-footer {
-        margin-top: 5rem;
-      }
-    `;
-
-    document.head.appendChild(styleTag);
-  }, [isWebDesktop]);
 
   const heroHeight = useMemo(() => {
     if (page !== "home") {
@@ -1018,9 +965,13 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                         onPress={() => setLandingAuthMode(null)}
                         style={({ pressed }) => [styles.heroBackLink, pressed ? { opacity: 0.8 } : null]}
                         testID="screens-auth-public-close-auth-inline"
+                        {...getWebClassNameProps("screens-auth-public-close-auth-inline")}
                       >
                         <Feather color={colors.onPrimaryMuted} name="arrow-left" size={14} />
-                        <Text style={styles.heroBackLinkLabel}>Volver a la portada</Text>
+                        <Text
+                          style={styles.heroBackLinkLabel}
+                          {...getWebClassNameProps("screens-auth-public-close-auth-inline-label")}
+                        >Volver a la portada</Text>
                       </Pressable>
                     ) : null}
 
@@ -1031,6 +982,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                         nativeID="screens-auth-public-mobile-section-nav"
                         showsHorizontalScrollIndicator={false}
                         testID="screens-auth-public-mobile-section-nav"
+                        {...getWebClassNameProps("screens-auth-public-mobile-section-nav")}
                       >
                         {MOBILE_SECTION_NAV_ITEMS.map((item) => {
                           const isActive = page === item.page;
@@ -1056,11 +1008,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 pressed ? styles.mobileSectionChipPressed : null,
                               ]}
                               testID={`screens-auth-public-mobile-section-chip-${item.key}`}
+                              {...getWebClassNameProps(
+                                joinWebClassNames(
+                                  `screens-auth-public-mobile-section-chip-${item.key}`,
+                                  isActive ? "screens-auth-public-mobile-section-chip--active" : null
+                                )
+                              )}
                             >
                               <Text
                                 nativeID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
                                 style={styles.mobileSectionChipLabel}
                                 testID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
+                                {...getWebClassNameProps("screens-auth-public-mobile-section-chip-label")}
                               >
                                 {item.label}
                               </Text>
@@ -1086,7 +1045,12 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                     ]}
                     testID="screens-auth-public-form-card"
                   >
-                    <View nativeID="screens-auth-public-form-tabs" style={styles.tabs} testID="screens-auth-public-form-tabs">
+                    <View
+                      nativeID="screens-auth-public-form-tabs"
+                      style={styles.tabs}
+                      testID="screens-auth-public-form-tabs"
+                      {...getWebClassNameProps("screens-auth-public-form-tabs")}
+                    >
                       <Pressable
                         accessibilityRole="link"
                         nativeID="screens-auth-public-form-tab-create-account"
@@ -1103,11 +1067,23 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           pressed ? styles.tabButtonPressed : null,
                         ]}
                         testID="screens-auth-public-form-tab-create-account"
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "screens-auth-public-form-tab-button",
+                            mode === "academy" ? "screens-auth-public-form-tab-button--active" : null
+                          )
+                        )}
                       >
                         <Text
                           nativeID="screens-auth-public-form-tab-create-account-label"
                           style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}
                           testID="screens-auth-public-form-tab-create-account-label"
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "screens-auth-public-form-tab-label",
+                              mode === "academy" ? "screens-auth-public-form-tab-label--active" : null
+                            )
+                          )}
                         >
                           Crear cuenta
                         </Text>
@@ -1128,11 +1104,23 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           pressed ? styles.tabButtonPressed : null,
                         ]}
                         testID="screens-auth-public-form-tab-signin"
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "screens-auth-public-form-tab-button",
+                            mode === "login" ? "screens-auth-public-form-tab-button--active" : null
+                          )
+                        )}
                       >
                         <Text
                           nativeID="screens-auth-public-form-tab-signin-label"
                           style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}
                           testID="screens-auth-public-form-tab-signin-label"
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "screens-auth-public-form-tab-label",
+                              mode === "login" ? "screens-auth-public-form-tab-label--active" : null
+                            )
+                          )}
                         >
                           Iniciar sesion
                         </Text>
@@ -1141,26 +1129,48 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
 
                     {mode === "academy" ? (
                       <>
-                        <Text nativeID="screens-auth-public-register-form-title" style={styles.formTitle} testID="screens-auth-public-register-form-title">
+                        <Text
+                          nativeID="screens-auth-public-register-form-title"
+                          style={styles.formTitle}
+                          testID="screens-auth-public-register-form-title"
+                          {...getWebClassNameProps("screens-auth-public-form-title")}
+                        >
                           {isAwaitingConfirmation ? "Esperando confirmación" : "Registra tu academia"}
                         </Text>
-                        <Text nativeID="screens-auth-public-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-register-form-subtitle">
+                        <Text
+                          nativeID="screens-auth-public-register-form-subtitle"
+                          style={styles.formSubtitle}
+                          testID="screens-auth-public-register-form-subtitle"
+                          {...getWebClassNameProps("screens-auth-public-form-subtitle")}
+                        >
                           {isAwaitingConfirmation
                             ? "Tu cuenta quedó pendiente de confirmación. Puedes abrir el enlace desde cualquier navegador o dispositivo y esta página entrará sola en cuanto detecte la confirmación."
                             : "Registra tu academia y crea la cuenta para administrarla hoy mismo."}
                         </Text>
                         {isAwaitingConfirmation ? (
-                          <View nativeID="screens-auth-public-register-pending-state" style={styles.pendingConfirmationCard} testID="screens-auth-public-register-pending-state">
-                            <View nativeID="screens-auth-public-register-pending-indicator" style={styles.pendingConfirmationIndicator} testID="screens-auth-public-register-pending-indicator" />
+                          <View
+                            nativeID="screens-auth-public-register-pending-state"
+                            style={styles.pendingConfirmationCard}
+                            testID="screens-auth-public-register-pending-state"
+                            {...getWebClassNameProps("screens-auth-public-pending-state-card")}
+                          >
+                            <View
+                              nativeID="screens-auth-public-register-pending-indicator"
+                              style={styles.pendingConfirmationIndicator}
+                              testID="screens-auth-public-register-pending-indicator"
+                              {...getWebClassNameProps("screens-auth-public-pending-state-indicator")}
+                            />
                             <View
                               nativeID="screens-auth-public-register-pending-copy"
                               style={styles.pendingConfirmationCopy}
                               testID="screens-auth-public-register-pending-copy"
+                              {...getWebClassNameProps("screens-auth-public-pending-state-copy")}
                             >
                               <Text
                                 nativeID="screens-auth-public-register-pending-title"
                                 style={styles.pendingConfirmationTitle}
                                 testID="screens-auth-public-register-pending-title"
+                                {...getWebClassNameProps("screens-auth-public-pending-state-title")}
                               >
                                 {redeemPendingSessionMutation.isPending
                                   ? "Correo confirmado. Entrando a tu panel..."
@@ -1170,6 +1180,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 nativeID="screens-auth-public-register-pending-description"
                                 style={styles.pendingConfirmationDescription}
                                 testID="screens-auth-public-register-pending-description"
+                                {...getWebClassNameProps("screens-auth-public-pending-state-description")}
                               >
                                 {redeemPendingSessionMutation.isPending
                                   ? "Ya detectamos la confirmación y estamos abriendo tu sesión."
@@ -1232,6 +1243,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 onPress={() => setShowRegisterPassword((current) => !current)}
                                 style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
                                 testID="screens-auth-public-register-password-toggle"
+                                {...getWebClassNameProps("screens-auth-public-password-toggle")}
                               >
                                 <Feather color={colors.textMuted} name={showRegisterPassword ? "eye-off" : "eye"} size={18} />
                               </Pressable>
@@ -1250,15 +1262,35 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                             value={MASKED_REGISTERED_PASSWORD}
                           />
                         )}
-                        <Text nativeID="screens-auth-public-register-helper" style={styles.helper} testID="screens-auth-public-register-helper">
+                        <Text
+                          nativeID="screens-auth-public-register-helper"
+                          style={styles.helper}
+                          testID="screens-auth-public-register-helper"
+                          {...getWebClassNameProps("screens-auth-public-form-helper")}
+                        >
                           {isAwaitingConfirmation
                             ? "Los datos quedaron bloqueados para evitar cambios mientras esperamos la confirmación. Si necesitas corregir algo, usa otro correo."
                             : "El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre."}
                         </Text>
-                        {formError ? <Text nativeID="screens-auth-public-register-error" style={styles.error} testID="screens-auth-public-register-error">{formError}</Text> : null}
-                        {formFeedback ? <Text nativeID="screens-auth-public-register-feedback" style={styles.success} testID="screens-auth-public-register-feedback">{formFeedback}</Text> : null}
+                        {formError ? <Text
+                          nativeID="screens-auth-public-register-error"
+                          style={styles.error}
+                          testID="screens-auth-public-register-error"
+                          {...getWebClassNameProps("screens-auth-public-form-error")}
+                        >{formError}</Text> : null}
+                        {formFeedback ? <Text
+                          nativeID="screens-auth-public-register-feedback"
+                          style={styles.success}
+                          testID="screens-auth-public-register-feedback"
+                          {...getWebClassNameProps("screens-auth-public-form-success")}
+                        >{formFeedback}</Text> : null}
                         {isAwaitingConfirmation ? (
-                          <View nativeID="screens-auth-public-register-actions" style={styles.formActions} testID="screens-auth-public-register-actions">
+                          <View
+                            nativeID="screens-auth-public-register-actions"
+                            style={styles.formActions}
+                            testID="screens-auth-public-register-actions"
+                            {...getWebClassNameProps("screens-auth-public-form-actions")}
+                          >
                             <AppButton
                               label="Reenviar enlace"
                               loading={resendMutation.isPending}
@@ -1287,8 +1319,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                       </>
                     ) : (
                       <>
-                        <Text nativeID="screens-auth-public-signin-form-title" style={styles.formTitle} testID="screens-auth-public-signin-form-title">Bienvenido de vuelta</Text>
-                        <Text nativeID="screens-auth-public-signin-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-signin-form-subtitle">
+                        <Text
+                          nativeID="screens-auth-public-signin-form-title"
+                          style={styles.formTitle}
+                          testID="screens-auth-public-signin-form-title"
+                          {...getWebClassNameProps("screens-auth-public-form-title")}
+                        >Bienvenido de vuelta</Text>
+                        <Text
+                          nativeID="screens-auth-public-signin-form-subtitle"
+                          style={styles.formSubtitle}
+                          testID="screens-auth-public-signin-form-subtitle"
+                          {...getWebClassNameProps("screens-auth-public-form-subtitle")}
+                        >
                           Inicia sesion con la cuenta administradora de tu academia para entrar al panel operativo.
                         </Text>
                         <AppInput
@@ -1316,6 +1358,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                               onPress={() => setShowPassword((current) => !current)}
                               style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
                               testID="screens-auth-public-signin-password-toggle"
+                              {...getWebClassNameProps("screens-auth-public-password-toggle")}
                             >
                               <Feather color={colors.textMuted} name={showPassword ? "eye-off" : "eye"} size={18} />
                             </Pressable>
@@ -1324,8 +1367,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           testID="screens-auth-public-signin-password-input"
                           value={password}
                         />
-                        {formError ? <Text nativeID="screens-auth-public-signin-error" style={styles.error} testID="screens-auth-public-signin-error">{formError}</Text> : null}
-                        {formFeedback ? <Text nativeID="screens-auth-public-signin-feedback" style={styles.success} testID="screens-auth-public-signin-feedback">{formFeedback}</Text> : null}
+                        {formError ? <Text
+                          nativeID="screens-auth-public-signin-error"
+                          style={styles.error}
+                          testID="screens-auth-public-signin-error"
+                          {...getWebClassNameProps("screens-auth-public-form-error")}
+                        >{formError}</Text> : null}
+                        {formFeedback ? <Text
+                          nativeID="screens-auth-public-signin-feedback"
+                          style={styles.success}
+                          testID="screens-auth-public-signin-feedback"
+                          {...getWebClassNameProps("screens-auth-public-form-success")}
+                        >{formFeedback}</Text> : null}
                         {isConfirmationPendingMessage(formError) ? (
                           <AppButton
                             label="Reenviar enlace de confirmación"
@@ -1465,9 +1518,13 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                         onPress={() => setLandingAuthMode(null)}
                         style={({ pressed }) => [styles.heroBackLink, pressed ? { opacity: 0.8 } : null]}
                         testID="screens-auth-public-close-auth-inline"
+                        {...getWebClassNameProps("screens-auth-public-close-auth-inline")}
                       >
                         <Feather color={colors.onPrimaryMuted} name="arrow-left" size={14} />
-                        <Text style={styles.heroBackLinkLabel}>Volver a la portada</Text>
+                        <Text
+                          style={styles.heroBackLinkLabel}
+                          {...getWebClassNameProps("screens-auth-public-close-auth-inline-label")}
+                        >Volver a la portada</Text>
                       </Pressable>
                     ) : null}
 
@@ -1478,6 +1535,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                         nativeID="screens-auth-public-mobile-section-nav"
                         showsHorizontalScrollIndicator={false}
                         testID="screens-auth-public-mobile-section-nav"
+                        {...getWebClassNameProps("screens-auth-public-mobile-section-nav")}
                       >
                         {MOBILE_SECTION_NAV_ITEMS.map((item) => {
                           const isActive = page === item.page;
@@ -1503,11 +1561,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 pressed ? styles.mobileSectionChipPressed : null,
                               ]}
                               testID={`screens-auth-public-mobile-section-chip-${item.key}`}
+                              {...getWebClassNameProps(
+                                joinWebClassNames(
+                                  `screens-auth-public-mobile-section-chip-${item.key}`,
+                                  isActive ? "screens-auth-public-mobile-section-chip--active" : null
+                                )
+                              )}
                             >
                               <Text
                                 nativeID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
                                 style={styles.mobileSectionChipLabel}
                                 testID={`screens-auth-public-mobile-section-chip-${item.key}-label`}
+                                {...getWebClassNameProps("screens-auth-public-mobile-section-chip-label")}
                               >
                                 {item.label}
                               </Text>
@@ -1533,7 +1598,12 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                     ]}
                     testID="screens-auth-public-form-card"
                   >
-                    <View nativeID="screens-auth-public-form-tabs" style={styles.tabs} testID="screens-auth-public-form-tabs">
+                    <View
+                      nativeID="screens-auth-public-form-tabs"
+                      style={styles.tabs}
+                      testID="screens-auth-public-form-tabs"
+                      {...getWebClassNameProps("screens-auth-public-form-tabs")}
+                    >
                       <Pressable
                         accessibilityRole="link"
                         nativeID="screens-auth-public-form-tab-create-account"
@@ -1550,11 +1620,23 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           pressed ? styles.tabButtonPressed : null,
                         ]}
                         testID="screens-auth-public-form-tab-create-account"
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "screens-auth-public-form-tab-button",
+                            mode === "academy" ? "screens-auth-public-form-tab-button--active" : null
+                          )
+                        )}
                       >
                         <Text
                           nativeID="screens-auth-public-form-tab-create-account-label"
                           style={[styles.tabLabel, mode === "academy" ? styles.tabLabelActive : null]}
                           testID="screens-auth-public-form-tab-create-account-label"
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "screens-auth-public-form-tab-label",
+                              mode === "academy" ? "screens-auth-public-form-tab-label--active" : null
+                            )
+                          )}
                         >
                           Crear cuenta
                         </Text>
@@ -1575,11 +1657,23 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           pressed ? styles.tabButtonPressed : null,
                         ]}
                         testID="screens-auth-public-form-tab-signin"
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "screens-auth-public-form-tab-button",
+                            mode === "login" ? "screens-auth-public-form-tab-button--active" : null
+                          )
+                        )}
                       >
                         <Text
                           nativeID="screens-auth-public-form-tab-signin-label"
                           style={[styles.tabLabel, mode === "login" ? styles.tabLabelActive : null]}
                           testID="screens-auth-public-form-tab-signin-label"
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "screens-auth-public-form-tab-label",
+                              mode === "login" ? "screens-auth-public-form-tab-label--active" : null
+                            )
+                          )}
                         >
                           Iniciar sesion
                         </Text>
@@ -1588,26 +1682,48 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
 
                     {mode === "academy" ? (
                       <>
-                        <Text nativeID="screens-auth-public-register-form-title" style={styles.formTitle} testID="screens-auth-public-register-form-title">
+                        <Text
+                          nativeID="screens-auth-public-register-form-title"
+                          style={styles.formTitle}
+                          testID="screens-auth-public-register-form-title"
+                          {...getWebClassNameProps("screens-auth-public-form-title")}
+                        >
                           {isAwaitingConfirmation ? "Esperando confirmación" : "Registra tu academia"}
                         </Text>
-                        <Text nativeID="screens-auth-public-register-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-register-form-subtitle">
+                        <Text
+                          nativeID="screens-auth-public-register-form-subtitle"
+                          style={styles.formSubtitle}
+                          testID="screens-auth-public-register-form-subtitle"
+                          {...getWebClassNameProps("screens-auth-public-form-subtitle")}
+                        >
                           {isAwaitingConfirmation
                             ? "Tu cuenta quedó pendiente de confirmación. Puedes abrir el enlace desde cualquier navegador o dispositivo y esta página entrará sola en cuanto detecte la confirmación."
                             : "Registra tu academia y crea la cuenta para administrarla hoy mismo."}
                         </Text>
                         {isAwaitingConfirmation ? (
-                          <View nativeID="screens-auth-public-register-pending-state" style={styles.pendingConfirmationCard} testID="screens-auth-public-register-pending-state">
-                            <View nativeID="screens-auth-public-register-pending-indicator" style={styles.pendingConfirmationIndicator} testID="screens-auth-public-register-pending-indicator" />
+                          <View
+                            nativeID="screens-auth-public-register-pending-state"
+                            style={styles.pendingConfirmationCard}
+                            testID="screens-auth-public-register-pending-state"
+                            {...getWebClassNameProps("screens-auth-public-pending-state-card")}
+                          >
+                            <View
+                              nativeID="screens-auth-public-register-pending-indicator"
+                              style={styles.pendingConfirmationIndicator}
+                              testID="screens-auth-public-register-pending-indicator"
+                              {...getWebClassNameProps("screens-auth-public-pending-state-indicator")}
+                            />
                             <View
                               nativeID="screens-auth-public-register-pending-copy"
                               style={styles.pendingConfirmationCopy}
                               testID="screens-auth-public-register-pending-copy"
+                              {...getWebClassNameProps("screens-auth-public-pending-state-copy")}
                             >
                               <Text
                                 nativeID="screens-auth-public-register-pending-title"
                                 style={styles.pendingConfirmationTitle}
                                 testID="screens-auth-public-register-pending-title"
+                                {...getWebClassNameProps("screens-auth-public-pending-state-title")}
                               >
                                 {redeemPendingSessionMutation.isPending
                                   ? "Correo confirmado. Entrando a tu panel..."
@@ -1617,6 +1733,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 nativeID="screens-auth-public-register-pending-description"
                                 style={styles.pendingConfirmationDescription}
                                 testID="screens-auth-public-register-pending-description"
+                                {...getWebClassNameProps("screens-auth-public-pending-state-description")}
                               >
                                 {redeemPendingSessionMutation.isPending
                                   ? "Ya detectamos la confirmación y estamos abriendo tu sesión."
@@ -1679,6 +1796,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                                 onPress={() => setShowRegisterPassword((current) => !current)}
                                 style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
                                 testID="screens-auth-public-register-password-toggle"
+                                {...getWebClassNameProps("screens-auth-public-password-toggle")}
                               >
                                 <Feather color={colors.textMuted} name={showRegisterPassword ? "eye-off" : "eye"} size={18} />
                               </Pressable>
@@ -1697,15 +1815,35 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                             value={MASKED_REGISTERED_PASSWORD}
                           />
                         )}
-                        <Text nativeID="screens-auth-public-register-helper" style={styles.helper} testID="screens-auth-public-register-helper">
+                        <Text
+                          nativeID="screens-auth-public-register-helper"
+                          style={styles.helper}
+                          testID="screens-auth-public-register-helper"
+                          {...getWebClassNameProps("screens-auth-public-form-helper")}
+                        >
                           {isAwaitingConfirmation
                             ? "Los datos quedaron bloqueados para evitar cambios mientras esperamos la confirmación. Si necesitas corregir algo, usa otro correo."
                             : "El sufijo interno de la academia se genera con las primeras tres letras utiles del nombre."}
                         </Text>
-                        {formError ? <Text nativeID="screens-auth-public-register-error" style={styles.error} testID="screens-auth-public-register-error">{formError}</Text> : null}
-                        {formFeedback ? <Text nativeID="screens-auth-public-register-feedback" style={styles.success} testID="screens-auth-public-register-feedback">{formFeedback}</Text> : null}
+                        {formError ? <Text
+                          nativeID="screens-auth-public-register-error"
+                          style={styles.error}
+                          testID="screens-auth-public-register-error"
+                          {...getWebClassNameProps("screens-auth-public-form-error")}
+                        >{formError}</Text> : null}
+                        {formFeedback ? <Text
+                          nativeID="screens-auth-public-register-feedback"
+                          style={styles.success}
+                          testID="screens-auth-public-register-feedback"
+                          {...getWebClassNameProps("screens-auth-public-form-success")}
+                        >{formFeedback}</Text> : null}
                         {isAwaitingConfirmation ? (
-                          <View nativeID="screens-auth-public-register-actions" style={styles.formActions} testID="screens-auth-public-register-actions">
+                          <View
+                            nativeID="screens-auth-public-register-actions"
+                            style={styles.formActions}
+                            testID="screens-auth-public-register-actions"
+                            {...getWebClassNameProps("screens-auth-public-form-actions")}
+                          >
                             <AppButton
                               label="Reenviar enlace"
                               loading={resendMutation.isPending}
@@ -1734,8 +1872,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                       </>
                     ) : (
                       <>
-                        <Text nativeID="screens-auth-public-signin-form-title" style={styles.formTitle} testID="screens-auth-public-signin-form-title">Bienvenido de vuelta</Text>
-                        <Text nativeID="screens-auth-public-signin-form-subtitle" style={styles.formSubtitle} testID="screens-auth-public-signin-form-subtitle">
+                        <Text
+                          nativeID="screens-auth-public-signin-form-title"
+                          style={styles.formTitle}
+                          testID="screens-auth-public-signin-form-title"
+                          {...getWebClassNameProps("screens-auth-public-form-title")}
+                        >Bienvenido de vuelta</Text>
+                        <Text
+                          nativeID="screens-auth-public-signin-form-subtitle"
+                          style={styles.formSubtitle}
+                          testID="screens-auth-public-signin-form-subtitle"
+                          {...getWebClassNameProps("screens-auth-public-form-subtitle")}
+                        >
                           Inicia sesion con la cuenta administradora de tu academia para entrar al panel operativo.
                         </Text>
                         <AppInput
@@ -1763,6 +1911,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                               onPress={() => setShowPassword((current) => !current)}
                               style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
                               testID="screens-auth-public-signin-password-toggle"
+                              {...getWebClassNameProps("screens-auth-public-password-toggle")}
                             >
                               <Feather color={colors.textMuted} name={showPassword ? "eye-off" : "eye"} size={18} />
                             </Pressable>
@@ -1771,8 +1920,18 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
                           testID="screens-auth-public-signin-password-input"
                           value={password}
                         />
-                        {formError ? <Text nativeID="screens-auth-public-signin-error" style={styles.error} testID="screens-auth-public-signin-error">{formError}</Text> : null}
-                        {formFeedback ? <Text nativeID="screens-auth-public-signin-feedback" style={styles.success} testID="screens-auth-public-signin-feedback">{formFeedback}</Text> : null}
+                        {formError ? <Text
+                          nativeID="screens-auth-public-signin-error"
+                          style={styles.error}
+                          testID="screens-auth-public-signin-error"
+                          {...getWebClassNameProps("screens-auth-public-form-error")}
+                        >{formError}</Text> : null}
+                        {formFeedback ? <Text
+                          nativeID="screens-auth-public-signin-feedback"
+                          style={styles.success}
+                          testID="screens-auth-public-signin-feedback"
+                          {...getWebClassNameProps("screens-auth-public-form-success")}
+                        >{formFeedback}</Text> : null}
                         {isConfirmationPendingMessage(formError) ? (
                           <AppButton
                             label="Reenviar enlace de confirmación"
