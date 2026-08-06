@@ -47,6 +47,7 @@ interface PublicPageChromeProps extends PropsWithChildren {
   contentMaxWidth?: number;
   showAuthControls?: boolean;
   showFooter?: boolean;
+  showFooterTopDivider?: boolean;
   screenScrollable?: boolean;
   screenContentStyle?: StyleProp<ViewStyle>;
   onGoSignIn?: () => void;
@@ -68,6 +69,7 @@ export function PublicPageChrome({
   contentMaxWidth,
   showAuthControls = true,
   showFooter = true,
+  showFooterTopDivider = true,
   screenScrollable = true,
   screenContentStyle,
   onGoSignIn,
@@ -393,7 +395,9 @@ export function PublicPageChrome({
 
         {showFooter ? (
           <View nativeID={`${idPrefix}-footer`} style={[styles.footerShell, screenScrollable ? styles.footerShellStatic : null, { paddingHorizontal: outerPaddingHorizontal }]} testID={`${idPrefix}-footer`}>
-          <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
+          {showFooterTopDivider ? (
+            <View nativeID={`${idPrefix}-footer-divider-top`} style={styles.footerDividerTop} testID={`${idPrefix}-footer-divider-top`} />
+          ) : null}
           <View nativeID={`${idPrefix}-footer-inner`} style={[styles.footerInner, { maxWidth: resolvedContentMaxWidth }]} testID={`${idPrefix}-footer-inner`}>
             <View nativeID={`${idPrefix}-footer-grid`} style={[styles.footerGrid, !isMobile ? styles.footerGridDesktop : null]} testID={`${idPrefix}-footer-grid`}>
               <View nativeID={`${idPrefix}-footer-brand-block`} style={styles.footerBrandBlock} testID={`${idPrefix}-footer-brand-block`}>
