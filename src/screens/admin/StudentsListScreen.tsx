@@ -2228,7 +2228,7 @@ const styles = StyleSheet.create({
     borderColor: colors.action,
   },
   formStepDotCompleted: {
-    backgroundColor: colors.metricMint,
+    backgroundColor: colors.successSoft,
     borderColor: colors.success,
   },
   formGrid: {

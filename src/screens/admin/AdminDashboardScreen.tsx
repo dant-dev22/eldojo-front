@@ -4675,7 +4675,7 @@ function MetricCard({
   const toneStyles =
     tone === "success"
       ? {
-          backgroundColor: colors.metricMint,
+          backgroundColor: colors.successSoft,
           icon: "users",
           iconColor: colors.success,
         }

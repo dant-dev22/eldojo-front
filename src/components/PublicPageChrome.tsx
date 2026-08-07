@@ -9,14 +9,14 @@ import { LogoSvg } from "@/components/LogoSvg";
 import { Screen } from "@/components/Screen";
 import {
   agedWood,
+  agedWoodSoft,
   colors,
   goldenYellow,
+  goldenYellowSoft,
+  indigoBlue,
   indigoBlueSoft,
-  judogiRed,
-  judogiRedSoft,
   radius,
   spacing,
-  tatamiGreenSoft,
   typography,
 } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
@@ -590,17 +590,17 @@ export function PublicPageChrome({
                     {...getWebClassNameProps("public-chrome-footer-values-row")}
                   >
                     <View
-                      style={[styles.footerValuePill, { backgroundColor: judogiRedSoft }]}
+                      style={[styles.footerValuePill, { backgroundColor: agedWoodSoft }]}
                       {...getWebClassNameProps(
                         joinWebClassNames(
                           "public-chrome-footer-value-pill",
-                          "public-chrome-footer-value-pill--red"
+                          "public-chrome-footer-value-pill--brown"
                         )
                       )}
                     >
                       <View
-                        style={styles.footerValueDotRed}
-                        {...getWebClassNameProps("public-chrome-footer-value-dot-red")}
+                        style={styles.footerValueDotBrown}
+                        {...getWebClassNameProps("public-chrome-footer-value-dot-brown")}
                       />
                       <Text
                         style={styles.footerValueLabel}
@@ -610,17 +610,17 @@ export function PublicPageChrome({
                       </Text>
                     </View>
                     <View
-                      style={[styles.footerValuePill, { backgroundColor: tatamiGreenSoft }]}
+                      style={[styles.footerValuePill, { backgroundColor: goldenYellowSoft }]}
                       {...getWebClassNameProps(
                         joinWebClassNames(
                           "public-chrome-footer-value-pill",
-                          "public-chrome-footer-value-pill--green"
+                          "public-chrome-footer-value-pill--gold"
                         )
                       )}
                     >
                       <View
-                        style={styles.footerValueDotGreen}
-                        {...getWebClassNameProps("public-chrome-footer-value-dot-green")}
+                        style={styles.footerValueDotGold}
+                        {...getWebClassNameProps("public-chrome-footer-value-dot-gold")}
                       />
                       <Text
                         style={styles.footerValueLabel}
@@ -718,7 +718,7 @@ export function PublicPageChrome({
                         style={styles.footerContactIconWrap}
                         {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
                       >
-                        <Feather color={judogiRed} name="mail" size={13} />
+                        <Feather color={agedWood} name="mail" size={13} />
                       </View>
                       <Text
                         style={styles.footerContactText}
@@ -735,7 +735,7 @@ export function PublicPageChrome({
                         style={styles.footerContactIconWrap}
                         {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
                       >
-                        <Feather color={judogiRed} name="phone" size={13} />
+                        <Feather color={agedWood} name="phone" size={13} />
                       </View>
                       <Text
                         style={styles.footerContactText}
@@ -752,7 +752,7 @@ export function PublicPageChrome({
                         style={styles.footerContactIconWrap}
                         {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
                       >
-                        <Feather color={judogiRed} name="map-pin" size={13} />
+                        <Feather color={agedWood} name="map-pin" size={13} />
                       </View>
                       <Text
                         style={styles.footerContactText}
@@ -1023,16 +1023,16 @@ const styles = StyleSheet.create({
     height: 44,
     width: 44,
     borderRadius: radius.md,
-    backgroundColor: judogiRedSoft,
+    backgroundColor: agedWoodSoft,
     borderWidth: 1,
-    borderColor: "rgba(198, 40, 40, 0.28)",
+    borderColor: "rgba(141, 110, 99, 0.28)",
   },
   brandMarkInner: {
     alignItems: "center",
     justifyContent: "center",
   },
   brandMarkLabel: {
-    color: judogiRed,
+    color: agedWood,
     fontFamily: typography.headingFamily,
     fontSize: 20,
     fontWeight: "800",
@@ -1116,10 +1116,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(141, 110, 99, 0.24)",
   },
   authButtonPrimary: {
-    backgroundColor: judogiRed,
+    backgroundColor: agedWood,
     borderWidth: 1,
-    borderColor: judogiRed,
-    shadowColor: judogiRed,
+    borderColor: agedWood,
+    shadowColor: agedWood,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 14,
@@ -1161,12 +1161,12 @@ const styles = StyleSheet.create({
     height: 38,
     width: 38,
     borderRadius: radius.pill,
-    backgroundColor: judogiRedSoft,
+    backgroundColor: agedWoodSoft,
     borderWidth: 1,
-    borderColor: "rgba(198, 40, 40, 0.22)",
+    borderColor: "rgba(141, 110, 99, 0.22)",
   },
   mobileMiniAvatarInitial: {
-    color: judogiRed,
+    color: agedWood,
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "800",
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 4,
     borderRadius: radius.pill,
-    backgroundColor: judogiRed,
+    backgroundColor: agedWood,
     marginBottom: spacing.xl,
   },
   footerInner: {
@@ -1280,7 +1280,7 @@ const styles = StyleSheet.create({
     height: 40,
     width: 40,
     borderRadius: radius.md,
-    backgroundColor: judogiRed,
+    backgroundColor: agedWood,
   },
   footerBrandMarkLabel: {
     color: "#FFFFFF",
@@ -1320,23 +1320,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
   },
-  footerValueDotRed: {
+  footerValueDotBrown: {
     width: 6,
     height: 6,
     borderRadius: 6,
-    backgroundColor: judogiRed,
+    backgroundColor: agedWood,
   },
-  footerValueDotGreen: {
+  footerValueDotGold: {
     width: 6,
     height: 6,
     borderRadius: 6,
-    backgroundColor: "#558B2F",
+    backgroundColor: goldenYellow,
   },
   footerValueDotIndigo: {
     width: 6,
     height: 6,
     borderRadius: 6,
-    backgroundColor: "#1A237E",
+    backgroundColor: indigoBlue,
   },
   footerValueLabel: {
     color: colors.text,
@@ -1394,7 +1394,7 @@ const styles = StyleSheet.create({
     height: 24,
     width: 24,
     borderRadius: radius.pill,
-    backgroundColor: judogiRedSoft,
+    backgroundColor: agedWoodSoft,
   },
   footerContactText: {
     color: colors.textMuted,
@@ -1470,14 +1470,14 @@ const styles = StyleSheet.create({
   },
   mobileMenuAvatar: {
     alignItems: "center",
-    backgroundColor: judogiRedSoft,
+    backgroundColor: agedWoodSoft,
     borderRadius: radius.pill,
     height: 40,
     justifyContent: "center",
     width: 40,
   },
   mobileMenuAvatarInitial: {
-    color: judogiRed,
+    color: agedWood,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "800",

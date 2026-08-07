@@ -12,6 +12,7 @@
   --color-golden-yellow-hover: #D98E1A;
   --color-golden-yellow-soft: rgba(249, 168, 37, 0.14);
   --color-aged-wood: #8D6E63;
+  --color-aged-wood-hover: #6D4C41;
   --color-aged-wood-light: #A1887F;
   --color-aged-wood-soft: rgba(141, 110, 99, 0.12);
   --color-aged-wood-strong: #6D4C41;
@@ -29,14 +30,14 @@
   --color-panel: #FFFFFF;
   --color-panel-soft: #FAFAFA;
 
-  --color-primary: var(--color-judogi-red);
-  --color-primary-hover: var(--color-judogi-red-hover);
-  --color-primary-soft: var(--color-judogi-red-soft);
-  --color-accent: var(--color-aged-wood);
-  --color-accent-soft: var(--color-aged-wood-soft);
-  --color-action: var(--color-judogi-red);
-  --color-action-hover: var(--color-judogi-red-hover);
-  --color-action-soft: var(--color-judogi-red-soft);
+  --color-primary: var(--color-aged-wood);
+  --color-primary-hover: var(--color-aged-wood-hover);
+  --color-primary-soft: var(--color-aged-wood-soft);
+  --color-accent: var(--color-indigo-blue);
+  --color-accent-soft: var(--color-indigo-blue-soft);
+  --color-action: var(--color-aged-wood);
+  --color-action-hover: var(--color-aged-wood-hover);
+  --color-action-soft: var(--color-aged-wood-soft);
   --color-secondary: var(--color-indigo-blue);
   --color-secondary-hover: var(--color-indigo-blue-hover);
   --color-secondary-soft: var(--color-indigo-blue-soft);

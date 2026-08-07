@@ -23,6 +23,7 @@ export const goldenYellowHover = "#D98E1A";
 export const goldenYellowSoft = "rgba(249, 168, 37, 0.14)";
 
 export const agedWood = "#8D6E63";
+export const agedWoodHover = "#6D4C41";
 export const agedWoodLight = "#A1887F";
 export const agedWoodSoft = "rgba(141, 110, 99, 0.12)";
 export const agedWoodStrong = "#6D4C41";
@@ -47,16 +48,16 @@ export const colors = {
   panel: "#FFFFFF",
   panelSoft: "#FAFAFA",
 
-  primary: tatamiGreen,
-  primaryHover: tatamiGreenHover,
-  primarySoft: tatamiGreenSoft,
+  primary: agedWood,
+  primaryHover: agedWoodHover,
+  primarySoft: agedWoodSoft,
 
-  accent: agedWood,
-  accentSoft: agedWoodSoft,
+  accent: indigoBlue,
+  accentSoft: indigoBlueSoft,
 
-  action: tatamiGreen,
-  actionHover: tatamiGreenHover,
-  actionSoft: tatamiGreenSoft,
+  action: agedWood,
+  actionHover: agedWoodHover,
+  actionSoft: agedWoodSoft,
 
   secondary: indigoBlue,
   secondaryHover: indigoBlueHover,
@@ -107,13 +108,14 @@ export const colors = {
   sidebarText: textPrimaryLight,
   sidebarMuted: textSecondaryLight,
 
-  activeIndicator: tatamiGreen,
-  focusRing: tatamiGreen,
+  activeIndicator: agedWood,
+  focusRing: agedWood,
 
   metricLavender: indigoBlueSoft,
-  metricMint: tatamiGreenSoft,
+  metricWood: agedWoodSoft,
   metricAmber: goldenYellowSoft,
   metricBlue: indigoBlueSoft,
+  metricSuccess: tatamiGreenSoft,
 };
 
 export const spacing = {
@@ -173,7 +175,7 @@ export const shadows = {
   },
   focus: {
     elevation: 0,
-    shadowColor: tatamiGreen,
+    shadowColor: agedWood,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.0,
     shadowRadius: 0,

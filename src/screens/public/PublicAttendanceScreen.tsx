@@ -15,6 +15,7 @@ import { AppSelect } from "@/components/AppSelect";
 import { StatusView } from "@/components/StatusView";
 import {
   agedWood as woodAged,
+  agedWoodHover as woodAgedHover,
   agedWoodSoft as woodSoftAccent,
   colors,
   goldenYellow as amber,
@@ -395,7 +396,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           </View>
           <View nativeID="screens-public-attendance-hero-copy" style={styles.heroCopy} testID="screens-public-attendance-hero-copy">
             <View nativeID="screens-public-attendance-hero-tag" style={styles.heroTagPill} testID="screens-public-attendance-hero-tag">
-              <Feather name="clock" size={13} color={judogiRed} />
+              <Feather name="clock" size={13} color={woodAged} />
               <Text style={styles.heroTagText}>Registro · Asistencia</Text>
             </View>
             {contextQuery.isSuccess && contextQuery.data ? (
@@ -472,7 +473,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                 <View nativeID="screens-public-attendance-context" style={styles.contextBlock} testID="screens-public-attendance-context">
                   <View style={styles.contextBadgeRow}>
                     <View style={styles.contextBadgeIconWrap}>
-                      <Feather name="book-open" size={13} color={judogiRed} />
+                      <Feather name="book-open" size={13} color={woodAged} />
                     </View>
                     <AppBadge label="Formulario de asistencia" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="warning" />
                   </View>
@@ -650,8 +651,8 @@ const styles = StyleSheet.create({
   },
   heroIconWrap: {
     alignItems: "center",
-    backgroundColor: judogiRedSoft,
-    borderColor: "rgba(198, 40, 40, 0.24)",
+    backgroundColor: woodSoftAccent,
+    borderColor: "rgba(141, 110, 99, 0.24)",
     borderRadius: 999,
     borderWidth: 1,
     height: 56,
@@ -663,7 +664,7 @@ const styles = StyleSheet.create({
     width: 56,
   },
   heroBrandGlyph: {
-    color: judogiRed,
+    color: woodAged,
     fontFamily: typography.headingFamily,
     fontSize: 30,
     fontWeight: "900",
@@ -749,7 +750,7 @@ const styles = StyleSheet.create({
   },
   formCardDivider: {
     alignSelf: "center",
-    backgroundColor: judogiRed,
+    backgroundColor: woodAged,
     borderRadius: 999,
     height: 4,
     marginBottom: spacing.lg,
@@ -778,7 +779,7 @@ const styles = StyleSheet.create({
   },
   contextBadgeIconWrap: {
     alignItems: "center",
-    backgroundColor: judogiRedSoft,
+    backgroundColor: woodSoftAccent,
     borderRadius: 999,
     height: 24,
     justifyContent: "center",
@@ -900,8 +901,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     alignItems: "center",
-    backgroundColor: judogiRed,
-    borderColor: judogiRed,
+    backgroundColor: woodAged,
+    borderColor: woodAged,
     borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: "row",
@@ -915,7 +916,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   submitButtonHover: {
-    backgroundColor: "rgba(198, 40, 40, 0.92)",
+    backgroundColor: woodAgedHover,
     shadowOpacity: 0.28,
   },
   submitButtonDisabled: {
