@@ -47,16 +47,16 @@ export const colors = {
   panel: "#FFFFFF",
   panelSoft: "#FAFAFA",
 
-  primary: judogiRed,
-  primaryHover: judogiRedHover,
-  primarySoft: judogiRedSoft,
+  primary: tatamiGreen,
+  primaryHover: tatamiGreenHover,
+  primarySoft: tatamiGreenSoft,
 
   accent: agedWood,
   accentSoft: agedWoodSoft,
 
-  action: judogiRed,
-  actionHover: judogiRedHover,
-  actionSoft: judogiRedSoft,
+  action: tatamiGreen,
+  actionHover: tatamiGreenHover,
+  actionSoft: tatamiGreenSoft,
 
   secondary: indigoBlue,
   secondaryHover: indigoBlueHover,
@@ -107,8 +107,8 @@ export const colors = {
   sidebarText: textPrimaryLight,
   sidebarMuted: textSecondaryLight,
 
-  activeIndicator: judogiRed,
-  focusRing: judogiRed,
+  activeIndicator: tatamiGreen,
+  focusRing: tatamiGreen,
 
   metricLavender: indigoBlueSoft,
   metricMint: tatamiGreenSoft,
@@ -173,7 +173,7 @@ export const shadows = {
   },
   focus: {
     elevation: 0,
-    shadowColor: judogiRed,
+    shadowColor: tatamiGreen,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.0,
     shadowRadius: 0,
