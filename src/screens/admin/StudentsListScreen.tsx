@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { beltsApi } from "@/api/beltsApi";
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
 import { studentsApi } from "@/api/studentsApi";
@@ -16,6 +17,8 @@ import { AppInput } from "@/components/AppInput";
 import { AdminShell } from "@/components/AdminShell";
 import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
+import { BeltIndicator } from "@/components/BeltIndicator";
+import { BeltSelector, type BeltSelectorValue } from "@/components/BeltSelector";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
@@ -52,6 +55,7 @@ type StudentFormState = {
   heightCm: string;
   enrollmentDate: string;
   primaryClassId: string;
+  belt: BeltSelectorValue;
   monthlyFee: string;
   currency: string;
   nextPaymentDate: string;
@@ -95,8 +99,8 @@ const FORM_PAGES: FormPage[] = [
   {
     id: "profile",
     title: "Perfil",
-    description: "Captura contexto deportivo y datos generales del ingreso.",
-    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId"],
+    description: "Captura contexto deportivo, grado actual y datos generales del ingreso.",
+    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId", "belt"],
   },
   {
     id: "billing",
@@ -124,6 +128,7 @@ function createEmptyForm(defaultBranchId?: number | null): StudentFormState {
     heightCm: "",
     enrollmentDate: new Date().toISOString().slice(0, 10),
     primaryClassId: "",
+    belt: { beltLevelId: null, stripeId: null },
     monthlyFee: "",
     currency: "MXN",
     nextPaymentDate: "",
@@ -145,6 +150,10 @@ function toFormState(student: Student): StudentFormState {
     heightCm: student.height_cm ? String(student.height_cm) : "",
     enrollmentDate: student.enrollment_date,
     primaryClassId: student.primary_class_id ? String(student.primary_class_id) : "",
+    belt: {
+      beltLevelId: student.current_belt_level_id ?? null,
+      stripeId: student.current_stripe_id ?? null,
+    },
     monthlyFee: student.monthly_fee ?? "",
     currency: student.currency,
     nextPaymentDate: student.next_payment_date ?? "",
@@ -220,6 +229,8 @@ function buildStudentPayload(
     height_cm: form.heightCm.trim() ? Number(form.heightCm.trim()) : null,
     enrollment_date: form.enrollmentDate,
     primary_class_id: form.primaryClassId ? Number(form.primaryClassId) : null,
+    current_belt_level_id: form.belt.beltLevelId,
+    current_stripe_id: form.belt.stripeId,
     monthly_fee: form.monthlyFee.trim() ? form.monthlyFee.trim() : null,
     currency: form.currency.trim().toUpperCase(),
     next_payment_date: form.nextPaymentDate.trim() || null,
@@ -241,6 +252,8 @@ function buildStudentUpdatePayload(form: StudentFormState): StudentUpdatePayload
     height_cm: form.heightCm.trim() ? Number(form.heightCm.trim()) : null,
     enrollment_date: form.enrollmentDate,
     primary_class_id: form.primaryClassId ? Number(form.primaryClassId) : null,
+    current_belt_level_id: form.belt.beltLevelId,
+    current_stripe_id: form.belt.stripeId,
     monthly_fee: form.monthlyFee.trim() ? form.monthlyFee.trim() : null,
     currency: form.currency.trim().toUpperCase(),
     next_payment_date: form.nextPaymentDate.trim() || null,
@@ -339,6 +352,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
     enabled: Boolean(organizationId && selectedBranchId),
   });
 
+  const beltsQuery = useQuery({
+    queryKey: ["belts-levels", organizationId],
+    queryFn: () =>
+      beltsApi.listLevels({
+        organization_id: organizationId ?? undefined,
+        is_active: true,
+        include_stripes: true,
+      }),
+    enabled: Boolean(organizationId),
+  });
+
   const studentsQuery = useQuery({
     queryKey: ["students", debouncedSearch],
     queryFn: () => studentsApi.list({ search: debouncedSearch.trim() || undefined }),
@@ -347,6 +371,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const branches = branchesQuery.data ?? [];
   const classes = classesQuery.data ?? [];
+  const beltLevels = beltsQuery.data ?? [];
   const sidebarBranch = branches.find((branch) => branch.id === fixedBranchId) ?? branches[0] ?? null;
   const sidebarSummary = useMemo(
     () => ({
@@ -795,6 +820,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <Text nativeID="screens-admin-students-list-table-head-branch" style={[styles.tableHeadCell, styles.branchColumn]} testID="screens-admin-students-list-table-head-branch">Sede</Text>
                 <Text nativeID="screens-admin-students-list-table-head-payment" style={[styles.tableHeadCell, styles.paymentColumn]} testID="screens-admin-students-list-table-head-payment">Próximo pago</Text>
                 <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
+                <Text nativeID="screens-admin-students-list-table-head-belt" style={[styles.tableHeadCell, styles.beltColumn]} testID="screens-admin-students-list-table-head-belt">Grado</Text>
                 <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
                 <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
               </View>
@@ -1072,6 +1098,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     }
                     testID="screens-admin-students-list-form-primary-class-select"
                     value={form.primaryClassId}
+                  />
+                </View>
+
+                <View style={styles.formBeltBlock}>
+                  <BeltSelector
+                    enabled={Boolean(organizationId)}
+                    label="Grado / Cinta actual"
+                    levels={beltLevels}
+                    onChange={(next) => handleUpdateField("belt", next)}
+                    testID="screens-admin-students-list-form-belt"
+                    value={form.belt}
                   />
                 </View>
               </>
@@ -1377,6 +1414,15 @@ function StudentListRow({
           <Text nativeID={`screens-admin-students-list-row-fee-value-${student.id}`} style={styles.tableCellValue} testID={`screens-admin-students-list-row-fee-value-${student.id}`}>{formatStudentFee(student)}</Text>
         </View>
 
+        <View nativeID={`screens-admin-students-list-row-belt-${student.id}`} style={[styles.tableCell, styles.beltColumn]} testID={`screens-admin-students-list-row-belt-${student.id}`}>
+          <BeltIndicator
+            beltLevel={student.current_belt_level}
+            size="xs"
+            stripe={student.current_stripe}
+            testID={`screens-admin-students-list-row-belt-value-${student.id}`}
+          />
+        </View>
+
         <View nativeID={`screens-admin-students-list-row-status-${student.id}`} style={[styles.tableCell, styles.statusColumn]} testID={`screens-admin-students-list-row-status-${student.id}`}>
           <View nativeID={`screens-admin-students-list-row-badges-${student.id}`} style={styles.tableBadges} testID={`screens-admin-students-list-row-badges-${student.id}`}>
             <AppBadge
@@ -1428,6 +1474,15 @@ function StudentListRow({
             tone={paymentTone}
           />
         </View>
+      </View>
+
+      <View nativeID={`screens-admin-students-list-row-mobile-belt-${student.id}`} style={styles.mobileBeltRow} testID={`screens-admin-students-list-row-mobile-belt-${student.id}`}>
+        <BeltIndicator
+          beltLevel={student.current_belt_level}
+          size="sm"
+          stripe={student.current_stripe}
+          testID={`screens-admin-students-list-row-mobile-belt-value-${student.id}`}
+        />
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-meta-${student.id}`} style={styles.mobileMetaGrid} testID={`screens-admin-students-list-row-mobile-meta-${student.id}`}>
@@ -1805,6 +1860,10 @@ const styles = StyleSheet.create({
   feeColumn: {
     flex: 1.1,
   },
+  beltColumn: {
+    flex: 1.4,
+    minWidth: 160,
+  },
   statusColumn: {
     flex: 1.5,
   },
@@ -2072,6 +2131,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: "600",
+  },
+  formBeltBlock: {
+    marginTop: spacing.lg,
+    width: "100%",
+  },
+  mobileBeltRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
 });
 

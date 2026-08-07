@@ -10,6 +10,7 @@ import { studentsApi } from "@/api/studentsApi";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
+import { BeltIndicator } from "@/components/BeltIndicator";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
@@ -262,6 +263,14 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
           <AppCard nativeID="screens-admin-student-detail-profile-card" style={styles.summaryCard} testID="screens-admin-student-detail-profile-card">
             <Text nativeID="screens-admin-student-detail-profile-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-profile-card-title">Ficha general</Text>
+            <View nativeID="screens-admin-student-detail-profile-belt-row" style={styles.beltRow} testID="screens-admin-student-detail-profile-belt-row">
+              <BeltIndicator
+                beltLevel={student.current_belt_level}
+                size="lg"
+                stripe={student.current_stripe}
+                testID="screens-admin-student-detail-profile-belt-indicator"
+              />
+            </View>
             <DetailRow
               idPrefix="screens-admin-student-detail-profile-birth"
               label="Nacimiento"
@@ -479,6 +488,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  beltRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   detailRow: {
     borderBottomColor: colors.border,

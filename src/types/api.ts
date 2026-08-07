@@ -133,6 +133,66 @@ export interface MyProfile {
   available_classes: AvailableClass[];
 }
 
+export interface BeltLevel {
+  id: number;
+  organization_id: number;
+  name: string;
+  display_name: string;
+  color_hex: string;
+  text_color_hex: string;
+  order_index: number;
+  is_active: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  stripes: BeltStripe[];
+}
+
+export interface BeltLevelSummary {
+  id: number;
+  name: string;
+  display_name: string;
+  color_hex: string;
+  text_color_hex: string;
+  order_index: number;
+  is_active: boolean;
+}
+
+export interface BeltStripe {
+  id: number;
+  belt_level_id: number;
+  name: string;
+  display_name: string;
+  color_hex: string;
+  order_index: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BeltStripeSummary {
+  id: number;
+  belt_level_id: number;
+  name: string;
+  display_name: string;
+  color_hex: string;
+  order_index: number;
+  is_active: boolean;
+}
+
+export interface StudentBeltHistory {
+  id: number;
+  student_id: number;
+  belt_level_id: number;
+  stripe_id: number | null;
+  awarded_at: string;
+  awarded_by_user_id: number | null;
+  notes: string | null;
+  created_at: string;
+  belt_level: BeltLevelSummary | null;
+  stripe: BeltStripeSummary | null;
+}
+
 export interface Student {
   id: number;
   organization_id: number;
@@ -147,6 +207,8 @@ export interface Student {
   photo_url: string | null;
   enrollment_date: string;
   primary_class_id: number | null;
+  current_belt_level_id: number | null;
+  current_stripe_id: number | null;
   monthly_fee: string | null;
   currency: string;
   next_payment_date: string | null;
@@ -158,6 +220,8 @@ export interface Student {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  current_belt_level: BeltLevelSummary | null;
+  current_stripe: BeltStripeSummary | null;
 }
 
 export interface StudentCreatePayload {
@@ -172,6 +236,8 @@ export interface StudentCreatePayload {
   photo_url?: string | null;
   enrollment_date: string;
   primary_class_id?: number | null;
+  current_belt_level_id?: number | null;
+  current_stripe_id?: number | null;
   monthly_fee?: string | null;
   currency: string;
   next_payment_date?: string | null;
@@ -194,6 +260,8 @@ export interface StudentUpdatePayload {
   photo_url?: string | null;
   enrollment_date?: string;
   primary_class_id?: number | null;
+  current_belt_level_id?: number | null;
+  current_stripe_id?: number | null;
   monthly_fee?: string | null;
   currency?: string | null;
   next_payment_date?: string | null;
