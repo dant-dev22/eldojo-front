@@ -25,6 +25,7 @@ import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
+import { StudentDetailModal } from "@/components/StudentDetailModal";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -329,6 +330,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const [currentStudentsPage, setCurrentStudentsPage] = useState(1);
   const [showContextSheet, setShowContextSheet] = useState(false);
   const [contextSheetStudent, setContextSheetStudent] = useState<Student | null>(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [detailStudentId, setDetailStudentId] = useState<number | null>(null);
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -549,6 +552,16 @@ export function StudentsListScreen({ navigation, route }: Props) {
     setShowContextSheet(true);
   }
 
+  function handleOpenDetail(studentId: number) {
+    setDetailStudentId(studentId);
+    setIsDetailModalVisible(true);
+  }
+
+  function handleCloseDetail() {
+    setIsDetailModalVisible(false);
+    setDetailStudentId(null);
+  }
+
   const contextActions = useMemo<BottomSheetAction[]>(
     () => {
       if (!contextSheetStudent) return [];
@@ -558,7 +571,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
           label: "Ver detalle",
           icon: "eye",
           tone: "primary",
-          onPress: () => navigation.navigate("StudentDetail", { studentId: contextSheetStudent.id }),
+          onPress: () => {
+            setShowContextSheet(false);
+            handleOpenDetail(contextSheetStudent.id);
+          },
         },
         {
           key: "edit",
@@ -835,7 +851,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     setStudentToDelete(item);
                   }}
                   onEdit={() => handleOpenEdit(item)}
-                  onViewDetail={() => navigation.navigate("StudentDetail", { studentId: item.id })}
+                  onViewDetail={() => handleOpenDetail(item.id)}
                   student={item}
                   studentStatusLabel={getStudentStatusLabel(item.status)}
                   studentStatusTone={getStudentStatusTone(item.status)}
@@ -1297,6 +1313,12 @@ export function StudentsListScreen({ navigation, route }: Props) {
           />
         </View>
       </AppModal>
+
+      <StudentDetailModal
+        visible={isDetailModalVisible}
+        studentId={detailStudentId}
+        onClose={handleCloseDetail}
+      />
     </Screen>
   );
 }

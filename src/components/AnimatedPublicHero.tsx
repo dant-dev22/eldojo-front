@@ -53,7 +53,7 @@ export const AnimatedPublicHero: React.FC<AnimatedPublicHeroProps> = ({ testID }
       >
         <LogoSvg
           size={logoSize}
-          variant="mark-only"
+          variant="brand-red"
           animated
           loop
           testID="screens-auth-public-hero-logo"

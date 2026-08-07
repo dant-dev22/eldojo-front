@@ -5,6 +5,7 @@ import { Linking, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewSt
 import { AdminUserMenu } from "@/components/AdminUserMenu";
 import { AppButton } from "@/components/AppButton";
 import { AppModal } from "@/components/AppModal";
+import { LogoSvg } from "@/components/LogoSvg";
 import { Screen } from "@/components/Screen";
 import {
   agedWood,
@@ -235,14 +236,12 @@ export function PublicPageChrome({
                     testID={`${idPrefix}-brand-mark-inner`}
                     {...getWebClassNameProps("public-chrome-navbar-brand-mark-inner")}
                   >
-                    <Text
+                    <LogoSvg
                       nativeID={`${idPrefix}-brand-mark-label`}
-                      style={styles.brandMarkLabel}
+                      size={32}
+                      variant="brand-red"
                       testID={`${idPrefix}-brand-mark-label`}
-                      {...getWebClassNameProps("public-chrome-navbar-brand-mark-label")}
-                    >
-                      弐
-                    </Text>
+                    />
                   </View>
                 </View>
                 <View
@@ -550,14 +549,12 @@ export function PublicPageChrome({
                       testID={`${idPrefix}-footer-brand-mark`}
                       {...getWebClassNameProps("public-chrome-footer-brand-mark")}
                     >
-                      <Text
+                      <LogoSvg
                         nativeID={`${idPrefix}-footer-brand-mark-label`}
-                        style={styles.footerBrandMarkLabel}
+                        size={28}
+                        variant="brand-red-solid"
                         testID={`${idPrefix}-footer-brand-mark-label`}
-                        {...getWebClassNameProps("public-chrome-footer-brand-mark-label")}
-                      >
-                        弐
-                      </Text>
+                      />
                     </View>
                     <View>
                       <Text

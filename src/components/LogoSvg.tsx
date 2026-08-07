@@ -2,7 +2,7 @@ import React from "react";
 import { Platform, StyleSheet, View, Text, ViewStyle } from "react-native";
 import { colors, typography } from "../constants/theme";
 
-export type LogoVariant = "primary" | "mark-only" | "mono-dark" | "mono-light";
+export type LogoVariant = "primary" | "mark-only" | "mono-dark" | "mono-light" | "brand-red" | "brand-red-solid";
 
 export interface LogoSvgProps {
   size?: number;
@@ -13,6 +13,7 @@ export interface LogoSvgProps {
   delayMs?: number;
   style?: ViewStyle;
   testID?: string;
+  nativeID?: string;
 }
 
 const CANVAS = 447;
@@ -69,6 +70,28 @@ function getFills(variant: LogoVariant): FillsByVariant {
       wordmarkDot: colors.gold,
     };
   }
+  if (variant === "brand-red") {
+    return {
+      seal: colors.primarySoft ?? "rgba(198, 40, 40, 0.12)",
+      kanji: colors.primary,
+      sealStroke: "rgba(198, 40, 40, 0.35)",
+      kanjiStroke: colors.primary,
+      wordmarkWord: colors.primary,
+      wordmarkBorder: colors.primary,
+      wordmarkDot: colors.gold,
+    };
+  }
+  if (variant === "brand-red-solid") {
+    return {
+      seal: colors.primary,
+      kanji: "#FFFFFF",
+      sealStroke: colors.primary,
+      kanjiStroke: "#FFFFFF",
+      wordmarkWord: colors.primary,
+      wordmarkBorder: colors.primary,
+      wordmarkDot: colors.gold,
+    };
+  }
   return {
     seal: "#FFFFFF",
     kanji: "#000000",
@@ -89,6 +112,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
   delayMs = 0,
   style,
   testID,
+  nativeID,
 }) => {
   const fills = getFills(variant);
 
@@ -119,7 +143,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
       };
 
       return (
-        <View style={[styles.container, style]} testID={testID}>
+        <View nativeID={nativeID} style={[styles.container, style]} testID={testID}>
           <View style={[styles.svgWrap, { width: size, height: size }]}>
             <MotionSvg
               width="100%"
@@ -353,7 +377,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
       const scaleI = overallScale.interpolate({ inputRange: [0.9, 1.1], outputRange: [0.9, 1.1] });
 
       return (
-        <View style={[styles.container, style]} testID={testID}>
+        <View nativeID={nativeID} style={[styles.container, style]} testID={testID}>
           <View style={[styles.svgWrap, { width: size, height: size }]}>
             <Svg width="100%" height="100%" viewBox={`0 0 ${CANVAS} ${CANVAS}`} preserveAspectRatio="xMidYMid meet">
               <Defs />

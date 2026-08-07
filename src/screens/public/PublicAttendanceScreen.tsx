@@ -9,6 +9,7 @@ import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
+import { LogoSvg } from "@/components/LogoSvg";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { AppSelect } from "@/components/AppSelect";
 import { StatusView } from "@/components/StatusView";
@@ -385,7 +386,12 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       <View nativeID="screens-public-attendance-layout" style={[styles.layout, { maxWidth: isDesktop ? 880 : contentMaxWidth }]} testID="screens-public-attendance-layout">
         <View nativeID="screens-public-attendance-hero" style={styles.heroRow} testID="screens-public-attendance-hero">
           <View nativeID="screens-public-attendance-hero-icon-wrap" style={styles.heroIconWrap} testID="screens-public-attendance-hero-icon-wrap">
-            <Text nativeID="screens-public-attendance-hero-glyph" style={styles.heroBrandGlyph} testID="screens-public-attendance-hero-glyph">弐</Text>
+            <LogoSvg
+              nativeID="screens-public-attendance-hero-glyph"
+              size={36}
+              variant="brand-red"
+              testID="screens-public-attendance-hero-glyph"
+            />
           </View>
           <View nativeID="screens-public-attendance-hero-copy" style={styles.heroCopy} testID="screens-public-attendance-hero-copy">
             <View nativeID="screens-public-attendance-hero-tag" style={styles.heroTagPill} testID="screens-public-attendance-hero-tag">
