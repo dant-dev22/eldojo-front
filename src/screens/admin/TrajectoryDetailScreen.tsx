@@ -2,13 +2,16 @@ import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { KeyboardAvoidingView, Pressable, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, KeyboardAvoidingView, Pressable, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
+import { branchesApi } from "@/api/branchesApi";
+import { classesApi } from "@/api/classesApi";
 import { studentsApi } from "@/api/studentsApi";
 import { trajectoryApi } from "@/api/trajectoryApi";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
+import { AppDateInput } from "@/components/AppDateInput";
 import { AppInput } from "@/components/AppInput";
 import { AppModal } from "@/components/AppModal";
 import { AdminShell } from "@/components/AdminShell";
@@ -19,8 +22,13 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import type { AdminStackParamList } from "@/navigation/types";
-import type { Student, TrajectoryEvent } from "@/types/api";
-import { formatDate } from "@/utils/format";
+import type { Student, StudentStatus, TrajectoryEvent } from "@/types/api";
+import {
+  formatCurrency,
+  formatDate,
+  formatPaymentStatus,
+  formatStudentStatus as formatStudentStatusLabel,
+} from "@/utils/format";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "TrajectoryDetail">;
 
@@ -70,6 +78,32 @@ function formatLongDate(dateKey: string): string {
   return `${weekday} ${day} de ${month}, ${year}`;
 }
 
+function getStudentPaymentColor(status: Student["payment_status"]): string {
+  switch (status) {
+    case "up_to_date":
+      return colors.success;
+    case "partial":
+    case "due_soon":
+      return colors.warning;
+    case "late":
+    case "overdue":
+      return colors.danger;
+    default:
+      return colors.textMuted;
+  }
+}
+
+function getStudentStatusColor(status: StudentStatus): string {
+  switch (status) {
+    case "active":
+      return colors.success;
+    case "frozen":
+      return colors.warning;
+    default:
+      return colors.textMuted;
+  }
+}
+
 export function TrajectoryDetailScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const { contentMaxWidth, isDesktop } = useResponsiveLayout();
@@ -91,6 +125,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
   const [dayModalError, setDayModalError] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<"success" | "danger">("success");
+  const [datePickerValue, setDatePickerValue] = useState<string>("");
   const newContentInputRef = useRef<TextInput>(null);
   const editContentInputRef = useRef<TextInput>(null);
 
@@ -109,6 +144,33 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     enabled: Boolean(studentId),
   });
 
+  const student: Student | null = studentQuery.data ?? null;
+
+  const branchesQuery = useQuery({
+    queryKey: ["branches", "trajectory-detail", student?.organization_id],
+    queryFn: () =>
+      branchesApi.list({
+        organizationId: student?.organization_id,
+        isActive: true,
+      }),
+    enabled: Boolean(student?.organization_id),
+  });
+
+  const classesQuery = useQuery({
+    queryKey: ["classes", "trajectory-detail", student?.organization_id, student?.branch_id],
+    queryFn: () =>
+      classesApi.list({
+        organizationId: student?.organization_id,
+        branchId: student?.branch_id,
+        isActive: true,
+      }),
+    enabled: Boolean(student?.organization_id && student?.branch_id),
+  });
+
+  const branch = (branchesQuery.data ?? []).find((item) => item.id === student?.branch_id) ?? null;
+  const primaryClass =
+    (classesQuery.data ?? []).find((item) => item.id === student?.primary_class_id) ?? null;
+
   const events = eventsQuery.data ?? [];
   const eventsByDateKey = useMemo(() => {
     const map = new Map<string, TrajectoryEvent[]>();
@@ -121,6 +183,13 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
   }, [events]);
   const totalEvents = events.length;
   const uniqueDays = eventsByDateKey.size;
+
+  const lastEvent = useMemo(() => {
+    if (events.length === 0) return null;
+    return events.reduce((latest, current) =>
+      current.event_date > latest.event_date ? current : latest
+    );
+  }, [events]);
 
   const createEventMutation = useMutation({
     mutationFn: trajectoryApi.createEvent,
@@ -286,6 +355,20 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     setCursor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
   }, []);
 
+  const handleDatePickerChange = useCallback((raw: string) => {
+    setDatePickerValue(raw);
+    const trimmed = raw.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return;
+    }
+    const parsed = fromDateKey(trimmed);
+    if (Number.isNaN(parsed.getTime())) {
+      return;
+    }
+    setCursor(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
+    setSelectedDateKey(trimmed);
+  }, []);
+
   const calendarCells = useMemo(() => {
     const year = cursor.getFullYear();
     const month = cursor.getMonth();
@@ -340,7 +423,6 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     [],
   );
 
-  const student: Student | null = studentQuery.data ?? null;
   const monthTitle = `${MONTH_NAMES[cursor.getMonth()] ?? ""} ${cursor.getFullYear()}`;
   const selectedEvents = useMemo(
     () => (selectedDateKey ? eventsByDateKey.get(selectedDateKey) ?? [] : []),
@@ -388,284 +470,418 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
         sidebarSummary={sidebarSummary}
         subtitle={student ? `trayectoria de ${student.first_name} ${student.last_name}` : "trayectoria del alumno"}
         title="Trayectoria"
-      >
-        <View
-          nativeID="screens-admin-trajectory-detail-content"
-          style={[styles.container, { maxWidth: contentMaxWidth }]}
-          testID="screens-admin-trajectory-detail-content"
-        >
-          <View style={styles.backRow}>
-            <Pressable
-              accessibilityRole="link"
-              hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
-              onPress={handleGoBack}
-              style={(state) => {
-                const hovered = (state as typeof state & { hovered?: boolean }).hovered ?? false;
-                return [
-                  styles.backLink,
-                  hovered ? styles.backLinkHovered : null,
-                  state.pressed ? styles.backLinkPressed : null,
-                ];
-              }}
-            >
-              <Feather name="arrow-left" size={16} color={colors.action} />
-              <Text style={styles.backLinkLabel}>Volver a la lista</Text>
-            </Pressable>
-          </View>
-
-          {feedbackMessage ? (
-            <AppCard
-              nativeID="screens-admin-trajectory-detail-feedback-card"
-              style={[
-                styles.feedbackCard,
-                feedbackTone === "success" ? styles.feedbackSuccess : styles.feedbackDanger,
-              ]}
-              testID="screens-admin-trajectory-detail-feedback-card"
-            >
-              <Text style={styles.feedbackText}>{feedbackMessage}</Text>
-            </AppCard>
-          ) : null}
-
-          {studentQuery.isLoading || eventsQuery.isLoading ? (
-            <AppCard
-              nativeID="screens-admin-trajectory-detail-loading-card"
-              style={styles.loadingCard}
-              testID="screens-admin-trajectory-detail-loading-card"
-            >
-              <Text style={styles.loadingText}>Cargando trayectoria…</Text>
-            </AppCard>
-          ) : studentQuery.isError ? (
-            <View style={styles.errorBlock}>
-              <StatusView
-                nativeID="screens-admin-trajectory-detail-error-status"
-                title="No pudimos cargar al alumno"
-                description={getErrorMessage(studentQuery.error)}
-              />
-            </View>
-          ) : !student ? (
-            <View style={styles.errorBlock}>
-              <StatusView
-                nativeID="screens-admin-trajectory-detail-missing-status"
-                title="Alumno no encontrado"
-                description="Verifica el código del alumno e intenta nuevamente."
-              />
-            </View>
-          ) : (
-            <>
+        showBackButton
+        onBack={handleGoBack}
+        headerMainContent={
+          <View
+            nativeID="screens-admin-trajectory-detail-header-block"
+            style={styles.headerBlock}
+            testID="screens-admin-trajectory-detail-header-block"
+          >
+            {feedbackMessage ? (
               <AppCard
-                nativeID="screens-admin-trajectory-detail-student-card"
-                style={styles.studentCard}
-                testID="screens-admin-trajectory-detail-student-card"
+                nativeID="screens-admin-trajectory-detail-feedback-card"
+                style={[
+                  styles.feedbackCard,
+                  feedbackTone === "success" ? styles.feedbackSuccess : styles.feedbackDanger,
+                ]}
+                testID="screens-admin-trajectory-detail-feedback-card"
               >
-                <View
-                  style={[
-                    styles.studentCardRow,
-                    isDesktop ? null : mobileStyles.studentCardRow,
-                  ]}
+                <Text style={styles.feedbackText}>{feedbackMessage}</Text>
+              </AppCard>
+            ) : null}
+
+            {studentQuery.isLoading || eventsQuery.isLoading || branchesQuery.isLoading || classesQuery.isLoading ? (
+              <AppCard
+                nativeID="screens-admin-trajectory-detail-loading-card"
+                style={styles.loadingCard}
+                testID="screens-admin-trajectory-detail-loading-card"
+              >
+                <Text style={styles.loadingText}>Cargando trayectoria…</Text>
+              </AppCard>
+            ) : studentQuery.isError ? (
+              <View style={styles.errorBlock}>
+                <StatusView
+                  nativeID="screens-admin-trajectory-detail-error-status"
+                  title="No pudimos cargar al alumno"
+                  description={getErrorMessage(studentQuery.error)}
+                />
+              </View>
+            ) : !student ? (
+              <View style={styles.errorBlock}>
+                <StatusView
+                  nativeID="screens-admin-trajectory-detail-missing-status"
+                  title="Alumno no encontrado"
+                  description="Verifica el código del alumno e intenta nuevamente."
+                />
+              </View>
+            ) : (
+              <>
+                <AppCard
+                  nativeID="screens-admin-trajectory-detail-student-card"
+                  style={styles.summaryCard}
+                  testID="screens-admin-trajectory-detail-student-card"
                 >
-                  <View style={styles.studentPhotoWrap}>
-                    {student.photo_url ? (
-                      <View style={styles.studentPhoto} />
+                  <View
+                    style={[
+                      styles.summaryHeaderSection,
+                      isDesktop ? desktopStyles.summaryHeaderSection : mobileStyles.summaryHeaderSection,
+                    ]}
+                  >
+                    <View style={styles.summaryPhotoBlock} testID="screens-admin-trajectory-detail-student-photo-block">
+                      {student.photo_url ? (
+                        <Image
+                          accessibilityLabel={`Foto de ${student.first_name} ${student.last_name}`}
+                          source={{ uri: student.photo_url }}
+                          style={styles.summaryPhoto}
+                          testID="screens-admin-trajectory-detail-student-photo"
+                        />
+                      ) : (
+                        <View
+                          accessibilityLabel={`Iniciales del alumno ${student.first_name} ${student.last_name}`}
+                          style={styles.summaryPhotoPlaceholder}
+                          testID="screens-admin-trajectory-detail-student-photo-placeholder"
+                        >
+                          <Text style={styles.summaryPhotoInitials} accessible={false}>
+                            {student.first_name.charAt(0)}
+                            {student.last_name.charAt(0)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.summaryHeaderCopy} testID="screens-admin-trajectory-detail-student-header-copy">
+                      <Text style={styles.summaryHeaderName} testID="screens-admin-trajectory-detail-student-name">
+                        {student.first_name} {student.last_name}
+                      </Text>
+                      <Text style={styles.summaryHeaderCode} testID="screens-admin-trajectory-detail-student-code">
+                        Código {student.unique_code}
+                      </Text>
+                      <View style={styles.summaryHeaderBeltRow} testID="screens-admin-trajectory-detail-student-belt-row">
+                        <BeltIndicator
+                          beltLevel={student.current_belt_level}
+                          size="sm"
+                          stripe={student.current_stripe}
+                          testID={`screens-admin-trajectory-detail-belt-${student.id}`}
+                        />
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.summaryStatsBlock,
+                        isDesktop ? null : mobileStyles.summaryStatsBlock,
+                      ]}
+                    >
+                      <View style={styles.summaryStatItem}>
+                        <Text style={styles.summaryStatValue}>{totalEvents}</Text>
+                        <Text style={styles.summaryStatLabel}>sucesos</Text>
+                      </View>
+                      <View style={styles.summaryStatItem}>
+                        <Text style={styles.summaryStatValue}>{uniqueDays}</Text>
+                        <Text style={styles.summaryStatLabel}>días</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.summaryDivider} />
+
+                  <View
+                    style={[
+                      styles.summaryTwoColGrid,
+                      isDesktop ? desktopStyles.summaryTwoColGrid : mobileStyles.summaryTwoColGrid,
+                    ]}
+                  >
+                    <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-status-block">
+                      <Text style={styles.summarySectionLabel}>Estado</Text>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-payment" testID="screens-admin-trajectory-detail-student-status-payment">
+                        <Text style={styles.summaryInfoRowLabel}>Pago</Text>
+                        <Text style={[styles.summaryInfoRowValue, { color: getStudentPaymentColor(student.payment_status) }]}>
+                          {formatPaymentStatus(student.payment_status)}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-student" testID="screens-admin-trajectory-detail-student-status-student">
+                        <Text style={styles.summaryInfoRowLabel}>Alumno</Text>
+                        <Text style={[styles.summaryInfoRowValue, { color: getStudentStatusColor(student.status) }]}>
+                          {formatStudentStatusLabel(student.status)}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-next" testID="screens-admin-trajectory-detail-student-status-next">
+                        <Text style={styles.summaryInfoRowLabel}>Próximo pago</Text>
+                        <Text style={styles.summaryInfoRowValue}>{formatDate(student.next_payment_date)}</Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-fee" testID="screens-admin-trajectory-detail-student-status-fee">
+                        <Text style={styles.summaryInfoRowLabel}>Mensualidad</Text>
+                        <Text style={styles.summaryInfoRowValue}>{formatCurrency(student.monthly_fee, student.currency)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-profile-block">
+                      <Text style={styles.summarySectionLabel}>Perfil</Text>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-birth" testID="screens-admin-trajectory-detail-student-profile-birth">
+                        <Text style={styles.summaryInfoRowLabel}>Nacimiento</Text>
+                        <Text style={styles.summaryInfoRowValue}>
+                          {formatDate(student.birth_date)} · {student.birth_place}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-enrollment" testID="screens-admin-trajectory-detail-student-profile-enrollment">
+                        <Text style={styles.summaryInfoRowLabel}>Inscripción</Text>
+                        <Text style={styles.summaryInfoRowValue}>{formatDate(student.enrollment_date)}</Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-branch" testID="screens-admin-trajectory-detail-student-profile-branch">
+                        <Text style={styles.summaryInfoRowLabel}>Sucursal</Text>
+                        <Text style={styles.summaryInfoRowValue}>
+                          {branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-class" testID="screens-admin-trajectory-detail-student-profile-class">
+                        <Text style={styles.summaryInfoRowLabel}>Clase</Text>
+                        <Text style={styles.summaryInfoRowValue}>{primaryClass?.name ?? "No asignada"}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.summaryDivider} />
+
+                  <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-contact-block">
+                    <Text style={styles.summarySectionLabel}>Contacto</Text>
+                    <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-guardian-name" testID="screens-admin-trajectory-detail-student-guardian-name">
+                      <Text style={styles.summaryInfoRowLabel}>Tutor</Text>
+                      <Text style={styles.summaryInfoRowValue}>{student.guardian_name ?? "No registrado"}</Text>
+                    </View>
+                    <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-guardian-phone" testID="screens-admin-trajectory-detail-student-guardian-phone">
+                      <Text style={styles.summaryInfoRowLabel}>Teléfono</Text>
+                      <Text style={styles.summaryInfoRowValue}>{student.guardian_phone ?? "No registrado"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.summaryDivider} />
+
+                  <View style={styles.summaryLastEventBlock} testID="screens-admin-trajectory-detail-student-last-event-block">
+                    <View style={styles.summaryLastEventHeader}>
+                      <Text style={styles.summarySectionLabel}>Último suceso</Text>
+                      <Feather name="award" size={14} color={colors.gold} />
+                    </View>
+                    {lastEvent ? (
+                      <View style={styles.summaryLastEventCard}>
+                        <View style={styles.summaryLastEventTopRow}>
+                          <Text style={styles.summaryLastEventDate}>
+                            {formatLongDate(lastEvent.event_date)}
+                          </Text>
+                          <Text style={styles.summaryLastEventMeta}>
+                            Guardado el {formatDate(lastEvent.created_at)}
+                          </Text>
+                        </View>
+                        <Text style={styles.summaryLastEventContent}>{lastEvent.content}</Text>
+                        <Pressable
+                          accessibilityRole="link"
+                          hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+                          onPress={() => {
+                            const d = fromDateKey(lastEvent.event_date);
+                            setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+                            setSelectedDateKey(lastEvent.event_date);
+                            setIsDayModalVisible(true);
+                            setIsCreatingNew(false);
+                            setDraftContent("");
+                            setEditingEventId(null);
+                            setEditingContent("");
+                            setDayModalError(null);
+                          }}
+                          style={(state) => {
+                            const hovered =
+                              (state as typeof state & { hovered?: boolean }).hovered ?? false;
+                            return [
+                              styles.summaryLastEventLink,
+                              hovered ? styles.summaryLastEventLinkHovered : null,
+                              state.pressed ? styles.summaryLastEventLinkPressed : null,
+                            ];
+                          }}
+                        >
+                          <Text style={[styles.summaryLastEventLinkLabel, styles.summaryLastEventLinkUnderlined]}>
+                            Ver en el calendario
+                          </Text>
+                        </Pressable>
+                      </View>
                     ) : (
-                      <View style={[styles.studentPhoto, styles.studentPhotoEmpty]}>
-                        <Text style={styles.studentPhotoInitials}>
-                          {student.first_name.slice(0, 1).toUpperCase()}
-                          {student.last_name.slice(0, 1).toUpperCase()}
+                      <View style={styles.summaryLastEventEmpty}>
+                        <Text style={styles.summaryLastEventEmptyTitle}>Sin sucesos registrados</Text>
+                        <Text style={styles.summaryLastEventEmptyDesc}>
+                          Selecciona un día en el calendario para agregar el primer recuerdo de la trayectoria de {student.first_name}.
                         </Text>
                       </View>
                     )}
                   </View>
+                </AppCard>
 
-                  <View style={styles.studentInfo}>
-                    <Text style={styles.studentName}>
-                      {student.first_name} {student.last_name}
-                    </Text>
-                    <Text style={styles.studentMeta}>
-                      {student.unique_code} · Inscrito el{" "}
-                      {formatDate(student.enrollment_date)}
-                    </Text>
-                    <View style={styles.studentInfoDetails}>
-                      <BeltIndicator
-                        beltLevel={student.current_belt_level}
-                        size="sm"
-                        stripe={student.current_stripe}
-                        testID={`screens-admin-trajectory-detail-belt-${student.id}`}
-                      />
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.studentStats,
-                      isDesktop ? null : mobileStyles.studentStats,
-                    ]}
-                  >
-                    <View style={styles.studentStat}>
-                      <Text style={styles.studentStatValue}>{totalEvents}</Text>
-                      <Text style={styles.studentStatLabel}>sucesos</Text>
-                    </View>
-                    <View style={styles.studentStat}>
-                      <Text style={styles.studentStatValue}>{uniqueDays}</Text>
-                      <Text style={styles.studentStatLabel}>días marcados</Text>
-                    </View>
-                  </View>
-                </View>
-              </AppCard>
-
-              <View
-                nativeID="screens-admin-trajectory-detail-calendar-wrap"
-                style={styles.calendarWrap}
-                testID="screens-admin-trajectory-detail-calendar-wrap"
-              >
-                <AppCard
-                  nativeID="screens-admin-trajectory-detail-calendar-card"
-                  style={styles.calendarCard}
-                  testID="screens-admin-trajectory-detail-calendar-card"
+                <View
+                  nativeID="screens-admin-trajectory-detail-calendar-wrap"
+                  style={styles.calendarWrap}
+                  testID="screens-admin-trajectory-detail-calendar-wrap"
                 >
-                  <View style={styles.calendarHeader}>
-                    <Pressable
-                      accessibilityLabel="Mes anterior"
-                      accessibilityRole="button"
-                      hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
-                      onPress={handlePrevMonth}
-                      style={(state) => {
-                        const hovered =
-                          (state as typeof state & { hovered?: boolean }).hovered ?? false;
-                        return [
-                          styles.monthNavButton,
-                          hovered ? styles.monthNavButtonHovered : null,
-                          state.pressed ? styles.monthNavButtonPressed : null,
-                        ];
-                      }}
-                    >
-                      <Feather name="chevron-left" size={20} color={colors.text} />
-                    </Pressable>
-                    <Text style={styles.monthTitle}>{monthTitle}</Text>
-                    <Pressable
-                      accessibilityLabel="Mes siguiente"
-                      accessibilityRole="button"
-                      hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
-                      onPress={handleNextMonth}
-                      style={(state) => {
-                        const hovered =
-                          (state as typeof state & { hovered?: boolean }).hovered ?? false;
-                        return [
-                          styles.monthNavButton,
-                          hovered ? styles.monthNavButtonHovered : null,
-                          state.pressed ? styles.monthNavButtonPressed : null,
-                        ];
-                      }}
-                    >
-                      <Feather name="chevron-right" size={20} color={colors.text} />
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.weekdayRow}>
-                    {WEEKDAY_SHORT.map((label) => (
-                      <Text
-                        key={label}
-                        style={styles.weekdayLabel}
-                      >
-                        {label}
-                      </Text>
-                    ))}
-                  </View>
-
-                  <View style={styles.calendarGrid}>
-                    {calendarCells.map((cell) => {
-                      if (!cell.inMonth || cell.day === null || !cell.dateKey) {
-                        return (
-                          <View key={cell.key} style={styles.dayCell} />
-                        );
-                      }
-                      return (
+                  <AppCard
+                    nativeID="screens-admin-trajectory-detail-calendar-card"
+                    style={styles.calendarCard}
+                    testID="screens-admin-trajectory-detail-calendar-card"
+                  >
+                    <View style={[styles.calendarTopBar, isDesktop ? desktopStyles.calendarTopBar : mobileStyles.calendarTopBar]}>
+                      <View style={styles.calendarHeader}>
                         <Pressable
-                          key={cell.key}
+                          accessibilityLabel="Mes anterior"
                           accessibilityRole="button"
                           hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
-                          onPress={() => handleOpenDay(cell.dateKey!)}
+                          onPress={handlePrevMonth}
                           style={(state) => {
                             const hovered =
-                              (state as typeof state & { hovered?: boolean })
-                                .hovered ?? false;
+                              (state as typeof state & { hovered?: boolean }).hovered ?? false;
                             return [
-                              styles.dayCell,
-                              styles.dayCellInteractive,
-                              cell.isToday ? styles.dayCellToday : null,
-                              cell.isSelected ? styles.dayCellSelected : null,
-                              hovered && !cell.isSelected
-                                ? styles.dayCellHovered
-                                : null,
-                              state.pressed ? styles.dayCellPressed : null,
+                              styles.monthNavButton,
+                              hovered ? styles.monthNavButtonHovered : null,
+                              state.pressed ? styles.monthNavButtonPressed : null,
                             ];
                           }}
                         >
-                          <Text
-                            style={[
-                              styles.dayNumber,
-                              cell.isToday ? styles.dayNumberToday : null,
-                              cell.isSelected ? styles.dayNumberSelected : null,
-                            ]}
-                          >
-                            {cell.day}
-                          </Text>
-                          {cell.eventsCount > 0 ? (
-                            <View
-                              style={[
-                                styles.dayDotRow,
-                                cell.eventsCount >= 3
-                                  ? styles.dayDotRowWide
+                          <Feather name="chevron-left" size={20} color={colors.text} />
+                        </Pressable>
+                        <Text style={styles.monthTitle}>{monthTitle}</Text>
+                        <Pressable
+                          accessibilityLabel="Mes siguiente"
+                          accessibilityRole="button"
+                          hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+                          onPress={handleNextMonth}
+                          style={(state) => {
+                            const hovered =
+                              (state as typeof state & { hovered?: boolean }).hovered ?? false;
+                            return [
+                              styles.monthNavButton,
+                              hovered ? styles.monthNavButtonHovered : null,
+                              state.pressed ? styles.monthNavButtonPressed : null,
+                            ];
+                          }}
+                        >
+                          <Feather name="chevron-right" size={20} color={colors.text} />
+                        </Pressable>
+                      </View>
+
+                      <View style={styles.datePickerWrap}>
+                        <AppDateInput
+                          label="Ir a fecha"
+                          nativeID="screens-admin-trajectory-detail-date-picker"
+                          testID="screens-admin-trajectory-detail-date-picker"
+                          value={datePickerValue}
+                          onChangeText={handleDatePickerChange}
+                          placeholder="YYYY-MM-DD"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.weekdayRow}>
+                      {WEEKDAY_SHORT.map((label) => (
+                        <Text
+                          key={label}
+                          style={styles.weekdayLabel}
+                        >
+                          {label}
+                        </Text>
+                      ))}
+                    </View>
+
+                    <View style={styles.calendarGrid}>
+                      {calendarCells.map((cell) => {
+                        if (!cell.inMonth || cell.day === null || !cell.dateKey) {
+                          return (
+                            <View key={cell.key} style={styles.dayCell} />
+                          );
+                        }
+                        return (
+                          <Pressable
+                            key={cell.key}
+                            accessibilityRole="button"
+                            hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+                            onPress={() => handleOpenDay(cell.dateKey!)}
+                            style={(state) => {
+                              const hovered =
+                                (state as typeof state & { hovered?: boolean })
+                                  .hovered ?? false;
+                              return [
+                                styles.dayCell,
+                                styles.dayCellInteractive,
+                                cell.isToday ? styles.dayCellToday : null,
+                                cell.isSelected ? styles.dayCellSelected : null,
+                                hovered && !cell.isSelected
+                                  ? styles.dayCellHovered
                                   : null,
+                                state.pressed ? styles.dayCellPressed : null,
+                              ];
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.dayNumber,
+                                cell.isToday ? styles.dayNumberToday : null,
+                                cell.isSelected ? styles.dayNumberSelected : null,
                               ]}
                             >
-                              {Array.from({ length: Math.min(cell.eventsCount, 3) }).map(
-                                (_, idx) => (
-                                  <View
-                                    key={idx}
-                                    style={[
-                                      styles.dayDot,
-                                      cell.isSelected
-                                        ? styles.dayDotSelected
-                                        : cell.isToday
-                                          ? styles.dayDotToday
-                                          : null,
-                                    ]}
-                                  />
-                                ),
-                              )}
-                            </View>
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                              {cell.day}
+                            </Text>
+                            {cell.eventsCount > 0 ? (
+                              <View
+                                style={[
+                                  styles.dayDotRow,
+                                  cell.eventsCount >= 3
+                                    ? styles.dayDotRowWide
+                                    : null,
+                                ]}
+                              >
+                                {Array.from({ length: Math.min(cell.eventsCount, 3) }).map(
+                                  (_, idx) => (
+                                    <View
+                                      key={idx}
+                                      style={[
+                                        styles.dayDot,
+                                        cell.isSelected
+                                          ? styles.dayDotSelected
+                                          : cell.isToday
+                                            ? styles.dayDotToday
+                                            : null,
+                                      ]}
+                                    />
+                                  ),
+                                )}
+                              </View>
+                            ) : null}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
 
-                  <View style={styles.calendarLegend}>
-                    <View style={styles.legendItem}>
-                      <View style={styles.dayDot} />
-                      <Text style={styles.legendText}>
-                        1-2 hitos del día
-                      </Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.dayDot, styles.dayDotAlt]} />
-                      <View style={styles.dayDotRowNarrow}>
+                    <View style={styles.calendarLegend}>
+                      <View style={styles.legendItem}>
                         <View style={styles.dayDot} />
-                        <View style={styles.dayDot} />
-                        <View style={styles.dayDot} />
+                        <Text style={styles.legendText}>
+                          1-2 hitos del día
+                        </Text>
                       </View>
-                      <Text style={styles.legendText}>3+ hitos</Text>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.dayDot, styles.dayDotAlt]} />
+                        <View style={styles.dayDotRowNarrow}>
+                          <View style={styles.dayDot} />
+                          <View style={styles.dayDot} />
+                          <View style={styles.dayDot} />
+                        </View>
+                        <Text style={styles.legendText}>3+ hitos</Text>
+                      </View>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.dayDotSample, styles.dayDotSampleToday]} />
+                        <Text style={styles.legendText}>Hoy</Text>
+                      </View>
                     </View>
-                    <View style={styles.legendItem}>
-                      <View style={[styles.dayDotSample, styles.dayDotSampleToday]} />
-                      <Text style={styles.legendText}>Hoy</Text>
-                    </View>
-                  </View>
-                </AppCard>
-              </View>
-            </>
-          )}
-        </View>
+                  </AppCard>
+                </View>
+              </>
+            )}
+          </View>
+        }
+      >
       </AdminShell>
 
       <AppModal
@@ -882,36 +1098,10 @@ const styles = StyleSheet.create({
   screenContent: {
     width: "100%",
   },
-  container: {
+  headerBlock: {
     alignSelf: "center",
     gap: spacing.lg,
     width: "100%",
-  },
-  backRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  backLink: {
-    alignItems: "center",
-    borderRadius: radius.sm,
-    flexDirection: "row",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 6,
-  },
-  backLinkHovered: {
-    backgroundColor: colors.actionSoft ?? colors.primarySoft,
-  },
-  backLinkPressed: {
-    opacity: 0.84,
-  },
-  backLinkLabel: {
-    color: colors.action,
-    fontFamily: typography.headingFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    textDecorationLine: "underline",
   },
   feedbackCard: {
     borderRadius: radius.md,
@@ -945,73 +1135,200 @@ const styles = StyleSheet.create({
   errorBlock: {
     flex: 1,
   },
-  studentCard: {
-    padding: spacing.md,
+  summaryCard: {
+    gap: spacing.lg,
+    padding: spacing.lg,
   },
-  studentCardRow: {
-    alignItems: "center",
+  summaryHeaderSection: {
     gap: spacing.md,
   },
-  studentPhotoWrap: {
+  summaryPhotoBlock: {
     alignItems: "center",
   },
-  studentPhoto: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
+  summaryPhoto: {
+    borderRadius: 999,
     borderColor: colors.border,
-    borderRadius: radius.pill,
     borderWidth: 1,
-    height: 72,
+    height: 88,
+    width: 88,
+  },
+  summaryPhotoPlaceholder: {
+    alignItems: "center",
+    backgroundColor: colors.woodSoft,
+    borderRadius: 999,
+    borderColor: colors.border,
+    borderWidth: 1,
+    height: 88,
     justifyContent: "center",
-    width: 72,
+    width: 88,
   },
-  studentPhotoEmpty: {
-    backgroundColor: colors.primarySoft,
+  summaryPhotoInitials: {
+    color: colors.woodStrong,
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
+    fontWeight: "800",
   },
-  studentPhotoInitials: {
-    color: colors.primary,
+  summaryHeaderCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  summaryHeaderName: {
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 22,
     fontWeight: "800",
   },
-  studentInfo: {
-    flex: 1,
-    gap: spacing.xs,
-    minWidth: 0,
-  },
-  studentName: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  studentMeta: {
+  summaryHeaderCode: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
-    lineHeight: 18,
   },
-  studentInfoDetails: {
-    marginTop: spacing.xs,
+  summaryHeaderBeltRow: {
+    alignSelf: "flex-start",
   },
-  studentStats: {
+  summaryStatsBlock: {
     gap: spacing.md,
   },
-  studentStat: {
+  summaryStatItem: {
     alignItems: "center",
     gap: 2,
   },
-  studentStatValue: {
+  summaryStatValue: {
     color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 22,
     fontWeight: "800",
   },
-  studentStatLabel: {
+  summaryStatLabel: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
     textTransform: "lowercase",
+  },
+  summaryDivider: {
+    backgroundColor: colors.border,
+    height: 1,
+    width: "100%",
+  },
+  summaryTwoColGrid: {
+    gap: spacing.md,
+  },
+  summaryInfoBlock: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  summarySectionLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 2,
+    textTransform: "uppercase",
+  },
+  summaryInfoRow: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: 3,
+    paddingVertical: spacing.xs,
+  },
+  summaryInfoRowLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  summaryInfoRowValue: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  summaryLastEventBlock: {
+    gap: spacing.sm,
+  },
+  summaryLastEventHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "space-between",
+  },
+  summaryLastEventCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  summaryLastEventTopRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+  },
+  summaryLastEventDate: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  summaryLastEventMeta: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+  },
+  summaryLastEventContent: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  summaryLastEventLink: {
+    alignSelf: "flex-start",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 6,
+  },
+  summaryLastEventLinkHovered: {
+    backgroundColor: colors.actionSoft ?? colors.primarySoft,
+  },
+  summaryLastEventLinkPressed: {
+    opacity: 0.84,
+  },
+  summaryLastEventLinkLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  summaryLastEventLinkUnderlined: {
+    textDecorationLine: "underline",
+  },
+  summaryLastEventEmpty: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.lg,
+  },
+  summaryLastEventEmptyTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  summaryLastEventEmptyDesc: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
   calendarWrap: {
     width: "100%",
@@ -1019,11 +1336,20 @@ const styles = StyleSheet.create({
   calendarCard: {
     padding: spacing.md,
   },
+  calendarTopBar: {
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    width: "100%",
+  },
+  datePickerWrap: {
+    width: "100%",
+  },
   calendarHeader: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: spacing.md,
+    width: "100%",
   },
   monthNavButton: {
     alignItems: "center",
@@ -1271,15 +1597,43 @@ const styles = StyleSheet.create({
 });
 
 const mobileStyles = StyleSheet.create({
-  studentCardRow: {
-    alignItems: "flex-start",
+  summaryHeaderSection: {
+    alignItems: "center",
     flexDirection: "column",
   },
-  studentStats: {
+  summaryHeaderCopy: {
+    alignItems: "center",
+  },
+  summaryHeaderBeltRow: {
+    alignSelf: "center",
+  },
+  summaryStatsBlock: {
     alignSelf: "stretch",
     flexDirection: "row",
     gap: spacing.xl,
-    justifyContent: "flex-start",
-    paddingLeft: spacing.sm,
+    justifyContent: "center",
+  },
+  summaryTwoColGrid: {
+    flexDirection: "column",
+  },
+  calendarTopBar: {
+    flexDirection: "column",
+  },
+});
+
+const desktopStyles = StyleSheet.create({
+  summaryHeaderSection: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+  },
+  summaryTwoColGrid: {
+    flexDirection: "row",
+  },
+  calendarTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  datePickerWrap: {
+    maxWidth: 320,
   },
 });
