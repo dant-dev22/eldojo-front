@@ -193,6 +193,31 @@ export interface StudentBeltHistory {
   stripe: BeltStripeSummary | null;
 }
 
+export type FightRecordType = "victoria" | "empate" | "derrota";
+
+export interface StudentFightRecord {
+  id: number;
+  student_id: number;
+  record_type: FightRecordType;
+  opponent_name: string;
+  fight_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentFightRecordCreatePayload {
+  student_id: number;
+  record_type: FightRecordType;
+  opponent_name: string;
+  fight_date: string;
+}
+
+export interface StudentFightRecordUpdatePayload {
+  record_type?: FightRecordType;
+  opponent_name?: string;
+  fight_date?: string;
+}
+
 export interface Student {
   id: number;
   organization_id: number;

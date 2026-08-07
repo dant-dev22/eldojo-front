@@ -7,6 +7,7 @@ import { Image, KeyboardAvoidingView, Pressable, Platform, ScrollView, StyleShee
 import { getErrorMessage } from "@/api/http";
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
+import { fightRecordsApi } from "@/api/fightRecordsApi";
 import { studentsApi } from "@/api/studentsApi";
 import { trajectoryApi } from "@/api/trajectoryApi";
 import { AppButton } from "@/components/AppButton";
@@ -22,7 +23,13 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import type { AdminStackParamList } from "@/navigation/types";
-import type { Student, StudentStatus, TrajectoryEvent } from "@/types/api";
+import type {
+  FightRecordType,
+  Student,
+  StudentFightRecord,
+  StudentStatus,
+  TrajectoryEvent,
+} from "@/types/api";
 import {
   formatCurrency,
   formatDate,
@@ -90,6 +97,46 @@ function formatLongDate(dateKey: string): string {
   return `${weekday} ${day} de ${month}, ${year}`;
 }
 
+function formatDateIso(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatFightTypeLabel(t: FightRecordType): string {
+  switch (t) {
+    case "victoria":
+      return "Victoria";
+    case "empate":
+      return "Empate";
+    case "derrota":
+      return "Derrota";
+  }
+}
+
+function getFightTypeColor(t: FightRecordType): string {
+  switch (t) {
+    case "victoria":
+      return colors.success;
+    case "empate":
+      return colors.warning;
+    case "derrota":
+      return colors.danger;
+  }
+}
+
+function getFightTypeSoftColor(t: FightRecordType): string {
+  switch (t) {
+    case "victoria":
+      return colors.successSoft;
+    case "empate":
+      return colors.warningSoft;
+    case "derrota":
+      return colors.dangerSoft;
+  }
+}
+
 function getStudentPaymentColor(status: Student["payment_status"]): string {
   switch (status) {
     case "up_to_date":
@@ -138,12 +185,25 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<"success" | "danger">("success");
   const [datePickerValue, setDatePickerValue] = useState<string>("");
+  const [isFightRecordModalVisible, setIsFightRecordModalVisible] = useState(false);
+  const [isCreatingFightRecord, setIsCreatingFightRecord] = useState(false);
+  const [editingFightRecordId, setEditingFightRecordId] = useState<number | null>(null);
+  const [draftFightType, setDraftFightType] = useState<FightRecordType>("victoria");
+  const [draftFightOpponent, setDraftFightOpponent] = useState("");
+  const [draftFightDate, setDraftFightDate] = useState<string>(formatDateIso(new Date()));
+  const [fightRecordError, setFightRecordError] = useState<string | null>(null);
   const newContentInputRef = useRef<TextInput>(null);
   const editContentInputRef = useRef<TextInput>(null);
 
   const studentQuery = useQuery({
     queryKey: ["student", studentId],
     queryFn: () => studentsApi.getById(studentId),
+  });
+
+  const fightRecordsQuery = useQuery({
+    queryKey: ["fight-records", studentId],
+    queryFn: () => fightRecordsApi.list({ student_id: studentId }),
+    enabled: Boolean(studentId),
   });
 
   const eventsQuery = useQuery({
@@ -254,6 +314,157 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
       setDayModalError(getErrorMessage(error));
     },
   });
+
+  const fightRecords = fightRecordsQuery.data ?? [];
+  const fightTotals = useMemo(() => {
+    const totals = { victoria: 0, empate: 0, derrota: 0 };
+    fightRecords.forEach((r) => {
+      totals[r.record_type] += 1;
+    });
+    return totals;
+  }, [fightRecords]);
+
+  const createFightMutation = useMutation({
+    mutationFn: fightRecordsApi.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["fight-records", studentId] });
+      await queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      setIsCreatingFightRecord(false);
+      setDraftFightType("victoria");
+      setDraftFightOpponent("");
+      setDraftFightDate(formatDateIso(new Date()));
+      setFightRecordError(null);
+      setFeedbackTone("success");
+      setFeedbackMessage("Registro deportivo agregado.");
+    },
+    onError: (error) => {
+      setFightRecordError(getErrorMessage(error));
+    },
+  });
+
+  const updateFightMutation = useMutation({
+    mutationFn: ({
+      recordId,
+      payload,
+    }: {
+      recordId: number;
+      payload: { record_type?: FightRecordType; opponent_name?: string; fight_date?: string };
+    }) => fightRecordsApi.update(recordId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["fight-records", studentId] });
+      await queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      setEditingFightRecordId(null);
+      setDraftFightType("victoria");
+      setDraftFightOpponent("");
+      setDraftFightDate(formatDateIso(new Date()));
+      setFightRecordError(null);
+      setFeedbackTone("success");
+      setFeedbackMessage("Registro deportivo actualizado.");
+    },
+    onError: (error) => {
+      setFightRecordError(getErrorMessage(error));
+    },
+  });
+
+  const removeFightMutation = useMutation({
+    mutationFn: (recordId: number) => fightRecordsApi.remove(recordId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["fight-records", studentId] });
+      await queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      setFightRecordError(null);
+      setFeedbackTone("success");
+      setFeedbackMessage("Registro deportivo eliminado.");
+    },
+    onError: (error) => {
+      setFightRecordError(getErrorMessage(error));
+    },
+  });
+
+  const handleOpenFightRecord = useCallback(() => {
+    setIsFightRecordModalVisible(true);
+    setIsCreatingFightRecord(false);
+    setEditingFightRecordId(null);
+    setDraftFightType("victoria");
+    setDraftFightOpponent("");
+    setDraftFightDate(formatDateIso(new Date()));
+    setFightRecordError(null);
+  }, []);
+
+  const handleCloseFightRecord = useCallback(() => {
+    setIsFightRecordModalVisible(false);
+    setIsCreatingFightRecord(false);
+    setEditingFightRecordId(null);
+    setDraftFightType("victoria");
+    setDraftFightOpponent("");
+    setDraftFightDate(formatDateIso(new Date()));
+    setFightRecordError(null);
+  }, []);
+
+  const handleStartEditFight = useCallback((record: StudentFightRecord) => {
+    setEditingFightRecordId(record.id);
+    setDraftFightType(record.record_type);
+    setDraftFightOpponent(record.opponent_name);
+    setDraftFightDate(record.fight_date);
+    setIsCreatingFightRecord(false);
+    setFightRecordError(null);
+  }, []);
+
+  const handleCancelEditFight = useCallback(() => {
+    setEditingFightRecordId(null);
+    setDraftFightType("victoria");
+    setDraftFightOpponent("");
+    setDraftFightDate(formatDateIso(new Date()));
+    setFightRecordError(null);
+  }, []);
+
+  const handleSubmitFightRecord = useCallback(() => {
+    const opponentTrimmed = draftFightOpponent.trim();
+    if (opponentTrimmed.length === 0) {
+      setFightRecordError("Escribe el nombre del rival.");
+      return;
+    }
+    if (opponentTrimmed.length > 50) {
+      setFightRecordError("El nombre del rival no puede exceder 50 caracteres.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(draftFightDate)) {
+      setFightRecordError("Usa el formato YYYY-MM-DD para la fecha.");
+      return;
+    }
+
+    if (editingFightRecordId !== null) {
+      updateFightMutation.mutate({
+        recordId: editingFightRecordId,
+        payload: {
+          record_type: draftFightType,
+          opponent_name: opponentTrimmed,
+          fight_date: draftFightDate,
+        },
+      });
+    } else {
+      createFightMutation.mutate({
+        student_id: studentId,
+        record_type: draftFightType,
+        opponent_name: opponentTrimmed,
+        fight_date: draftFightDate,
+      });
+    }
+  }, [
+    createFightMutation,
+    draftFightDate,
+    draftFightOpponent,
+    draftFightType,
+    editingFightRecordId,
+    studentId,
+    updateFightMutation,
+  ]);
+
+  const handleRemoveFight = useCallback(
+    (recordId: number) => {
+      removeFightMutation.mutate(recordId);
+    },
+    [removeFightMutation],
+  );
 
   useEffect(() => {
     if (!feedbackMessage) {
@@ -450,7 +661,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
       >
         <View
           nativeID="screens-admin-trajectory-detail-missing-scope-container"
-          style={[styles.container, { maxWidth: contentMaxWidth }]}
+          style={[{ width: "100%", alignSelf: "center" }, { maxWidth: contentMaxWidth }]}
           testID="screens-admin-trajectory-detail-missing-scope-container"
         >
           <StatusView
@@ -503,7 +714,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
               </AppCard>
             ) : null}
 
-            {studentQuery.isLoading || eventsQuery.isLoading || branchesQuery.isLoading || classesQuery.isLoading ? (
+            {studentQuery.isLoading || eventsQuery.isLoading || fightRecordsQuery.isLoading || branchesQuery.isLoading || classesQuery.isLoading ? (
               <AppCard
                 nativeID="screens-admin-trajectory-detail-loading-card"
                 style={styles.loadingCard}
@@ -664,6 +875,45 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                     <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-guardian-phone" testID="screens-admin-trajectory-detail-student-guardian-phone">
                       <Text style={styles.summaryInfoRowLabel}>Teléfono</Text>
                       <Text style={styles.summaryInfoRowValue}>{student.guardian_phone ?? "No registrado"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.summaryDivider} />
+
+                  <View
+                    nativeID="screens-admin-trajectory-detail-student-fight-record-block"
+                    style={styles.fightRecordBlock}
+                    testID="screens-admin-trajectory-detail-student-fight-record-block"
+                  >
+                    <View style={styles.fightRecordHeaderRow}>
+                      <Text style={styles.summarySectionLabel}>Récord deportivo</Text>
+                      <AppButton
+                        label="Editar"
+                        nativeID="screens-admin-trajectory-detail-student-fight-record-edit-button"
+                        onPress={handleOpenFightRecord}
+                        testID="screens-admin-trajectory-detail-student-fight-record-edit-button"
+                        variant="secondary"
+                      />
+                    </View>
+                    <View style={styles.fightRecordStatsRow} testID="screens-admin-trajectory-detail-student-fight-record-stats">
+                      <FightRecordStat
+                        idPrefix="screens-admin-trajectory-detail-student-fight-record-wins"
+                        label="Victorias"
+                        value={fightTotals.victoria}
+                        tone="victoria"
+                      />
+                      <FightRecordStat
+                        idPrefix="screens-admin-trajectory-detail-student-fight-record-draws"
+                        label="Empates"
+                        value={fightTotals.empate}
+                        tone="empate"
+                      />
+                      <FightRecordStat
+                        idPrefix="screens-admin-trajectory-detail-student-fight-record-losses"
+                        label="Derrotas"
+                        value={fightTotals.derrota}
+                        tone="derrota"
+                      />
                     </View>
                   </View>
 
@@ -1102,7 +1352,378 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
           )}
         </KeyboardAvoidingView>
       </AppModal>
+
+      <AppModal
+        nativeID="screens-admin-trajectory-detail-fight-record-modal"
+        visible={isFightRecordModalVisible}
+        title="Récord deportivo"
+        description={
+          fightRecords.length > 0
+            ? `${fightRecords.length} ${fightRecords.length === 1 ? "encuentro" : "encuentros"} registrados`
+            : "Sin encuentros registrados"
+        }
+        onClose={handleCloseFightRecord}
+        testID="screens-admin-trajectory-detail-fight-record-modal"
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.fightRecordModalContent}
+        >
+          {fightRecordError ? (
+            <AppCard
+              nativeID="screens-admin-trajectory-detail-fight-record-modal-error"
+              style={[styles.feedbackCard, styles.feedbackDanger]}
+              testID="screens-admin-trajectory-detail-fight-record-modal-error"
+            >
+              <Text style={styles.feedbackText}>{fightRecordError}</Text>
+            </AppCard>
+          ) : null}
+
+          <ScrollView
+            contentContainerStyle={styles.fightRecordList}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {fightRecords.length === 0 && !isCreatingFightRecord && editingFightRecordId === null ? (
+              <AppCard
+                nativeID="screens-admin-trajectory-detail-fight-record-modal-empty"
+                style={styles.emptyCard}
+                testID="screens-admin-trajectory-detail-fight-record-modal-empty"
+              >
+                <Text style={styles.emptyTitle}>Sin peleas registradas</Text>
+                <Text style={styles.emptyDescription}>
+                  Agrega el primer registro deportivo para comenzar a construir el historial competitivo del alumno.
+                </Text>
+              </AppCard>
+            ) : null}
+
+            {fightRecords.map((record) => {
+              const isEditing = editingFightRecordId === record.id;
+              if (isEditing) {
+                return (
+                  <AppCard
+                    key={record.id}
+                    nativeID={`screens-admin-trajectory-detail-fight-record-edit-card-${record.id}`}
+                    style={styles.fightRecordCard}
+                    testID={`screens-admin-trajectory-detail-fight-record-edit-card-${record.id}`}
+                  >
+                    <FightRecordFormBlock
+                      idPrefix={`screens-admin-trajectory-detail-fight-record-edit-${record.id}`}
+                      typeValue={draftFightType}
+                      onTypeChange={setDraftFightType}
+                      opponentValue={draftFightOpponent}
+                      onOpponentChange={setDraftFightOpponent}
+                      dateValue={draftFightDate}
+                      onDateChange={setDraftFightDate}
+                      opponentCounter
+                    />
+                    <View style={styles.fightRecordFormActions}>
+                      <AppButton
+                        label="Guardar"
+                        nativeID={`screens-admin-trajectory-detail-fight-record-edit-save-${record.id}`}
+                        onPress={handleSubmitFightRecord}
+                        loading={updateFightMutation.isPending}
+                        testID={`screens-admin-trajectory-detail-fight-record-edit-save-${record.id}`}
+                        variant="success"
+                      />
+                      <AppButton
+                        label="Cancelar"
+                        nativeID={`screens-admin-trajectory-detail-fight-record-edit-cancel-${record.id}`}
+                        onPress={handleCancelEditFight}
+                        testID={`screens-admin-trajectory-detail-fight-record-edit-cancel-${record.id}`}
+                        variant="secondary"
+                      />
+                    </View>
+                  </AppCard>
+                );
+              }
+              return (
+                <AppCard
+                  key={record.id}
+                  nativeID={`screens-admin-trajectory-detail-fight-record-card-${record.id}`}
+                  style={[
+                    styles.fightRecordCard,
+                    { borderLeftColor: getFightTypeColor(record.record_type), borderLeftWidth: 4 },
+                  ]}
+                  testID={`screens-admin-trajectory-detail-fight-record-card-${record.id}`}
+                >
+                  <View style={styles.fightRecordCardTopRow}>
+                    <View
+                      nativeID={`screens-admin-trajectory-detail-fight-record-type-tag-${record.id}`}
+                      style={[
+                        styles.fightRecordTypeTag,
+                        {
+                          backgroundColor: getFightTypeSoftColor(record.record_type),
+                          borderColor: getFightTypeColor(record.record_type),
+                        },
+                      ]}
+                      testID={`screens-admin-trajectory-detail-fight-record-type-tag-${record.id}`}
+                    >
+                      <Text
+                        style={[
+                          styles.fightRecordTypeTagLabel,
+                          { color: getFightTypeColor(record.record_type) },
+                        ]}
+                      >
+                        {formatFightTypeLabel(record.record_type)}
+                      </Text>
+                    </View>
+                    <Text style={styles.fightRecordDate}>{formatDate(record.fight_date)}</Text>
+                  </View>
+                  <Text style={styles.fightRecordOpponent}>
+                    vs. <Text style={styles.fightRecordOpponentName}>{record.opponent_name}</Text>
+                  </Text>
+                  <View style={styles.fightRecordCardActionsRow}>
+                    <Pressable
+                      accessibilityRole="link"
+                      hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+                      onPress={() => handleStartEditFight(record)}
+                      style={(state) => {
+                        const hovered =
+                          (state as typeof state & { hovered?: boolean }).hovered ?? false;
+                        return [
+                          styles.fightRecordActionLink,
+                          hovered ? styles.fightRecordActionLinkHovered : null,
+                          state.pressed ? styles.fightRecordActionLinkPressed : null,
+                        ];
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.fightRecordActionLinkLabel,
+                          styles.fightRecordActionLinkUnderlined,
+                        ]}
+                      >
+                        Editar
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="link"
+                      hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+                      onPress={() => handleRemoveFight(record.id)}
+                      style={(state) => {
+                        const hovered =
+                          (state as typeof state & { hovered?: boolean }).hovered ?? false;
+                        return [
+                          styles.fightRecordActionLink,
+                          styles.fightRecordActionLinkDanger,
+                          hovered ? styles.fightRecordActionLinkDangerHovered : null,
+                          state.pressed ? styles.fightRecordActionLinkPressed : null,
+                        ];
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.fightRecordActionLinkLabel,
+                          styles.fightRecordActionLinkDangerLabel,
+                          styles.fightRecordActionLinkUnderlined,
+                        ]}
+                      >
+                        Eliminar
+                      </Text>
+                    </Pressable>
+                  </View>
+                </AppCard>
+              );
+            })}
+          </ScrollView>
+
+          {isCreatingFightRecord ? (
+            <AppCard
+              nativeID="screens-admin-trajectory-detail-fight-record-modal-new-card"
+              style={styles.fightRecordCard}
+              testID="screens-admin-trajectory-detail-fight-record-modal-new-card"
+            >
+              <FightRecordFormBlock
+                idPrefix="screens-admin-trajectory-detail-fight-record-new"
+                typeValue={draftFightType}
+                onTypeChange={setDraftFightType}
+                opponentValue={draftFightOpponent}
+                onOpponentChange={setDraftFightOpponent}
+                dateValue={draftFightDate}
+                onDateChange={setDraftFightDate}
+                opponentCounter
+              />
+              <View style={styles.fightRecordFormActions}>
+                <AppButton
+                  label="Guardar"
+                  loading={createFightMutation.isPending}
+                  nativeID="screens-admin-trajectory-detail-fight-record-new-save"
+                  onPress={handleSubmitFightRecord}
+                  testID="screens-admin-trajectory-detail-fight-record-new-save"
+                  variant="success"
+                />
+                <AppButton
+                  label="Cancelar"
+                  nativeID="screens-admin-trajectory-detail-fight-record-new-cancel"
+                  onPress={() => {
+                    setIsCreatingFightRecord(false);
+                    setDraftFightType("victoria");
+                    setDraftFightOpponent("");
+                    setDraftFightDate(formatDateIso(new Date()));
+                    setFightRecordError(null);
+                  }}
+                  testID="screens-admin-trajectory-detail-fight-record-new-cancel"
+                  variant="secondary"
+                />
+              </View>
+            </AppCard>
+          ) : editingFightRecordId === null ? (
+            <View style={styles.addActionRow}>
+              <AppButton
+                label="+ Registrar encuentro"
+                nativeID="screens-admin-trajectory-detail-fight-record-add-button"
+                onPress={() => {
+                  setIsCreatingFightRecord(true);
+                  setEditingFightRecordId(null);
+                  setDraftFightType("victoria");
+                  setDraftFightOpponent("");
+                  setDraftFightDate(formatDateIso(new Date()));
+                  setFightRecordError(null);
+                }}
+                testID="screens-admin-trajectory-detail-fight-record-add-button"
+                variant="primary"
+              />
+            </View>
+          ) : null}
+        </KeyboardAvoidingView>
+      </AppModal>
     </Screen>
+  );
+}
+
+type FightRecordStatTone = FightRecordType;
+
+function FightRecordStat({
+  label,
+  value,
+  tone,
+  idPrefix,
+}: {
+  label: string;
+  value: number;
+  tone: FightRecordStatTone;
+  idPrefix?: string;
+}) {
+  const baseId = idPrefix ?? `screens-admin-trajectory-detail-fight-stat-${tone}`;
+  const accent = getFightTypeColor(tone);
+  const softBg = getFightTypeSoftColor(tone);
+
+  return (
+    <View
+      nativeID={baseId}
+      style={[styles.fightRecordStatBox, { backgroundColor: softBg }]}
+      testID={baseId}
+    >
+      <Text
+        nativeID={`${baseId}-value`}
+        style={[styles.fightRecordStatValue, { color: accent }]}
+        testID={`${baseId}-value`}
+      >
+        {value}
+      </Text>
+      <View
+        nativeID={`${baseId}-accent`}
+        style={[styles.fightRecordStatAccent, { backgroundColor: accent }]}
+        testID={`${baseId}-accent`}
+      />
+      <Text nativeID={`${baseId}-label`} style={styles.fightRecordStatLabel} testID={`${baseId}-label`}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function FightRecordFormBlock({
+  idPrefix,
+  typeValue,
+  onTypeChange,
+  opponentValue,
+  onOpponentChange,
+  dateValue,
+  onDateChange,
+  opponentCounter = false,
+}: {
+  idPrefix: string;
+  typeValue: FightRecordType;
+  onTypeChange: (v: FightRecordType) => void;
+  opponentValue: string;
+  onOpponentChange: (v: string) => void;
+  dateValue: string;
+  onDateChange: (v: string) => void;
+  opponentCounter?: boolean;
+}) {
+  const options: Array<{ key: FightRecordType; label: string }> = [
+    { key: "victoria", label: "Victoria" },
+    { key: "empate", label: "Empate" },
+    { key: "derrota", label: "Derrota" },
+  ];
+
+  return (
+    <View nativeID={`${idPrefix}-form`} style={styles.fightRecordFormBlock} testID={`${idPrefix}-form`}>
+      <View nativeID={`${idPrefix}-type-row`} style={styles.fightRecordTypeRow} testID={`${idPrefix}-type-row`}>
+        {options.map((option) => {
+          const selected = typeValue === option.key;
+          const accent = getFightTypeColor(option.key);
+          const softBg = getFightTypeSoftColor(option.key);
+          return (
+            <Pressable
+              key={option.key}
+              accessibilityRole="button"
+              hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
+              onPress={() => onTypeChange(option.key)}
+              style={(state) => {
+                const hovered =
+                  (state as typeof state & { hovered?: boolean }).hovered ?? false;
+                return [
+                  styles.fightRecordTypeOption,
+                  selected
+                    ? {
+                        backgroundColor: softBg,
+                        borderColor: accent,
+                      }
+                    : null,
+                  hovered && !selected ? { backgroundColor: colors.surfaceAlt } : null,
+                  state.pressed ? { opacity: 0.9 } : null,
+                ];
+              }}
+              testID={`${idPrefix}-type-option-${option.key}`}
+            >
+              <Text
+                style={[
+                  styles.fightRecordTypeOptionLabel,
+                  selected ? { color: accent, fontWeight: "800" } : null,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <AppInput
+        label="Rival (nombre y apellido)"
+        maxLength={50}
+        nativeID={`${idPrefix}-opponent-input`}
+        onChangeText={onOpponentChange}
+        placeholder="Ej: Juan Pérez"
+        testID={`${idPrefix}-opponent-input`}
+        value={opponentValue}
+      />
+      {opponentCounter ? (
+        <View style={styles.fightRecordOpponentCounterRow}>
+          <Text style={styles.fightRecordOpponentCounter}>{opponentValue.length}/50</Text>
+        </View>
+      ) : null}
+      <AppDateInput
+        label="Fecha del encuentro"
+        nativeID={`${idPrefix}-date-input`}
+        onChangeText={onDateChange}
+        placeholder="YYYY-MM-DD"
+        testID={`${idPrefix}-date-input`}
+        value={dateValue}
+      />
+    </View>
   );
 }
 
@@ -1605,6 +2226,157 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: spacing.sm,
+  },
+  fightRecordBlock: {
+    gap: spacing.sm,
+  },
+  fightRecordHeaderRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  fightRecordStatsRow: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  fightRecordStatBox: {
+    alignItems: "center",
+    borderRadius: 16,
+    flex: 1,
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: spacing.sm,
+  },
+  fightRecordStatValue: {
+    fontFamily: typography.headingFamily,
+    fontSize: 26,
+    fontWeight: "800",
+    lineHeight: 30,
+  },
+  fightRecordStatAccent: {
+    borderRadius: 999,
+    height: 3,
+    opacity: 0.85,
+    width: 32,
+  },
+  fightRecordStatLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  fightRecordModalContent: {
+    gap: spacing.md,
+  },
+  fightRecordList: {
+    gap: spacing.sm,
+  },
+  fightRecordCard: {
+    gap: spacing.xs,
+    padding: spacing.md,
+  },
+  fightRecordCardTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  fightRecordTypeTag: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  fightRecordTypeTagLabel: {
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  fightRecordDate: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+  },
+  fightRecordOpponent: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  fightRecordOpponentName: {
+    fontFamily: typography.headingFamily,
+    fontWeight: "700",
+  },
+  fightRecordCardActionsRow: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  fightRecordActionLink: {
+    alignSelf: "flex-start",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
+  },
+  fightRecordActionLinkHovered: {
+    backgroundColor: colors.actionSoft ?? colors.primarySoft,
+  },
+  fightRecordActionLinkDanger: {},
+  fightRecordActionLinkDangerHovered: {
+    backgroundColor: colors.dangerSoft,
+  },
+  fightRecordActionLinkPressed: {
+    opacity: 0.84,
+  },
+  fightRecordActionLinkLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  fightRecordActionLinkDangerLabel: {
+    color: colors.danger,
+  },
+  fightRecordActionLinkUnderlined: {
+    textDecorationLine: "underline",
+  },
+  fightRecordFormBlock: {
+    gap: spacing.sm,
+  },
+  fightRecordTypeRow: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  fightRecordTypeOption: {
+    alignItems: "center",
+    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 10,
+  },
+  fightRecordTypeOptionLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  fightRecordFormActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  fightRecordOpponentCounterRow: {
+    alignItems: "flex-end",
+  },
+  fightRecordOpponentCounter: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
   },
 });
 
