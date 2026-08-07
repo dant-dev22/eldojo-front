@@ -45,7 +45,57 @@ type Props = NativeStackScreenProps<AdminStackParamList, "StudentsList">;
 
 type FormDialogMode = "create" | "edit";
 type FormDialogStep = "form" | "confirm";
-type FormPageId = "identity" | "profile" | "billing" | "contact";
+type FormPageId =
+  | "identity"
+  | "profile"
+  | "billing"
+  | "contact"
+  | "medical"
+  | "documents"
+  | "minors";
+
+type EmergencyContactFormState = {
+  fullName: string;
+  relationship: string;
+  phone: string;
+  secondaryPhone: string;
+  email: string;
+  notes: string;
+};
+
+type MedicalRecordFormState = {
+  bloodType: string;
+  allergies: string;
+  previousInjuries: string;
+  insuranceType: "public" | "private" | "none";
+  insuranceProvider: string;
+  insurancePolicyNumber: string;
+  chronicConditions: string;
+  medications: string;
+  physicianName: string;
+  physicianPhone: string;
+  additionalNotes: string;
+};
+
+type DocumentFormState = {
+  waiverFileUrl: string;
+  waiverSignedAt: string;
+  waiverSignedBy: string;
+  photoConsentGranted: boolean;
+  photoConsentSignedAt: string;
+  photoConsentSignedBy: string;
+};
+
+type AuthorizedPersonFormState = {
+  fullName: string;
+  relationship: string;
+  dniType: string;
+  dniNumber: string;
+  dniVerified: boolean;
+  phone: string;
+  secondaryPhone: string;
+  authorizationNotes: string;
+};
 
 type StudentFormState = {
   branchId: string;
@@ -64,7 +114,14 @@ type StudentFormState = {
   status: StudentStatus;
   guardianName: string;
   guardianPhone: string;
+  phone: string;
+  email: string;
+  isMinor: boolean;
   notes: string;
+  emergencyContact: EmergencyContactFormState;
+  medical: MedicalRecordFormState;
+  documents: DocumentFormState;
+  authorizedPerson: AuthorizedPersonFormState;
 };
 
 type FormErrors = Partial<Record<keyof StudentFormState, string>>;
@@ -75,6 +132,7 @@ type FormPage = {
   title: string;
   description: string;
   fields: StudentFormField[];
+  conditional?: (form: StudentFormState) => boolean;
 };
 
 const PAYMENT_STATUS_OPTIONS: Array<{ label: string; value: PaymentStatus }> = [
@@ -88,6 +146,23 @@ const STUDENT_STATUS_OPTIONS: Array<{ label: string; value: StudentStatus }> = [
   { label: "Activo", value: "active" },
   { label: "Congelado", value: "frozen" },
   { label: "Inactivo", value: "inactive" },
+];
+
+const INSURANCE_TYPE_OPTIONS: Array<{ label: string; value: "public" | "private" | "none" }> = [
+  { label: "Seguro público", value: "public" },
+  { label: "Seguro privado", value: "private" },
+  { label: "Sin seguro", value: "none" },
+];
+
+const BLOOD_TYPE_OPTIONS = [
+  { label: "A+", value: "A+" },
+  { label: "A-", value: "A-" },
+  { label: "B+", value: "B+" },
+  { label: "B-", value: "B-" },
+  { label: "AB+", value: "AB+" },
+  { label: "AB-", value: "AB-" },
+  { label: "O+", value: "O+" },
+  { label: "O-", value: "O-" },
 ];
 
 const FORM_PAGES: FormPage[] = [
@@ -111,13 +186,83 @@ const FORM_PAGES: FormPage[] = [
   },
   {
     id: "contact",
-    title: "Seguimiento",
-    description: "Agrega contacto responsable, próximo pago y observaciones.",
-    fields: ["nextPaymentDate", "guardianName", "guardianPhone", "notes"],
+    title: "Contacto",
+    description: "Teléfono, email, contacto de emergencia y responsable.",
+    fields: ["phone", "email", "nextPaymentDate", "guardianName", "guardianPhone", "notes", "emergencyContact"],
+  },
+  {
+    id: "medical",
+    title: "Ficha médica",
+    description: "Datos clínicos relevantes para proteger la integridad del alumno.",
+    fields: ["medical"],
+  },
+  {
+    id: "documents",
+    title: "Documentos",
+    description: "Waiver de responsabilidad firmado y consentimiento de uso de imagen.",
+    fields: ["documents"],
+  },
+  {
+    id: "minors",
+    title: "Menores de edad",
+    description: "Si es menor, indica personas autorizadas para su retiro con DNI verificado.",
+    fields: ["isMinor", "authorizedPerson"],
+    conditional: (form) => true,
   },
 ];
 
 const STUDENTS_PER_PAGE = 10;
+
+function createEmptyEmergencyContact(): EmergencyContactFormState {
+  return {
+    fullName: "",
+    relationship: "",
+    phone: "",
+    secondaryPhone: "",
+    email: "",
+    notes: "",
+  };
+}
+
+function createEmptyMedicalRecord(): MedicalRecordFormState {
+  return {
+    bloodType: "",
+    allergies: "",
+    previousInjuries: "",
+    insuranceType: "none",
+    insuranceProvider: "",
+    insurancePolicyNumber: "",
+    chronicConditions: "",
+    medications: "",
+    physicianName: "",
+    physicianPhone: "",
+    additionalNotes: "",
+  };
+}
+
+function createEmptyDocuments(): DocumentFormState {
+  return {
+    waiverFileUrl: "",
+    waiverSignedAt: "",
+    waiverSignedBy: "",
+    photoConsentGranted: false,
+    photoConsentSignedAt: "",
+    photoConsentSignedBy: "",
+  };
+}
+
+function createEmptyAuthorizedPerson(): AuthorizedPersonFormState {
+  return {
+    fullName: "",
+    relationship: "",
+    dniType: "",
+    dniNumber: "",
+    dniVerified: false,
+    phone: "",
+    secondaryPhone: "",
+    authorizationNotes: "",
+  };
+}
 
 function createEmptyForm(defaultBranchId?: number | null): StudentFormState {
   return {
@@ -137,11 +282,25 @@ function createEmptyForm(defaultBranchId?: number | null): StudentFormState {
     status: "active",
     guardianName: "",
     guardianPhone: "",
+    phone: "",
+    email: "",
+    isMinor: false,
     notes: "",
+    emergencyContact: createEmptyEmergencyContact(),
+    medical: createEmptyMedicalRecord(),
+    documents: createEmptyDocuments(),
+    authorizedPerson: createEmptyAuthorizedPerson(),
   };
 }
 
 function toFormState(student: Student): StudentFormState {
+  const ec = student.emergency_contacts?.[0];
+  const mr = student.medical_record;
+  const docs = student.documents ?? [];
+  const waiver = docs.find((d) => d.document_type === "liability_waiver");
+  const photo = docs.find((d) => d.document_type === "photo_consent");
+  const ap = student.authorized_persons?.[0];
+
   return {
     branchId: String(student.branch_id),
     firstName: student.first_name,
@@ -162,7 +321,49 @@ function toFormState(student: Student): StudentFormState {
     status: student.status,
     guardianName: student.guardian_name ?? "",
     guardianPhone: student.guardian_phone ?? "",
+    phone: student.phone ?? "",
+    email: student.email ?? "",
+    isMinor: Boolean(student.is_minor),
     notes: student.notes ?? "",
+    emergencyContact: {
+      fullName: ec?.full_name ?? "",
+      relationship: ec?.relationship ?? "",
+      phone: ec?.phone ?? "",
+      secondaryPhone: ec?.secondary_phone ?? "",
+      email: ec?.email ?? "",
+      notes: ec?.notes ?? "",
+    },
+    medical: {
+      bloodType: mr?.blood_type ?? "",
+      allergies: mr?.allergies ?? "",
+      previousInjuries: mr?.previous_injuries ?? "",
+      insuranceType: mr?.insurance_type ?? "none",
+      insuranceProvider: mr?.insurance_provider ?? "",
+      insurancePolicyNumber: mr?.insurance_policy_number ?? "",
+      chronicConditions: mr?.chronic_conditions ?? "",
+      medications: mr?.medications ?? "",
+      physicianName: mr?.physician_name ?? "",
+      physicianPhone: mr?.physician_phone ?? "",
+      additionalNotes: mr?.additional_notes ?? "",
+    },
+    documents: {
+      waiverFileUrl: waiver?.file_url ?? "",
+      waiverSignedAt: waiver?.signed_at ?? "",
+      waiverSignedBy: waiver?.signed_by_full_name ?? "",
+      photoConsentGranted: Boolean(photo),
+      photoConsentSignedAt: photo?.signed_at ?? "",
+      photoConsentSignedBy: photo?.signed_by_full_name ?? "",
+    },
+    authorizedPerson: {
+      fullName: ap?.full_name ?? "",
+      relationship: ap?.relationship ?? "",
+      dniType: ap?.dni_type ?? "",
+      dniNumber: ap?.dni_number ?? "",
+      dniVerified: Boolean(ap?.dni_verified),
+      phone: ap?.phone ?? "",
+      secondaryPhone: ap?.secondary_phone ?? "",
+      authorizationNotes: ap?.authorization_notes ?? "",
+    },
   };
 }
 
@@ -239,6 +440,9 @@ function buildStudentPayload(
     status: form.status,
     guardian_name: form.guardianName.trim() || null,
     guardian_phone: form.guardianPhone.trim() || null,
+    phone: form.phone.trim() || null,
+    email: form.email.trim() || null,
+    is_minor: form.isMinor,
     notes: form.notes.trim() || null,
   };
 }
@@ -262,6 +466,9 @@ function buildStudentUpdatePayload(form: StudentFormState): StudentUpdatePayload
     status: form.status,
     guardian_name: form.guardianName.trim() || null,
     guardian_phone: form.guardianPhone.trim() || null,
+    phone: form.phone.trim() || null,
+    email: form.email.trim() || null,
+    is_minor: form.isMinor,
     notes: form.notes.trim() || null,
   };
 }
@@ -295,6 +502,12 @@ function validateStudentForm(form: StudentFormState): FormErrors {
   }
   if (form.nextPaymentDate.trim() && !isValidDateText(form.nextPaymentDate.trim())) {
     errors.nextPaymentDate = "Usa el formato YYYY-MM-DD.";
+  }
+  if (form.phone.trim() && !/^[\d\s\-+()]{7,}$/.test(form.phone.trim())) {
+    errors.phone = "Ingresa un teléfono válido.";
+  }
+  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    errors.email = "Ingresa un email válido.";
   }
 
   return errors;
@@ -332,6 +545,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const [contextSheetStudent, setContextSheetStudent] = useState<Student | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [detailStudentId, setDetailStudentId] = useState<number | null>(null);
+  const [isMedicalQuickViewVisible, setIsMedicalQuickViewVisible] = useState(false);
+  const [medicalQuickViewStudent, setMedicalQuickViewStudent] = useState<Student | null>(null);
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -406,6 +621,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
   );
   const inactiveStudentsCount = useMemo(
     () => students.filter((student) => student.status !== "active").length,
+    [students],
+  );
+  const incompleteProfilesCount = useMemo(
+    () => students.filter((student) => student.profile_completeness && !student.profile_completeness.is_complete).length,
     [students],
   );
   const totalStudentsPages = Math.max(1, Math.ceil(students.length / STUDENTS_PER_PAGE));
@@ -567,6 +786,16 @@ export function StudentsListScreen({ navigation, route }: Props) {
       if (!contextSheetStudent) return [];
       return [
         {
+          key: "medical",
+          label: "Ver ficha médica",
+          icon: "heart",
+          tone: "danger",
+          onPress: () => {
+            setShowContextSheet(false);
+            handleOpenMedicalCard(contextSheetStudent);
+          },
+        },
+        {
           key: "view",
           label: "Ver detalle",
           icon: "eye",
@@ -588,7 +817,6 @@ export function StudentsListScreen({ navigation, route }: Props) {
           icon: "dollar-sign",
           tone: "success",
           onPress: () => {
-            // TODO: Integrar con pantalla de pagos cuando exista
             setFeedbackMessage(
               `Funcionalidad de registro de pago para ${contextSheetStudent.first_name} ${contextSheetStudent.last_name} próximamente.`
             );
@@ -629,6 +857,30 @@ export function StudentsListScreen({ navigation, route }: Props) {
       [field]: undefined,
     }));
     setModalError(null);
+  }
+
+  function handleUpdateNestedField<
+    T extends "emergencyContact" | "medical" | "documents" | "authorizedPerson",
+    K extends keyof StudentFormState[T],
+  >(nested: T, field: K, value: StudentFormState[T][K]) {
+    setForm((current) => ({
+      ...current,
+      [nested]: {
+        ...current[nested],
+        [field]: value,
+      },
+    }));
+    setModalError(null);
+  }
+
+  function handleOpenMedicalCard(student: Student) {
+    setMedicalQuickViewStudent(student);
+    setIsMedicalQuickViewVisible(true);
+  }
+
+  function handleCloseMedicalCard() {
+    setIsMedicalQuickViewVisible(false);
+    setMedicalQuickViewStudent(null);
   }
 
   function handleAdvanceForm() {
@@ -784,6 +1036,14 @@ export function StudentsListScreen({ navigation, route }: Props) {
             alumnos no activos
           </Text>
         </View>
+        <View nativeID="screens-admin-students-list-metric-incomplete" style={styles.inlineMetricRow} testID="screens-admin-students-list-metric-incomplete">
+          <Text nativeID="screens-admin-students-list-metric-incomplete-value" style={[styles.inlineMetricValue, { color: colors.warning }]} testID="screens-admin-students-list-metric-incomplete-value">
+            {incompleteProfilesCount}
+          </Text>
+          <Text nativeID="screens-admin-students-list-metric-incomplete-label" style={styles.inlineMetricLabel} testID="screens-admin-students-list-metric-incomplete-label">
+            fichas incompletas
+          </Text>
+        </View>
       </View>
       <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitleInline} testID="screens-admin-students-list-results-title">lista de alumnos</Text>
     </View>
@@ -851,6 +1111,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     setStudentToDelete(item);
                   }}
                   onEdit={() => handleOpenEdit(item)}
+                  onOpenMedicalCard={() => handleOpenMedicalCard(item)}
                   onViewDetail={() => handleOpenDetail(item.id)}
                   student={item}
                   studentStatusLabel={getStudentStatusLabel(item.status)}
@@ -1169,6 +1430,31 @@ export function StudentsListScreen({ navigation, route }: Props) {
             {currentPage.id === "contact" ? (
               <>
                 <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                  <AppInput
+                    autoCapitalize="none"
+                    error={formErrors.phone}
+                    keyboardType="phone-pad"
+                    label="Teléfono del alumno"
+                    nativeID="screens-admin-students-list-form-phone-input"
+                    onChangeText={(value) => handleUpdateField("phone", value)}
+                    placeholder="8112345678"
+                    testID="screens-admin-students-list-form-phone-input"
+                    value={form.phone}
+                  />
+                  <AppInput
+                    autoCapitalize="none"
+                    error={formErrors.email}
+                    keyboardType="email-address"
+                    label="Email del alumno"
+                    nativeID="screens-admin-students-list-form-email-input"
+                    onChangeText={(value) => handleUpdateField("email", value)}
+                    placeholder="alumno@correo.com"
+                    testID="screens-admin-students-list-form-email-input"
+                    value={form.email}
+                  />
+                </View>
+
+                <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
                   <AppDateInput
                     error={formErrors.nextPaymentDate}
                     label="Próximo pago"
@@ -1197,9 +1483,56 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     testID="screens-admin-students-list-form-guardian-phone-input"
                     value={form.guardianPhone}
                   />
+                </View>
+
+                <AppCard nativeID="screens-admin-students-list-form-emergency-card" style={styles.formSubCard} testID="screens-admin-students-list-form-emergency-card">
+                  <Text nativeID="screens-admin-students-list-form-emergency-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-emergency-title">
+                    Contacto de emergencia
+                  </Text>
+                  <Text nativeID="screens-admin-students-list-form-emergency-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-emergency-desc">
+                    Persona a quien contactar en caso de incidente o urgencia médica.
+                  </Text>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <AppInput
+                      label="Nombre completo"
+                      nativeID="screens-admin-students-list-form-ec-fullname-input"
+                      onChangeText={(value) => handleUpdateNestedField("emergencyContact", "fullName", value)}
+                      placeholder="Nombre del contacto"
+                      testID="screens-admin-students-list-form-ec-fullname-input"
+                      value={form.emergencyContact.fullName}
+                    />
+                    <AppInput
+                      label="Parentesco"
+                      nativeID="screens-admin-students-list-form-ec-rel-input"
+                      onChangeText={(value) => handleUpdateNestedField("emergencyContact", "relationship", value)}
+                      placeholder="Madre, Padre, Hermano, Amigo..."
+                      testID="screens-admin-students-list-form-ec-rel-input"
+                      value={form.emergencyContact.relationship}
+                    />
+                  </View>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <AppInput
+                      keyboardType="phone-pad"
+                      label="Teléfono principal"
+                      nativeID="screens-admin-students-list-form-ec-phone-input"
+                      onChangeText={(value) => handleUpdateNestedField("emergencyContact", "phone", value)}
+                      placeholder="8112345678"
+                      testID="screens-admin-students-list-form-ec-phone-input"
+                      value={form.emergencyContact.phone}
+                    />
+                    <AppInput
+                      keyboardType="phone-pad"
+                      label="Teléfono secundario"
+                      nativeID="screens-admin-students-list-form-ec-phone2-input"
+                      onChangeText={(value) => handleUpdateNestedField("emergencyContact", "secondaryPhone", value)}
+                      placeholder="Opcional"
+                      testID="screens-admin-students-list-form-ec-phone2-input"
+                      value={form.emergencyContact.secondaryPhone}
+                    />
+                  </View>
                   <View nativeID="screens-admin-students-list-form-notes-block" style={styles.notesBlock} testID="screens-admin-students-list-form-notes-block">
                     <AppInput
-                      label="Notas"
+                      label="Notas generales"
                       multiline
                       nativeID="screens-admin-students-list-form-notes-input"
                       numberOfLines={4}
@@ -1210,7 +1543,331 @@ export function StudentsListScreen({ navigation, route }: Props) {
                       value={form.notes}
                     />
                   </View>
-                </View>
+                </AppCard>
+              </>
+            ) : null}
+
+            {currentPage.id === "medical" ? (
+              <>
+                <AppCard nativeID="screens-admin-students-list-form-medical-card" style={styles.formSubCard} testID="screens-admin-students-list-form-medical-card">
+                  <Text nativeID="screens-admin-students-list-form-medical-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-medical-title">
+                    Ficha médica
+                  </Text>
+                  <Text nativeID="screens-admin-students-list-form-medical-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-medical-desc">
+                    Información clínica esencial para proteger al alumno durante la práctica. Ningún campo es obligatorio.
+                  </Text>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <AppSelect
+                      items={BLOOD_TYPE_OPTIONS}
+                      label="Tipo de sangre"
+                      nativeID="screens-admin-students-list-form-mr-blood-select"
+                      onValueChange={(value) => handleUpdateNestedField("medical", "bloodType", value)}
+                      placeholder="Selecciona el tipo"
+                      testID="screens-admin-students-list-form-mr-blood-select"
+                      value={form.medical.bloodType}
+                    />
+                    <AppSelect
+                      items={INSURANCE_TYPE_OPTIONS}
+                      label="Seguro médico"
+                      nativeID="screens-admin-students-list-form-mr-insurance-select"
+                      onValueChange={(value) => handleUpdateNestedField("medical", "insuranceType", value as "public" | "private" | "none")}
+                      testID="screens-admin-students-list-form-mr-insurance-select"
+                      value={form.medical.insuranceType}
+                    />
+                  </View>
+                  {form.medical.insuranceType !== "none" ? (
+                    <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                      <AppInput
+                        label="Proveedor / aseguradora"
+                        nativeID="screens-admin-students-list-form-mr-ins-provider-input"
+                        onChangeText={(value) => handleUpdateNestedField("medical", "insuranceProvider", value)}
+                        placeholder="IMSS, ISSSTE, AXXA, GNP..."
+                        testID="screens-admin-students-list-form-mr-ins-provider-input"
+                        value={form.medical.insuranceProvider}
+                      />
+                      <AppInput
+                        label="Número de póliza"
+                        nativeID="screens-admin-students-list-form-mr-ins-policy-input"
+                        onChangeText={(value) => handleUpdateNestedField("medical", "insurancePolicyNumber", value)}
+                        placeholder="Número de afiliación"
+                        testID="screens-admin-students-list-form-mr-ins-policy-input"
+                        value={form.medical.insurancePolicyNumber}
+                      />
+                    </View>
+                  ) : null}
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        label="Alergias conocidas"
+                        multiline
+                        nativeID="screens-admin-students-list-form-mr-allergies-input"
+                        numberOfLines={3}
+                        onChangeText={(value) => handleUpdateNestedField("medical", "allergies", value)}
+                        placeholder="Medicamentos, alimentos, picaduras..."
+                        style={styles.notesInput}
+                        testID="screens-admin-students-list-form-mr-allergies-input"
+                        value={form.medical.allergies}
+                      />
+                    </View>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        label="Lesiones o padecimientos previos"
+                        multiline
+                        nativeID="screens-admin-students-list-form-mr-injuries-input"
+                        numberOfLines={3}
+                        onChangeText={(value) => handleUpdateNestedField("medical", "previousInjuries", value)}
+                        placeholder="Esguinces, fracturas, cirugías, asma, cardiopatías..."
+                        style={styles.notesInput}
+                        testID="screens-admin-students-list-form-mr-injuries-input"
+                        value={form.medical.previousInjuries}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        label="Padecimientos crónicos"
+                        multiline
+                        nativeID="screens-admin-students-list-form-mr-chronic-input"
+                        numberOfLines={2}
+                        onChangeText={(value) => handleUpdateNestedField("medical", "chronicConditions", value)}
+                        placeholder="Hipertensión, diabetes, epilepsia..."
+                        style={styles.notesInput}
+                        testID="screens-admin-students-list-form-mr-chronic-input"
+                        value={form.medical.chronicConditions}
+                      />
+                    </View>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        label="Medicamentos de uso diario"
+                        multiline
+                        nativeID="screens-admin-students-list-form-mr-meds-input"
+                        numberOfLines={2}
+                        onChangeText={(value) => handleUpdateNestedField("medical", "medications", value)}
+                        placeholder="Dosis y horario si es relevante"
+                        style={styles.notesInput}
+                        testID="screens-admin-students-list-form-mr-meds-input"
+                        value={form.medical.medications}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <AppInput
+                      label="Médico tratante"
+                      nativeID="screens-admin-students-list-form-mr-physician-input"
+                      onChangeText={(value) => handleUpdateNestedField("medical", "physicianName", value)}
+                      placeholder="Nombre del doctor"
+                      testID="screens-admin-students-list-form-mr-physician-input"
+                      value={form.medical.physicianName}
+                    />
+                    <AppInput
+                      keyboardType="phone-pad"
+                      label="Teléfono del médico"
+                      nativeID="screens-admin-students-list-form-mr-physician-phone-input"
+                      onChangeText={(value) => handleUpdateNestedField("medical", "physicianPhone", value)}
+                      placeholder="Contacto de urgencias"
+                      testID="screens-admin-students-list-form-mr-physician-phone-input"
+                      value={form.medical.physicianPhone}
+                    />
+                  </View>
+                  <View style={styles.formFieldSpan}>
+                    <AppInput
+                      label="Notas médicas adicionales"
+                      multiline
+                      nativeID="screens-admin-students-list-form-mr-notes-input"
+                      numberOfLines={2}
+                      onChangeText={(value) => handleUpdateNestedField("medical", "additionalNotes", value)}
+                      placeholder="Restricciones físicas, dispositivos médicos, instrucciones especiales..."
+                      style={styles.notesInput}
+                      testID="screens-admin-students-list-form-mr-notes-input"
+                      value={form.medical.additionalNotes}
+                    />
+                  </View>
+                </AppCard>
+              </>
+            ) : null}
+
+            {currentPage.id === "documents" ? (
+              <>
+                <AppCard nativeID="screens-admin-students-list-form-waiver-card" style={styles.formSubCard} testID="screens-admin-students-list-form-waiver-card">
+                  <Text nativeID="screens-admin-students-list-form-waiver-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-waiver-title">
+                    Waiver de responsabilidad firmado
+                  </Text>
+                  <Text nativeID="screens-admin-students-list-form-waiver-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-waiver-desc">
+                    Documento de exención de responsabilidad por actividad física. Puedes pegar una URL del archivo o indicar "firmado en papel".
+                  </Text>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        autoCapitalize="none"
+                        label="URL o referencia del archivo"
+                        nativeID="screens-admin-students-list-form-waiver-url-input"
+                        onChangeText={(value) => handleUpdateNestedField("documents", "waiverFileUrl", value)}
+                        placeholder="https://drive.google.com/... o 'Firmado 15/07/26 en recepción'"
+                        testID="screens-admin-students-list-form-waiver-url-input"
+                        value={form.documents.waiverFileUrl}
+                      />
+                    </View>
+                  </View>
+                  <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                    <AppDateInput
+                      label="Fecha de firma"
+                      nativeID="screens-admin-students-list-form-waiver-date-input"
+                      onChangeText={(value) => handleUpdateNestedField("documents", "waiverSignedAt", value)}
+                      placeholder="2026-07-15"
+                      testID="screens-admin-students-list-form-waiver-date-input"
+                      value={form.documents.waiverSignedAt}
+                    />
+                    <AppInput
+                      label="Firmado por"
+                      nativeID="screens-admin-students-list-form-waiver-signedby-input"
+                      onChangeText={(value) => handleUpdateNestedField("documents", "waiverSignedBy", value)}
+                      placeholder="Nombre completo del alumno o tutor"
+                      testID="screens-admin-students-list-form-waiver-signedby-input"
+                      value={form.documents.waiverSignedBy}
+                    />
+                  </View>
+                </AppCard>
+
+                <AppCard nativeID="screens-admin-students-list-form-photo-card" style={styles.formSubCard} testID="screens-admin-students-list-form-photo-card">
+                  <Text nativeID="screens-admin-students-list-form-photo-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-photo-title">
+                    Consentimiento de uso de imagen
+                  </Text>
+                  <Text nativeID="screens-admin-students-list-form-photo-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-photo-desc">
+                    Autorización para publicar fotos o videos en redes sociales, sitio web o material promocional del dojo.
+                  </Text>
+                  <ToggleRow
+                    idPrefix="screens-admin-students-list-form-photo-consent-toggle"
+                    label="Autoriza uso de imagen para redes"
+                    value={form.documents.photoConsentGranted}
+                    onValueChange={(next) => handleUpdateNestedField("documents", "photoConsentGranted", next)}
+                  />
+                  {form.documents.photoConsentGranted ? (
+                    <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                      <AppDateInput
+                        label="Fecha de consentimiento"
+                        nativeID="screens-admin-students-list-form-photo-date-input"
+                        onChangeText={(value) => handleUpdateNestedField("documents", "photoConsentSignedAt", value)}
+                        placeholder="2026-07-15"
+                        testID="screens-admin-students-list-form-photo-date-input"
+                        value={form.documents.photoConsentSignedAt}
+                      />
+                      <AppInput
+                        label="Consentimiento firmado por"
+                        nativeID="screens-admin-students-list-form-photo-signedby-input"
+                        onChangeText={(value) => handleUpdateNestedField("documents", "photoConsentSignedBy", value)}
+                        placeholder="Nombre del alumno o tutor legal"
+                        testID="screens-admin-students-list-form-photo-signedby-input"
+                        value={form.documents.photoConsentSignedBy}
+                      />
+                    </View>
+                  ) : null}
+                </AppCard>
+              </>
+            ) : null}
+
+            {currentPage.id === "minors" ? (
+              <>
+                <AppCard nativeID="screens-admin-students-list-form-minors-card" style={styles.formSubCard} testID="screens-admin-students-list-form-minors-card">
+                  <Text nativeID="screens-admin-students-list-form-minors-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-minors-title">
+                    Menores de edad
+                  </Text>
+                  <Text nativeID="screens-admin-students-list-form-minors-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-minors-desc">
+                    Si el alumno es menor de edad, registra a las personas autorizadas para su retiro del dojo con DNI verificado.
+                  </Text>
+                  <ToggleRow
+                    idPrefix="screens-admin-students-list-form-is-minor-toggle"
+                    label="¿Es menor de edad?"
+                    value={form.isMinor}
+                    onValueChange={(next) => handleUpdateField("isMinor", next)}
+                  />
+                </AppCard>
+
+                {form.isMinor ? (
+                  <AppCard nativeID="screens-admin-students-list-form-authorized-card" style={styles.formSubCard} testID="screens-admin-students-list-form-authorized-card">
+                    <Text nativeID="screens-admin-students-list-form-authorized-title" style={styles.formSubCardTitle} testID="screens-admin-students-list-form-authorized-title">
+                      Persona autorizada para retiro
+                    </Text>
+                    <Text nativeID="screens-admin-students-list-form-authorized-desc" style={styles.formSubCardDesc} testID="screens-admin-students-list-form-authorized-desc">
+                      Registra al menos una persona que pueda retirar al alumno. Verifica físicamente su documento de identidad antes de marcarlo como confirmado.
+                    </Text>
+                    <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                      <AppInput
+                        label="Nombre completo"
+                        nativeID="screens-admin-students-list-form-ap-fullname-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "fullName", value)}
+                        placeholder="Nombre de la persona autorizada"
+                        testID="screens-admin-students-list-form-ap-fullname-input"
+                        value={form.authorizedPerson.fullName}
+                      />
+                      <AppInput
+                        label="Parentesco / relación"
+                        nativeID="screens-admin-students-list-form-ap-rel-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "relationship", value)}
+                        placeholder="Madre, Padre, Tío, Abuelo..."
+                        testID="screens-admin-students-list-form-ap-rel-input"
+                        value={form.authorizedPerson.relationship}
+                      />
+                    </View>
+                    <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                      <AppInput
+                        label="Tipo de DNI"
+                        nativeID="screens-admin-students-list-form-ap-dni-type-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "dniType", value)}
+                        placeholder="INE, Pasaporte, CURP, Cédula..."
+                        testID="screens-admin-students-list-form-ap-dni-type-input"
+                        value={form.authorizedPerson.dniType}
+                      />
+                      <AppInput
+                        label="Número de DNI"
+                        nativeID="screens-admin-students-list-form-ap-dni-number-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "dniNumber", value)}
+                        placeholder="Número del documento"
+                        testID="screens-admin-students-list-form-ap-dni-number-input"
+                        value={form.authorizedPerson.dniNumber}
+                      />
+                    </View>
+                    <ToggleRow
+                      idPrefix="screens-admin-students-list-form-ap-dni-verified-toggle"
+                      label="DNI verificado físicamente en recepción"
+                      value={form.authorizedPerson.dniVerified}
+                      onValueChange={(next) => handleUpdateNestedField("authorizedPerson", "dniVerified", next)}
+                    />
+                    <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                      <AppInput
+                        keyboardType="phone-pad"
+                        label="Teléfono"
+                        nativeID="screens-admin-students-list-form-ap-phone-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "phone", value)}
+                        placeholder="Teléfono de contacto"
+                        testID="screens-admin-students-list-form-ap-phone-input"
+                        value={form.authorizedPerson.phone}
+                      />
+                      <AppInput
+                        keyboardType="phone-pad"
+                        label="Teléfono secundario"
+                        nativeID="screens-admin-students-list-form-ap-phone2-input"
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "secondaryPhone", value)}
+                        placeholder="Opcional"
+                        testID="screens-admin-students-list-form-ap-phone2-input"
+                        value={form.authorizedPerson.secondaryPhone}
+                      />
+                    </View>
+                    <View style={styles.formFieldSpan}>
+                      <AppInput
+                        label="Notas / instrucciones de autorización"
+                        multiline
+                        nativeID="screens-admin-students-list-form-ap-notes-input"
+                        numberOfLines={2}
+                        onChangeText={(value) => handleUpdateNestedField("authorizedPerson", "authorizationNotes", value)}
+                        placeholder="Horarios permitidos, solo retirar con credencial, etc."
+                        style={styles.notesInput}
+                        testID="screens-admin-students-list-form-ap-notes-input"
+                        value={form.authorizedPerson.authorizationNotes}
+                      />
+                    </View>
+                  </AppCard>
+                ) : null}
               </>
             ) : null}
 
@@ -1244,12 +1901,23 @@ export function StudentsListScreen({ navigation, route }: Props) {
               <SummaryRow idPrefix="screens-admin-students-list-summary-branch" label="Sucursal" value={selectedBranch?.name ?? "Sin sucursal"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-full-name" label="Nombre completo" value={`${form.firstName} ${form.lastName}`.trim()} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-birth" label="Nacimiento" value={`${form.birthDate} · ${form.birthPlace}`} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-phone" label="Teléfono" value={form.phone || "Sin capturar"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-email" label="Email" value={form.email || "Sin capturar"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-minor" label="Menor de edad" value={form.isMinor ? "Sí" : "No"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-enrollment" label="Inscripción" value={form.enrollmentDate} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-class" label="Clase principal" value={selectedClass?.name ?? "Sin clase"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-monthly-fee" label="Mensualidad" value={form.monthlyFee.trim() ? `${form.monthlyFee} ${form.currency}` : "Sin mensualidad"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-payment" label="Pago" value={getPaymentLabel(form.paymentStatus)} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-status" label="Estado" value={getStudentStatusLabel(form.status)} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-guardian" label="Tutor" value={form.guardianName || "Sin tutor"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-emergency" label="Contacto de emergencia" value={form.emergencyContact.fullName || "Sin capturar"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-blood" label="Tipo de sangre" value={form.medical.bloodType || "Sin capturar"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-insurance" label="Seguro médico" value={INSURANCE_TYPE_OPTIONS.find((i) => i.value === form.medical.insuranceType)?.label ?? "Sin seguro"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-waiver" label="Waiver firmado" value={form.documents.waiverFileUrl || form.documents.waiverSignedBy ? "Subido / firmado" : "Pendiente"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-photos" label="Uso de imagen" value={form.documents.photoConsentGranted ? "Autorizado" : "No autorizado"} />
+              {form.isMinor ? (
+                <SummaryRow idPrefix="screens-admin-students-list-summary-authorized" label="Persona autorizada" value={form.authorizedPerson.fullName || "Sin capturar"} />
+              ) : null}
               <SummaryRow idPrefix="screens-admin-students-list-summary-notes" label="Notas" value={form.notes || "Sin notas"} />
             </AppCard>
             <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
@@ -1315,12 +1983,348 @@ export function StudentsListScreen({ navigation, route }: Props) {
         </View>
       </AppModal>
 
+      <AppModal
+        nativeID="screens-admin-students-list-medical-quick-view-modal"
+        title={
+          medicalQuickViewStudent
+            ? `Ficha médica · ${medicalQuickViewStudent.first_name} ${medicalQuickViewStudent.last_name}`
+            : "Ficha médica"
+        }
+        description={
+          medicalQuickViewStudent?.unique_code
+            ? `Código ${medicalQuickViewStudent.unique_code} · Datos clínicos relevantes para proteger al alumno durante la práctica`
+            : undefined
+        }
+        onClose={handleCloseMedicalCard}
+        testID="screens-admin-students-list-medical-quick-view-modal"
+        visible={isMedicalQuickViewVisible}
+      >
+        {medicalQuickViewStudent ? (
+          <View style={styles.medicalQuickViewContainer}>
+            {medicalQuickViewStudent.profile_completeness?.missing_fields?.length ? (
+              <AppCard nativeID="screens-admin-students-list-medical-incomplete" style={[styles.formSubCard, styles.medicalIncompleteCard]} testID="screens-admin-students-list-medical-incomplete">
+                <View style={styles.medicalIncompleteHeader}>
+                  <Feather color={colors.warning} name="alert-circle" size={18} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.medicalIncompleteTitle}>Ficha médica incompleta</Text>
+                    <Text style={styles.medicalIncompleteDesc}>
+                      Faltan: {medicalQuickViewStudent.profile_completeness.missing_fields.join(", ")}.
+                    </Text>
+                  </View>
+                </View>
+              </AppCard>
+            ) : null}
+
+            <AppCard nativeID="screens-admin-students-list-medical-quick-vitals" style={styles.formSubCard} testID="screens-admin-students-list-medical-quick-vitals">
+              <Text style={styles.formSubCardTitle}>Signos vitales y sangre</Text>
+              <View style={[styles.medicalGrid]}>
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-blood"
+                  icon="droplet"
+                  label="Tipo de sangre"
+                  tone="danger"
+                  value={medicalQuickViewStudent.medical_record?.blood_type}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-tetanus"
+                  icon="shield"
+                  label="Vacuna antitetánica"
+                  tone="info"
+                  value={medicalQuickViewStudent.medical_record?.tetanus_vaccine_date ? formatDate(medicalQuickViewStudent.medical_record.tetanus_vaccine_date) : null}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-alt"
+                  icon="activity"
+                  label="Altura"
+                  value={medicalQuickViewStudent.height_cm ? `${medicalQuickViewStudent.height_cm} cm` : null}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-birth"
+                  icon="calendar"
+                  label="Nacimiento"
+                  value={formatDate(medicalQuickViewStudent.birth_date)}
+                />
+              </View>
+            </AppCard>
+
+            <AppCard nativeID="screens-admin-students-list-medical-quick-allergies" style={styles.formSubCard} testID="screens-admin-students-list-medical-quick-allergies">
+              <Text style={styles.formSubCardTitle}>Alergias, lesiones y padecimientos</Text>
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-allergies-field"
+                icon="alert-triangle"
+                label="Alergias conocidas"
+                tone="warning"
+                value={medicalQuickViewStudent.medical_record?.allergies}
+              />
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-injuries-field"
+                icon="x-circle"
+                label="Lesiones / cirugías previas"
+                tone="danger"
+                value={medicalQuickViewStudent.medical_record?.previous_injuries}
+              />
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-chronic-field"
+                icon="heart"
+                label="Padecimientos crónicos"
+                tone="warning"
+                value={medicalQuickViewStudent.medical_record?.chronic_conditions}
+              />
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-meds-field"
+                icon="plus-circle"
+                label="Medicamentos de uso diario"
+                tone="info"
+                value={medicalQuickViewStudent.medical_record?.medications}
+              />
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-notes-field"
+                icon="file-text"
+                label="Notas adicionales"
+                value={medicalQuickViewStudent.medical_record?.additional_notes}
+              />
+            </AppCard>
+
+            <AppCard nativeID="screens-admin-students-list-medical-quick-insurance" style={styles.formSubCard} testID="screens-admin-students-list-medical-quick-insurance">
+              <Text style={styles.formSubCardTitle}>Seguro médico y doctor de cabecera</Text>
+              <View style={[styles.medicalGrid]}>
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-quick-ins-type"
+                  icon="umbrella"
+                  label="Tipo de seguro"
+                  tone="success"
+                  value={(() => {
+                    const type = medicalQuickViewStudent.medical_record?.insurance_type;
+                    if (!type || type === "none") return "Sin seguro";
+                    return type === "public" ? "Seguro público" : "Seguro privado";
+                  })()}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-quick-ins-provider"
+                  icon="briefcase"
+                  label="Aseguradora"
+                  value={medicalQuickViewStudent.medical_record?.insurance_provider}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-quick-ins-policy"
+                  icon="hash"
+                  label="Número de póliza"
+                  value={medicalQuickViewStudent.medical_record?.insurance_policy_number}
+                />
+                <QuickField
+                  idPrefix="screens-admin-students-list-medical-quick-physician"
+                  icon="user"
+                  label="Médico tratante"
+                  value={medicalQuickViewStudent.medical_record?.physician_name}
+                />
+              </View>
+              <QuickField
+                idPrefix="screens-admin-students-list-medical-quick-physician-phone"
+                icon="phone"
+                label="Teléfono del médico"
+                tone="info"
+                value={medicalQuickViewStudent.medical_record?.physician_phone}
+              />
+            </AppCard>
+
+            <AppCard nativeID="screens-admin-students-list-medical-quick-emergency" style={styles.formSubCard} testID="screens-admin-students-list-medical-quick-emergency">
+              <Text style={styles.formSubCardTitle}>Contacto de emergencia</Text>
+              {medicalQuickViewStudent.emergency_contacts?.length ? (
+                <>
+                  <QuickField
+                    idPrefix="screens-admin-students-list-medical-ec-name"
+                    icon="user"
+                    label="Nombre"
+                    value={medicalQuickViewStudent.emergency_contacts[0].full_name}
+                  />
+                  <View style={[styles.medicalGrid]}>
+                    <QuickField
+                      idPrefix="screens-admin-students-list-medical-ec-rel"
+                      icon="link"
+                      label="Parentesco"
+                      value={medicalQuickViewStudent.emergency_contacts[0].relationship}
+                    />
+                    <QuickField
+                      idPrefix="screens-admin-students-list-medical-ec-phone"
+                      icon="phone-call"
+                      label="Teléfono"
+                      tone="danger"
+                      value={medicalQuickViewStudent.emergency_contacts[0].phone}
+                    />
+                  </View>
+                  {medicalQuickViewStudent.emergency_contacts[0].secondary_phone ? (
+                    <QuickField
+                      idPrefix="screens-admin-students-list-medical-ec-phone2"
+                      icon="phone"
+                      label="Teléfono secundario"
+                      value={medicalQuickViewStudent.emergency_contacts[0].secondary_phone}
+                    />
+                  ) : null}
+                  {medicalQuickViewStudent.emergency_contacts[0].notes ? (
+                    <QuickField
+                      idPrefix="screens-admin-students-list-medical-ec-notes"
+                      icon="message-square"
+                      label="Notas de contacto"
+                      value={medicalQuickViewStudent.emergency_contacts[0].notes}
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <Text style={[styles.quickFieldValue, { color: colors.textMuted }]}>
+                  Sin contacto de emergencia capturado.
+                </Text>
+              )}
+            </AppCard>
+
+            <View style={styles.medicalQuickActions}>
+              <AppButton
+                label="Editar ficha completa"
+                nativeID="screens-admin-students-list-medical-edit-button"
+                onPress={() => {
+                  handleCloseMedicalCard();
+                  if (medicalQuickViewStudent) handleOpenEdit(medicalQuickViewStudent);
+                }}
+                testID="screens-admin-students-list-medical-edit-button"
+                variant="secondary"
+              />
+              <AppButton
+                label="Cerrar"
+                nativeID="screens-admin-students-list-medical-close-button"
+                onPress={handleCloseMedicalCard}
+                testID="screens-admin-students-list-medical-close-button"
+              />
+            </View>
+          </View>
+        ) : (
+          <StatusView title="Sin alumno seleccionado" description="Selecciona un alumno para ver su ficha médica." />
+        )}
+      </AppModal>
+
       <StudentDetailModal
         visible={isDetailModalVisible}
         studentId={detailStudentId}
         onClose={handleCloseDetail}
       />
     </Screen>
+  );
+}
+
+function ToggleRow({
+  idPrefix,
+  label,
+  value,
+  onValueChange,
+}: {
+  idPrefix: string;
+  label: string;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      nativeID={idPrefix}
+      onPress={() => onValueChange(!value)}
+      style={(state) => {
+        const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+        return [
+          styles.toggleRow,
+          hovered ? styles.toggleRowHovered : null,
+          state.pressed ? styles.toggleRowPressed : null,
+        ];
+      }}
+      testID={idPrefix}
+    >
+      <Text nativeID={`${idPrefix}-label`} style={styles.toggleRowLabel} testID={`${idPrefix}-label`}>
+        {label}
+      </Text>
+      <View
+        nativeID={`${idPrefix}-track`}
+        style={[styles.toggleTrack, value ? styles.toggleTrackOn : null]}
+        testID={`${idPrefix}-track`}
+      >
+        <View
+          nativeID={`${idPrefix}-thumb`}
+          style={[styles.toggleThumb, value ? styles.toggleThumbOn : null]}
+          testID={`${idPrefix}-thumb`}
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+function QuickField({
+  idPrefix,
+  icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  idPrefix: string;
+  icon?: keyof typeof Feather.glyphMap;
+  label: string;
+  value?: string | null;
+  tone?: "neutral" | "danger" | "warning" | "success" | "info";
+}) {
+  const hasValue = Boolean(value && value.trim().length > 0);
+  const displayValue = hasValue ? value : "Sin capturar";
+  const valueColor = hasValue
+    ? tone === "danger"
+      ? colors.danger
+      : tone === "warning"
+        ? colors.warning
+        : tone === "success"
+          ? colors.success
+          : tone === "info"
+            ? colors.info
+            : colors.text
+    : colors.textMuted;
+
+  return (
+    <View nativeID={idPrefix} style={styles.quickFieldWrap} testID={idPrefix}>
+      <View style={styles.quickFieldHeader}>
+        {icon ? (
+          <View
+            nativeID={`${idPrefix}-icon-wrap`}
+            style={[
+              styles.quickFieldIconWrap,
+              tone === "danger"
+                ? styles.quickFieldIconDanger
+                : tone === "warning"
+                  ? styles.quickFieldIconWarning
+                  : tone === "success"
+                    ? styles.quickFieldIconSuccess
+                    : null,
+            ]}
+            testID={`${idPrefix}-icon-wrap`}
+          >
+            <Feather
+              color={
+                tone === "danger"
+                  ? colors.danger
+                  : tone === "warning"
+                    ? colors.warning
+                    : tone === "success"
+                      ? colors.success
+                      : colors.textMuted
+              }
+              name={icon}
+              size={14}
+            />
+          </View>
+        ) : null}
+        <Text nativeID={`${idPrefix}-label`} style={styles.quickFieldLabel} testID={`${idPrefix}-label`}>
+          {label}
+        </Text>
+      </View>
+      <Text
+        nativeID={`${idPrefix}-value`}
+        style={[styles.quickFieldValue, { color: valueColor }]}
+        testID={`${idPrefix}-value`}
+      >
+        {displayValue}
+      </Text>
+    </View>
   );
 }
 
@@ -1389,6 +2393,7 @@ function StudentListRow({
   onEdit,
   onDelete,
   onContext,
+  onOpenMedicalCard,
 }: {
   student: Student;
   branchName: string;
@@ -1401,7 +2406,10 @@ function StudentListRow({
   onEdit: () => void;
   onDelete: () => void;
   onContext?: () => void;
+  onOpenMedicalCard?: () => void;
 }) {
+  const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
+
   if (isDesktop) {
     return (
       <View nativeID={`screens-admin-students-list-row-${student.id}`} style={styles.tableRow} testID={`screens-admin-students-list-row-${student.id}`}>
@@ -1409,9 +2417,21 @@ function StudentListRow({
           <Text nativeID={`screens-admin-students-list-row-name-${student.id}`} style={styles.tableStudentName} testID={`screens-admin-students-list-row-name-${student.id}`}>
             {student.first_name} {student.last_name}
           </Text>
-          <Text nativeID={`screens-admin-students-list-row-code-${student.id}`} style={styles.tableStudentMeta} testID={`screens-admin-students-list-row-code-${student.id}`}>
-            Código {student.unique_code}
-          </Text>
+          <View style={[styles.tableBadgesText, { marginTop: 2 }]}>
+            <Text nativeID={`screens-admin-students-list-row-code-${student.id}`} style={styles.tableStudentMeta} testID={`screens-admin-students-list-row-code-${student.id}`}>
+              Código {student.unique_code}
+            </Text>
+            {isProfileIncomplete ? (
+              <View
+                nativeID={`screens-admin-students-list-row-incomplete-badge-${student.id}`}
+                style={styles.inlineWarningBadge}
+                testID={`screens-admin-students-list-row-incomplete-badge-${student.id}`}
+              >
+                <Feather color={colors.warning} name="alert-circle" size={12} />
+                <Text style={styles.inlineWarningBadgeText}>Ficha incompleta</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         <View nativeID={`screens-admin-students-list-row-branch-${student.id}`} style={[styles.tableCell, styles.branchColumn]} testID={`screens-admin-students-list-row-branch-${student.id}`}>
@@ -1449,6 +2469,30 @@ function StudentListRow({
         </View>
 
         <View nativeID={`screens-admin-students-list-row-actions-${student.id}`} style={[styles.tableCell, styles.actionsColumn, styles.tableActions]} testID={`screens-admin-students-list-row-actions-${student.id}`}>
+          {onOpenMedicalCard ? (
+            <Pressable
+              accessibilityLabel="Ver ficha médica del alumno"
+              accessibilityRole="link"
+              nativeID={`screens-admin-students-list-medical-button-${student.id}`}
+              onPress={onOpenMedicalCard}
+              style={(state) => {
+                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                return [
+                  styles.rowHyperlink,
+                  hovered ? styles.rowHyperlinkHovered : null,
+                  state.pressed ? styles.rowHyperlinkPressed : null,
+                ];
+              }}
+              testID={`screens-admin-students-list-medical-button-${student.id}`}
+            >
+              <View style={styles.rowIconHyperlink}>
+                <Feather color={colors.danger} name="heart" size={14} />
+                <Text nativeID={`screens-admin-students-list-medical-button-${student.id}-label`} style={[styles.rowHyperlinkLabel, { color: colors.danger }]} testID={`screens-admin-students-list-medical-button-${student.id}-label`}>
+                  Ficha médica
+                </Text>
+              </View>
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityLabel="Ver detalle del alumno"
             accessibilityRole="link"
@@ -1498,6 +2542,18 @@ function StudentListRow({
 
   return (
     <View nativeID={`screens-admin-students-list-row-mobile-${student.id}`} style={styles.mobileRow} testID={`screens-admin-students-list-row-mobile-${student.id}`}>
+      {isProfileIncomplete ? (
+        <View style={styles.mobileIncompleteWrap}>
+          <View
+            nativeID={`screens-admin-students-list-row-mobile-incomplete-${student.id}`}
+            style={styles.inlineWarningBadge}
+            testID={`screens-admin-students-list-row-mobile-incomplete-${student.id}`}
+          >
+            <Feather color={colors.warning} name="alert-circle" size={12} />
+            <Text style={styles.inlineWarningBadgeText}>Ficha incompleta</Text>
+          </View>
+        </View>
+      ) : null}
       <View nativeID={`screens-admin-students-list-row-mobile-top-${student.id}`} style={styles.mobileRowTop} testID={`screens-admin-students-list-row-mobile-top-${student.id}`}>
         <View nativeID={`screens-admin-students-list-row-mobile-copy-${student.id}`} style={styles.mobileRowCopy} testID={`screens-admin-students-list-row-mobile-copy-${student.id}`}>
           <Text nativeID={`screens-admin-students-list-row-mobile-name-${student.id}`} style={styles.tableStudentName} testID={`screens-admin-students-list-row-mobile-name-${student.id}`}>
@@ -1533,6 +2589,31 @@ function StudentListRow({
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
+        {onOpenMedicalCard ? (
+          <Pressable
+            accessibilityLabel="Ver ficha médica"
+            accessibilityRole="link"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            nativeID={`screens-admin-students-list-medical-link-${student.id}`}
+            onPress={onOpenMedicalCard}
+            style={(state) => {
+              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+              return [
+                styles.mobileActionLink,
+                hovered ? styles.mobileActionLinkHovered : null,
+                state.pressed ? styles.mobileActionLinkPressed : null,
+              ];
+            }}
+            testID={`screens-admin-students-list-medical-link-${student.id}`}
+          >
+            <View style={styles.rowIconHyperlink}>
+              <Feather color={colors.danger} name="heart" size={14} />
+              <Text nativeID={`screens-admin-students-list-medical-link-label-${student.id}`} style={[styles.mobileActionLinkLabel, { color: colors.danger }]} testID={`screens-admin-students-list-medical-link-label-${student.id}`}>
+                Médica
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityLabel="Ver detalle del alumno"
           accessibilityRole="link"
@@ -2282,6 +3363,190 @@ const styles = StyleSheet.create({
   formBeltBlock: {
     marginTop: spacing.lg,
     width: "100%",
+  },
+  formSubCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+  },
+  formSubCardTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  formSubCardDesc: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  formFieldSpan: {
+    width: "100%",
+  },
+  inlineWarningBadge: {
+    alignItems: "center",
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  inlineWarningBadgeText: {
+    color: colors.warning,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  toggleRow: {
+    alignItems: "center",
+    borderRadius: radius.md,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  toggleRowHovered: {
+    backgroundColor: colors.hoverStrong,
+  },
+  toggleRowPressed: {
+    backgroundColor: colors.surface,
+    opacity: 0.9,
+  },
+  toggleRowLabel: {
+    color: colors.text,
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  toggleTrack: {
+    alignItems: "center",
+    backgroundColor: colors.hoverStrong,
+    borderRadius: radius.pill,
+    height: 26,
+    justifyContent: "center",
+    paddingHorizontal: 2,
+    width: 48,
+  },
+  toggleTrackOn: {
+    backgroundColor: colors.success,
+  },
+  toggleThumb: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    height: 22,
+    width: 22,
+  },
+  toggleThumbOn: {
+    alignSelf: "flex-end",
+  },
+  mobileIncompleteWrap: {
+    alignItems: "flex-start",
+    marginBottom: spacing.xs,
+  },
+  rowIconHyperlink: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 4,
+  },
+  quickFieldWrap: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: 6,
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  quickFieldHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  quickFieldIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    height: 24,
+    justifyContent: "center",
+    width: 24,
+  },
+  quickFieldIconDanger: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
+  },
+  quickFieldIconWarning: {
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
+  },
+  quickFieldIconSuccess: {
+    backgroundColor: colors.successSoft,
+    borderColor: colors.success,
+  },
+  quickFieldLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  quickFieldValue: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+    paddingLeft: 32,
+  },
+  medicalQuickViewContainer: {
+    gap: spacing.md,
+  },
+  medicalGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  medicalIncompleteCard: {
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
+  },
+  medicalIncompleteHeader: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  medicalIncompleteTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  medicalIncompleteDesc: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  medicalQuickActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "flex-end",
+    marginTop: spacing.sm,
   },
   mobileBeltRow: {
     alignItems: "center",

@@ -241,6 +241,9 @@ export interface Student {
   status: StudentStatus;
   guardian_name: string | null;
   guardian_phone: string | null;
+  phone: string | null;
+  email: string | null;
+  is_minor: boolean;
   notes: string | null;
   rd_victorias: number;
   rd_empates: number;
@@ -250,6 +253,11 @@ export interface Student {
   deleted_at: string | null;
   current_belt_level: BeltLevelSummary | null;
   current_stripe: BeltStripeSummary | null;
+  emergency_contacts?: EmergencyContact[] | null;
+  medical_record?: MedicalRecord | null;
+  documents?: StudentDocument[] | null;
+  authorized_persons?: AuthorizedPerson[] | null;
+  profile_completeness?: StudentProfileCompleteness | null;
 }
 
 export interface StudentCreatePayload {
@@ -273,6 +281,9 @@ export interface StudentCreatePayload {
   status: StudentStatus;
   guardian_name?: string | null;
   guardian_phone?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  is_minor?: boolean;
   notes?: string | null;
   rd_victorias?: number;
   rd_empates?: number;
@@ -300,10 +311,159 @@ export interface StudentUpdatePayload {
   status?: StudentStatus;
   guardian_name?: string | null;
   guardian_phone?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  is_minor?: boolean;
   notes?: string | null;
   rd_victorias?: number;
   rd_empates?: number;
   rd_derrotas?: number;
+}
+
+export type InsuranceType = "public" | "private" | "none";
+export type DocumentType = "liability_waiver" | "photo_consent" | "other";
+
+export interface EmergencyContact {
+  id: number;
+  student_id: number;
+  organization_id: number;
+  full_name: string;
+  relationship: string | null;
+  phone: string;
+  secondary_phone: string | null;
+  email: string | null;
+  priority: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface EmergencyContactCreatePayload {
+  full_name: string;
+  relationship?: string | null;
+  phone: string;
+  secondary_phone?: string | null;
+  email?: string | null;
+  priority?: number;
+  notes?: string | null;
+}
+
+export interface MedicalRecord {
+  id: number;
+  student_id: number;
+  organization_id: number;
+  blood_type: string | null;
+  allergies: string | null;
+  previous_injuries: string | null;
+  insurance_type: InsuranceType;
+  insurance_provider: string | null;
+  insurance_policy_number: string | null;
+  chronic_conditions: string | null;
+  medications: string | null;
+  physician_name: string | null;
+  physician_phone: string | null;
+  tetanus_vaccine_date: string | null;
+  additional_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface MedicalRecordUpsertPayload {
+  blood_type?: string | null;
+  allergies?: string | null;
+  previous_injuries?: string | null;
+  insurance_type?: InsuranceType;
+  insurance_provider?: string | null;
+  insurance_policy_number?: string | null;
+  chronic_conditions?: string | null;
+  medications?: string | null;
+  physician_name?: string | null;
+  physician_phone?: string | null;
+  tetanus_vaccine_date?: string | null;
+  additional_notes?: string | null;
+}
+
+export interface StudentDocument {
+  id: number;
+  student_id: number;
+  organization_id: number;
+  document_type: DocumentType;
+  title: string;
+  file_url: string;
+  file_name: string | null;
+  file_size_bytes: number | null;
+  signed_at: string | null;
+  signed_by_full_name: string | null;
+  witness_name: string | null;
+  expires_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface StudentDocumentCreatePayload {
+  document_type: DocumentType;
+  title: string;
+  file_url: string;
+  file_name?: string | null;
+  file_size_bytes?: number | null;
+  signed_at?: string | null;
+  signed_by_full_name?: string | null;
+  witness_name?: string | null;
+  expires_at?: string | null;
+  notes?: string | null;
+}
+
+export interface AuthorizedPerson {
+  id: number;
+  student_id: number;
+  organization_id: number;
+  full_name: string;
+  relationship: string | null;
+  dni_type: string | null;
+  dni_number: string;
+  dni_verified: boolean;
+  dni_verified_by_user_id: number | null;
+  dni_photo_url: string | null;
+  phone: string;
+  secondary_phone: string | null;
+  photo_url: string | null;
+  authorization_notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface AuthorizedPersonCreatePayload {
+  full_name: string;
+  relationship?: string | null;
+  dni_type?: string | null;
+  dni_number: string;
+  dni_verified?: boolean;
+  dni_photo_url?: string | null;
+  phone: string;
+  secondary_phone?: string | null;
+  photo_url?: string | null;
+  authorization_notes?: string | null;
+  is_active?: boolean;
+}
+
+export interface StudentProfileCompleteness {
+  is_complete: boolean;
+  total_fields: number;
+  filled_fields: number;
+  missing_fields: string[];
+  has_phone: boolean;
+  has_email: boolean;
+  has_emergency_contacts: boolean;
+  has_medical_record: boolean;
+  has_liability_waiver: boolean;
+  has_photo_consent: boolean;
+  has_authorized_persons_if_minor: boolean;
 }
 
 export interface Organization {
