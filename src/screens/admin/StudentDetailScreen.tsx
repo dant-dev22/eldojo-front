@@ -138,6 +138,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
           onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
+          onGoTrajectory={() => navigation.navigate("TrajectoryList")}
           subtitle="Preparando la ficha principal y el historial financiero del alumno."
           title="Detalle de alumno"
         >
@@ -166,6 +167,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
           onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
           onGoStudents={() => navigation.navigate("StudentsList")}
+          onGoTrajectory={() => navigation.navigate("TrajectoryList")}
           subtitle="No fue posible cargar la informacion del alumno."
           title="Detalle de alumno"
         >
@@ -229,6 +231,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
+        onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}
         subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}
         title={`${student.first_name} ${student.last_name}`}

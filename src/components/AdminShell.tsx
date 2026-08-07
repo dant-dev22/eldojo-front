@@ -17,6 +17,7 @@ import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 export type AdminSection =
   | "dashboard"
   | "students"
+  | "trajectory"
   | "branches"
   | "operations"
   | "payments"
@@ -30,6 +31,7 @@ interface AdminShellProps extends PropsWithChildren {
   activeSection: AdminSection;
   onGoDashboard: () => void;
   onGoStudents: () => void;
+  onGoTrajectory: () => void;
   onGoBranches: () => void;
   onGoOperations: () => void;
   onGoPayments: () => void;
@@ -89,6 +91,7 @@ export function AdminShell({
   activeSection,
   onGoDashboard,
   onGoStudents,
+  onGoTrajectory,
   onGoBranches,
   onGoOperations,
   onGoPayments,
@@ -132,6 +135,13 @@ export function AdminShell({
           description: "Padrón, altas y seguimiento",
           icon: "users",
           onPress: onGoStudents,
+        },
+        {
+          key: "trajectory",
+          label: "Trayectoria",
+          description: "Calendario y recuerdos por alumno",
+          icon: "award",
+          onPress: onGoTrajectory,
         },
         {
           key: "operations",
@@ -182,7 +192,7 @@ export function AdminShell({
       });
       return base;
     },
-    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoReports, onGoSettings, onGoStudents],
+    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoReports, onGoSettings, onGoStudents, onGoTrajectory],
   );
 
   const displayName = useMemo(

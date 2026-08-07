@@ -8,6 +8,9 @@ import { colors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { StudentDetailScreen } from "@/screens/admin/StudentDetailScreen";
+import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
+import { TrajectoryDetailScreen } from "@/screens/admin/TrajectoryDetailScreen";
+import { TrajectoryListScreen } from "@/screens/admin/TrajectoryListScreen";
 import { AccountConfirmedScreen } from "@/screens/auth/AccountConfirmedScreen";
 import { ConfirmAccountScreen } from "@/screens/auth/ConfirmAccountScreen";
 import {
@@ -19,7 +22,6 @@ import {
   StoresScreen,
 } from "@/screens/auth/PublicSiteScreen";
 import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
-import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
 import { PUBLIC_HOME_ALIAS_PATHS, PUBLIC_SCREEN_PATHS } from "@/navigation/publicRoutes";
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
@@ -57,6 +59,8 @@ const linking: LinkingOptions<RootPathParamList> = {
       Stores: PUBLIC_SCREEN_PATHS.Stores,
       StudentDetail: "admin/alumnos/:studentId",
       StudentsList: "admin/alumnos",
+      TrajectoryList: "admin/trayectoria",
+      TrajectoryDetail: "admin/trayectoria/:studentId",
     },
   },
 };
@@ -139,6 +143,14 @@ function AdminFlow() {
       <AdminStack.Screen
         component={StudentDetailScreen}
         name="StudentDetail"
+      />
+      <AdminStack.Screen
+        component={TrajectoryListScreen}
+        name="TrajectoryList"
+      />
+      <AdminStack.Screen
+        component={TrajectoryDetailScreen}
+        name="TrajectoryDetail"
       />
     </AdminStack.Navigator>
   );

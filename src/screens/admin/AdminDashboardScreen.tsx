@@ -3125,6 +3125,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
+        onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}
         subtitle={pageSubtitle}
         title={pageTitle}

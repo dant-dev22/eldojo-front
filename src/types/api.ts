@@ -453,3 +453,32 @@ export interface ApiErrorResponse {
 export interface MessageResponse {
   message: string;
 }
+
+export interface TrajectoryEvent {
+  id: number;
+  student_id: number;
+  organization_id: number;
+  event_date: string;
+  content: string;
+  created_by_user_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrajectoryEventCreatePayload {
+  student_id: number;
+  event_date: string;
+  content: string;
+}
+
+export interface TrajectoryEventUpdatePayload {
+  event_date?: string;
+  content?: string;
+}
+
+export interface StudentTrajectorySummary {
+  student_id: number;
+  total_events: number;
+  first_event_date: string | null;
+  last_event_date: string | null;
+}

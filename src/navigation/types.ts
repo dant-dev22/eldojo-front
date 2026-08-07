@@ -16,6 +16,8 @@ export type AdminStackParamList = {
   AdminHome: { section?: AdminDashboardSection } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
   StudentDetail: { studentId: number };
+  TrajectoryList: undefined;
+  TrajectoryDetail: { studentId: number };
   Home: { initialSection?: HomeInitialSection } | undefined;
   About: undefined;
   Events: undefined;

@@ -913,6 +913,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
         onGoStudents={() => navigation.navigate("StudentsList")}
+        onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}
         subtitle="consulta y administra el estado del alumnado de tu Dojo"
         title="Panel de alumnos"
