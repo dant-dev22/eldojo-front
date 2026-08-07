@@ -10,7 +10,10 @@ import type { AppInputProps } from "@/components/AppInput";
 import { colors, radius, spacing } from "@/constants/theme";
 import "react-datepicker/dist/react-datepicker.css";
 
-interface AppDateInputProps extends Omit<AppInputProps, "rightAdornment"> {}
+interface AppDateInputProps extends Omit<AppInputProps, "rightAdornment"> {
+  inlineContainerId?: string;
+  popperZIndex?: number;
+}
 
 registerLocale("es", es);
 
@@ -35,6 +38,8 @@ export function AppDateInput({
   onFocus,
   nativeID,
   testID,
+  inlineContainerId,
+  popperZIndex,
 }: AppDateInputProps) {
   const [draftValue, setDraftValue] = useState(typeof value === "string" ? value : "");
   const selectedDate = parseDateText(draftValue) ?? null;
@@ -56,9 +61,22 @@ export function AppDateInput({
     onChangeText?.(nextValue);
   }
 
+  const isInline = Boolean(inlineContainerId);
+  const customPopperStyles = popperZIndex
+    ? `
+.app-datepicker-popper {
+  z-index: ${popperZIndex} !important;
+}
+
+#app-datepicker-portal .app-datepicker-popper {
+  z-index: ${popperZIndex} !important;
+}
+`
+    : "";
+
   return (
     <View nativeID={`${baseId}-wrapper`} style={styles.wrapper} testID={`${baseId}-wrapper`}>
-      <style>{datePickerStyles}</style>
+      <style>{datePickerStyles + customPopperStyles}</style>
       <Text nativeID={`${baseId}-label`} style={styles.label} testID={`${baseId}-label`}>
         {label}
       </Text>
@@ -87,9 +105,9 @@ export function AppDateInput({
           onFocus={onFocus as never}
           placeholderText={placeholder}
           popperClassName="app-datepicker-popper"
-          popperProps={{ strategy: "fixed" }}
+          popperProps={{ strategy: isInline ? "absolute" : "fixed" }}
           popperPlacement="bottom-start"
-          portalId="app-datepicker-portal"
+          portalId={inlineContainerId ?? "app-datepicker-portal"}
           selected={selectedDate}
           shouldCloseOnSelect
           showMonthDropdown
@@ -153,6 +171,14 @@ const datePickerStyles = `
   z-index: 9999;
 }
 
+#screens-admin-trajectory-detail-calendar-portal {
+  position: relative;
+}
+
+#screens-admin-trajectory-detail-calendar-portal .app-datepicker-popper {
+  z-index: 50 !important;
+}
+
 .app-datepicker-popper {
   z-index: 9999 !important;
 }
@@ -168,6 +194,10 @@ const datePickerStyles = `
   box-shadow: 0 16px 40px rgba(17, 24, 39, 0.14);
   font-family: inherit;
   overflow: hidden;
+}
+
+#screens-admin-trajectory-detail-calendar-portal .app-datepicker-popper .react-datepicker {
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
 }
 
 .app-datepicker-popper .react-datepicker__triangle {

@@ -982,9 +982,19 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                 >
                   <AppCard
                     nativeID="screens-admin-trajectory-detail-calendar-card"
-                    style={styles.calendarCard}
+                    style={[
+                      styles.calendarCard,
+                      Platform.OS === "web" ? (webStyles.calendarCardInline as never) : null,
+                    ]}
                     testID="screens-admin-trajectory-detail-calendar-card"
                   >
+                    {Platform.OS === "web" ? (
+                      <div
+                        data-testid="screens-admin-trajectory-detail-calendar-portal"
+                        id="screens-admin-trajectory-detail-calendar-portal"
+                        style={webStyles.calendarPortal as React.CSSProperties}
+                      />
+                    ) : null}
                     <View style={[styles.calendarTopBar, isDesktop ? desktopStyles.calendarTopBar : mobileStyles.calendarTopBar]}>
                       <View style={styles.calendarHeader}>
                         <Pressable
@@ -1032,6 +1042,8 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                           value={datePickerValue}
                           onChangeText={handleDatePickerChange}
                           placeholder="YYYY-MM-DD"
+                          inlineContainerId={Platform.OS === "web" ? "screens-admin-trajectory-detail-calendar-portal" : undefined}
+                          popperZIndex={50}
                         />
                       </View>
                     </View>
@@ -2421,3 +2433,18 @@ const desktopStyles = StyleSheet.create({
     maxWidth: 320,
   },
 });
+
+const webStyles = {
+  calendarCardInline: {
+    position: "relative" as const,
+    overflow: "visible" as const,
+    zIndex: 10,
+  },
+  calendarPortal: {
+    position: "absolute" as const,
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+  },
+};
