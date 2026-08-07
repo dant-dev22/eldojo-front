@@ -172,15 +172,25 @@ const datePickerStyles = `
 }
 
 #screens-admin-trajectory-detail-calendar-portal {
-  position: relative;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+#screens-admin-trajectory-detail-calendar-portal > * {
+  pointer-events: auto;
 }
 
 #screens-admin-trajectory-detail-calendar-portal .app-datepicker-popper {
-  z-index: 50 !important;
+  z-index: 100 !important;
+  pointer-events: auto;
 }
 
 .app-datepicker-popper {
   z-index: 9999 !important;
+  pointer-events: auto;
 }
 
 #app-datepicker-portal .app-datepicker-popper {
@@ -197,7 +207,7 @@ const datePickerStyles = `
 }
 
 #screens-admin-trajectory-detail-calendar-portal .app-datepicker-popper .react-datepicker {
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.16);
 }
 
 .app-datepicker-popper .react-datepicker__triangle {

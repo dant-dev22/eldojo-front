@@ -977,24 +977,24 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
 
                 <View
                   nativeID="screens-admin-trajectory-detail-calendar-wrap"
-                  style={styles.calendarWrap}
+                  style={[
+                    styles.calendarWrap,
+                    Platform.OS === "web" ? (webStyles.calendarWrapRelative as never) : null,
+                  ]}
                   testID="screens-admin-trajectory-detail-calendar-wrap"
                 >
+                  {Platform.OS === "web" ? (
+                    <div
+                      data-testid="screens-admin-trajectory-detail-calendar-portal"
+                      id="screens-admin-trajectory-detail-calendar-portal"
+                      style={webStyles.calendarPortal as React.CSSProperties}
+                    />
+                  ) : null}
                   <AppCard
                     nativeID="screens-admin-trajectory-detail-calendar-card"
-                    style={[
-                      styles.calendarCard,
-                      Platform.OS === "web" ? (webStyles.calendarCardInline as never) : null,
-                    ]}
+                    style={styles.calendarCard}
                     testID="screens-admin-trajectory-detail-calendar-card"
                   >
-                    {Platform.OS === "web" ? (
-                      <div
-                        data-testid="screens-admin-trajectory-detail-calendar-portal"
-                        id="screens-admin-trajectory-detail-calendar-portal"
-                        style={webStyles.calendarPortal as React.CSSProperties}
-                      />
-                    ) : null}
                     <View style={[styles.calendarTopBar, isDesktop ? desktopStyles.calendarTopBar : mobileStyles.calendarTopBar]}>
                       <View style={styles.calendarHeader}>
                         <Pressable
@@ -1043,7 +1043,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                           onChangeText={handleDatePickerChange}
                           placeholder="YYYY-MM-DD"
                           inlineContainerId={Platform.OS === "web" ? "screens-admin-trajectory-detail-calendar-portal" : undefined}
-                          popperZIndex={50}
+                          popperZIndex={100}
                         />
                       </View>
                     </View>
@@ -2435,10 +2435,8 @@ const desktopStyles = StyleSheet.create({
 });
 
 const webStyles = {
-  calendarCardInline: {
+  calendarWrapRelative: {
     position: "relative" as const,
-    overflow: "visible" as const,
-    zIndex: 10,
   },
   calendarPortal: {
     position: "absolute" as const,
@@ -2446,5 +2444,7 @@ const webStyles = {
     height: 0,
     top: 0,
     left: 0,
+    zIndex: 100,
+    overflow: "visible" as const,
   },
 };
