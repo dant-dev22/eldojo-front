@@ -56,6 +56,7 @@ export const AnimatedPublicHero: React.FC<AnimatedPublicHeroProps> = ({ testID }
           variant="brand-red"
           animated
           loop
+          noSealGlow
           testID="screens-auth-public-hero-logo"
         />
       </View>

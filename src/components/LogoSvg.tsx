@@ -14,6 +14,7 @@ export interface LogoSvgProps {
   style?: ViewStyle;
   testID?: string;
   nativeID?: string;
+  noSealGlow?: boolean;
 }
 
 const CANVAS = 447;
@@ -113,6 +114,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
   style,
   testID,
   nativeID,
+  noSealGlow = false,
 }) => {
   const fills = getFills(variant);
 
@@ -174,7 +176,11 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
                     drawT[5][0],
                     1,
                   ];
-                  const fillKey = [0, 0, 0.15, 1, 0.05, 0];
+                  const isSeal = i === 0;
+                  const sealFillOpacity = noSealGlow ? 1 : 0.15;
+                  const fillKey = isSeal && noSealGlow
+                    ? [1, 1, 1, 1, 1, 1]
+                    : [0, 0, sealFillOpacity, 1, 0.05, 0];
                   const strokeOpKey = drawT.map((t) => t[1]);
                   const strokeTimes = drawT.map((t) => t[0]);
                   const plKey = drawT.map((t) => t[1]);
@@ -327,22 +333,25 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
           const holdDur = Math.max(100, Math.floor((holdEnd - fillEnd) * durMs));
           const tailDur = Math.max(80, Math.floor((1 - holdEnd) * durMs));
 
+          const isSeal = i === 0;
+          const sealSkip = isSeal && noSealGlow;
+
           return Animated.sequence([
             Animated.delay(startDelay),
             Animated.parallel([
-              Animated.timing(refs[i].strokeOp, { toValue: 1, duration: 30, easing: Easing.linear, useNativeDriver: false }),
+              sealSkip ? Animated.delay(0) : Animated.timing(refs[i].strokeOp, { toValue: 1, duration: 30, easing: Easing.linear, useNativeDriver: false }),
               Animated.timing(refs[i].pl, { toValue: 0.05, duration: 20, easing: Easing.linear, useNativeDriver: false }),
             ]),
             Animated.parallel([
               Animated.timing(refs[i].pl, { toValue: 1, duration: drawDur, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
             ]),
             Animated.parallel([
-              Animated.timing(refs[i].fillOp, { toValue: 1, duration: fillDur, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+              sealSkip ? Animated.delay(0) : Animated.timing(refs[i].fillOp, { toValue: 1, duration: fillDur, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
             ]),
             Animated.delay(holdDur),
             Animated.parallel([
-              Animated.timing(refs[i].strokeOp, { toValue: 0, duration: tailDur, easing: Easing.linear, useNativeDriver: false }),
-              Animated.timing(refs[i].fillOp, { toValue: 0, duration: tailDur, easing: Easing.linear, useNativeDriver: false }),
+              sealSkip ? Animated.delay(0) : Animated.timing(refs[i].strokeOp, { toValue: 0, duration: tailDur, easing: Easing.linear, useNativeDriver: false }),
+              sealSkip ? Animated.delay(0) : Animated.timing(refs[i].fillOp, { toValue: 0, duration: tailDur, easing: Easing.linear, useNativeDriver: false }),
             ]),
           ]);
         };
@@ -365,6 +374,11 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
             ? Animated.loop(animBase as any, { iterations: -1 })
             : (animBase as any),
         ]);
+
+        if (noSealGlow) {
+          refs[0].fillOp.setValue(1);
+          refs[0].strokeOp.setValue(0);
+        }
 
         total.start();
         return () => {
