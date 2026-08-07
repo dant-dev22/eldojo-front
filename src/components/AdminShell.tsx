@@ -131,7 +131,7 @@ export function AdminShell({
         },
         {
           key: "students",
-          label: "alumnos",
+          label: "Alumnos",
           description: "Padrón, altas y seguimiento",
           icon: "users",
           onPress: onGoStudents,
@@ -290,22 +290,6 @@ export function AdminShell({
       </View>
 
       <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
-        <View nativeID="components-admin-shell-profile-card" style={styles.profileCard} testID="components-admin-shell-profile-card">
-          <View nativeID="components-admin-shell-profile-top" style={styles.profileTop} testID="components-admin-shell-profile-top">
-            <View nativeID="components-admin-shell-profile-avatar" style={styles.profileAvatar} testID="components-admin-shell-profile-avatar">
-              <Text nativeID="components-admin-shell-profile-avatar-label" style={styles.profileAvatarLabel} testID="components-admin-shell-profile-avatar-label">
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View nativeID="components-admin-shell-profile-copy" style={styles.profileCopy} testID="components-admin-shell-profile-copy">
-              <Text nativeID="components-admin-shell-profile-name" style={styles.profileName} testID="components-admin-shell-profile-name">{displayName}</Text>
-              <Text nativeID="components-admin-shell-profile-email" style={styles.profileMeta} testID="components-admin-shell-profile-email">{user?.email ?? "Sin correo disponible"}</Text>
-            </View>
-          </View>
-          <Text nativeID="components-admin-shell-profile-assignments" style={styles.profileMeta} testID="components-admin-shell-profile-assignments">
-            {assignmentCount} {assignmentCount === 1 ? "asignacion activa" : "asignaciones activas"}
-          </Text>
-        </View>
         <AppButton
           label="Cerrar sesion"
           nativeID="components-admin-shell-logout-button"

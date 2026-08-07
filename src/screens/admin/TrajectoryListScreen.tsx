@@ -275,266 +275,267 @@ export function TrajectoryListScreen({ navigation }: Props) {
                 onChangeText={setSearch}
               />
             </View>
+
+            <View
+              nativeID="screens-admin-trajectory-list-content"
+              style={[styles.container, { maxWidth: contentMaxWidth }]}
+              testID="screens-admin-trajectory-list-content"
+            >
+              {studentsQuery.isLoading ? (
+                <AppCard
+                  nativeID="screens-admin-trajectory-list-loading-card"
+                  style={styles.loadingCard}
+                  testID="screens-admin-trajectory-list-loading-card"
+                >
+                  <Text style={styles.loadingText}>Cargando alumnos…</Text>
+                </AppCard>
+              ) : studentsQuery.isError ? (
+                <View style={styles.errorBlock}>
+                  <StatusView
+                    nativeID="screens-admin-trajectory-list-error-status"
+                    title="No pudimos cargar los alumnos"
+                    description={getErrorMessage(studentsQuery.error)}
+                  />
+                </View>
+              ) : visibleStudents.length === 0 ? (
+                <AppCard
+                  nativeID="screens-admin-trajectory-list-empty-card"
+                  style={styles.loadingCard}
+                  testID="screens-admin-trajectory-list-empty-card"
+                >
+                  <Text style={styles.resultsTitle}>
+                    {debouncedSearch.trim()
+                      ? "Sin resultados para la búsqueda"
+                      : "Todavía no hay alumnos"}
+                  </Text>
+                  <Text style={styles.resultsDescription}>
+                    {debouncedSearch.trim()
+                      ? "Prueba con otro nombre, apellido o código."
+                      : "Agrega alumnos desde la sección 'Alumnos' y luego vuelve aquí para registrar su trayectoria."}
+                  </Text>
+                </AppCard>
+              ) : (
+                <AppCard
+                  nativeID="screens-admin-trajectory-list-results-panel"
+                  style={styles.resultsPanel}
+                  testID="screens-admin-trajectory-list-results-panel"
+                >
+                  <View
+                    nativeID="screens-admin-trajectory-list-results-head"
+                    style={styles.resultsHead}
+                    testID="screens-admin-trajectory-list-results-head"
+                  >
+                    <Text style={styles.resultsHeadTitle}>
+                      Lista de alumnos
+                    </Text>
+                    <Text style={styles.resultsHeadMeta}>
+                      {visibleStudents.length === 1
+                        ? "1 alumno"
+                        : `${visibleStudents.length} alumnos`}
+                    </Text>
+                  </View>
+
+                  <View
+                    nativeID="screens-admin-trajectory-list-table-head"
+                    style={[
+                      styles.tableHead,
+                      isDesktop ? null : mobileStyles.tableHead,
+                    ]}
+                    testID="screens-admin-trajectory-list-table-head"
+                  >
+                    <Text style={[styles.tableHeadCell, styles.tableColStudent]}>
+                      Alumno
+                    </Text>
+                    <Text
+                      style={[styles.tableHeadCell, styles.tableColBelt]}
+                    >
+                      Cinta
+                    </Text>
+                    {isDesktop ? (
+                      <Text
+                        style={[styles.tableHeadCell, styles.tableColStatus]}
+                      >
+                        Estado
+                      </Text>
+                    ) : null}
+                    {isDesktop ? (
+                      <Text
+                        style={[styles.tableHeadCell, styles.tableColCount]}
+                      >
+                        Sucesos
+                      </Text>
+                    ) : null}
+                    {isDesktop ? (
+                      <Text
+                        style={[styles.tableHeadCell, styles.tableColLast]}
+                      >
+                        Último suceso
+                      </Text>
+                    ) : null}
+                    <Text
+                      style={[styles.tableHeadCell, styles.tableColActions]}
+                    >
+                      Acciones
+                    </Text>
+                  </View>
+
+                  <ScrollView
+                    horizontal={!isDesktop}
+                    style={styles.tableScroll}
+                    contentContainerStyle={styles.tableScrollContent}
+                    showsHorizontalScrollIndicator={false}
+                  >
+                    <View style={styles.tableBody}>
+                      {paginatedStudents.map((student) => {
+                        const summary = summaryByStudentId.get(student.id);
+                        return (
+                          <View
+                            key={student.id}
+                            nativeID={`screens-admin-trajectory-list-table-row-${student.id}`}
+                            style={styles.tableRow}
+                            testID={`screens-admin-trajectory-list-table-row-${student.id}`}
+                          >
+                            <View
+                              style={[
+                                styles.tableCell,
+                                styles.tableColStudent,
+                                !isDesktop
+                                  ? mobileStyles.tableColStudent
+                                  : null,
+                              ]}
+                            >
+                              <Text
+                                style={styles.studentName}
+                                numberOfLines={1}
+                              >
+                                {student.first_name} {student.last_name}
+                              </Text>
+                              <Text style={styles.studentCode}>
+                                {student.unique_code}
+                              </Text>
+                            </View>
+
+                            <View
+                              style={[
+                                styles.tableCell,
+                                styles.tableColBelt,
+                                !isDesktop ? mobileStyles.tableColBelt : null,
+                              ]}
+                            >
+                              <BeltIndicator
+                                beltLevel={student.current_belt_level}
+                                size="xs"
+                                stripe={student.current_stripe}
+                                testID={`screens-admin-trajectory-list-row-belt-value-${student.id}`}
+                              />
+                            </View>
+
+                            {isDesktop ? (
+                              <View
+                                style={[
+                                  styles.tableCell,
+                                  styles.tableColStatus,
+                                ]}
+                              >
+                                <Text style={styles.statusText}>
+                                  {formatStudentStatus(student.status)}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {isDesktop ? (
+                              <View
+                                style={[
+                                  styles.tableCell,
+                                  styles.tableColCount,
+                                ]}
+                              >
+                                <Text style={styles.countText}>
+                                  {summary?.total_events ?? 0}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {isDesktop ? (
+                              <View
+                                style={[styles.tableCell, styles.tableColLast]}
+                              >
+                                <Text style={styles.lastEventText}>
+                                  {summary?.last_event_date
+                                    ? formatDate(summary.last_event_date)
+                                    : "—"}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            <View
+                              style={[
+                                styles.tableCell,
+                                styles.tableColActions,
+                                !isDesktop
+                                  ? mobileStyles.tableColActions
+                                  : null,
+                              ]}
+                            >
+                              <Pressable
+                                accessibilityRole="link"
+                                hitSlop={{
+                                  bottom: 8,
+                                  left: 8,
+                                  right: 8,
+                                  top: 8,
+                                }}
+                                nativeID={`screens-admin-trajectory-list-edit-link-${student.id}`}
+                                onPress={() =>
+                                  navigation.navigate("TrajectoryDetail", {
+                                    studentId: student.id,
+                                  })
+                                }
+                                style={(state) => {
+                                  const hovered =
+                                    (state as typeof state & { hovered?: boolean })
+                                      .hovered ?? false;
+                                  return [
+                                    styles.inlineLink,
+                                    hovered
+                                      ? styles.inlineLinkHovered
+                                      : null,
+                                    state.pressed
+                                      ? styles.inlineLinkPressed
+                                      : null,
+                                  ];
+                                }}
+                                testID={`screens-admin-trajectory-list-edit-link-${student.id}`}
+                              >
+                                <Text
+                                  style={[
+                                    styles.inlineLinkLabel,
+                                    styles.inlineLinkLabelUnderlined,
+                                  ]}
+                                >
+                                  Editar trayectoria
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+
+                  {totalPages > 1 ? (
+                    <View style={styles.paginationRow}>
+                      <Text style={styles.paginationMeta}>
+                        Página {currentPage} de {totalPages}
+                      </Text>
+                    </View>
+                  ) : null}
+                </AppCard>
+              )}
+            </View>
           </View>
         }
       >
-        <View
-          nativeID="screens-admin-trajectory-list-content"
-          style={[styles.container, { maxWidth: contentMaxWidth }]}
-          testID="screens-admin-trajectory-list-content"
-        >
-          {studentsQuery.isLoading ? (
-            <AppCard
-              nativeID="screens-admin-trajectory-list-loading-card"
-              style={styles.loadingCard}
-              testID="screens-admin-trajectory-list-loading-card"
-            >
-              <Text style={styles.loadingText}>Cargando alumnos…</Text>
-            </AppCard>
-          ) : studentsQuery.isError ? (
-            <View style={styles.errorBlock}>
-              <StatusView
-                nativeID="screens-admin-trajectory-list-error-status"
-                title="No pudimos cargar los alumnos"
-                description={getErrorMessage(studentsQuery.error)}
-              />
-            </View>
-          ) : visibleStudents.length === 0 ? (
-            <AppCard
-              nativeID="screens-admin-trajectory-list-empty-card"
-              style={styles.loadingCard}
-              testID="screens-admin-trajectory-list-empty-card"
-            >
-              <Text style={styles.resultsTitle}>
-                {debouncedSearch.trim()
-                  ? "Sin resultados para la búsqueda"
-                  : "Todavía no hay alumnos"}
-              </Text>
-              <Text style={styles.resultsDescription}>
-                {debouncedSearch.trim()
-                  ? "Prueba con otro nombre, apellido o código."
-                  : "Agrega alumnos desde la sección 'Alumnos' y luego vuelve aquí para registrar su trayectoria."}
-              </Text>
-            </AppCard>
-          ) : (
-            <AppCard
-              nativeID="screens-admin-trajectory-list-results-panel"
-              style={styles.resultsPanel}
-              testID="screens-admin-trajectory-list-results-panel"
-            >
-              <View
-                nativeID="screens-admin-trajectory-list-results-head"
-                style={styles.resultsHead}
-                testID="screens-admin-trajectory-list-results-head"
-              >
-                <Text style={styles.resultsHeadTitle}>
-                  Lista de alumnos
-                </Text>
-                <Text style={styles.resultsHeadMeta}>
-                  {visibleStudents.length === 1
-                    ? "1 alumno"
-                    : `${visibleStudents.length} alumnos`}
-                </Text>
-              </View>
-
-              <View
-                nativeID="screens-admin-trajectory-list-table-head"
-                style={[
-                  styles.tableHead,
-                  isDesktop ? null : mobileStyles.tableHead,
-                ]}
-                testID="screens-admin-trajectory-list-table-head"
-              >
-                <Text style={[styles.tableHeadCell, styles.tableColStudent]}>
-                  Alumno
-                </Text>
-                <Text
-                  style={[styles.tableHeadCell, styles.tableColBelt]}
-                >
-                  Cinta
-                </Text>
-                {isDesktop ? (
-                  <Text
-                    style={[styles.tableHeadCell, styles.tableColStatus]}
-                  >
-                    Estado
-                  </Text>
-                ) : null}
-                {isDesktop ? (
-                  <Text
-                    style={[styles.tableHeadCell, styles.tableColCount]}
-                  >
-                    Sucesos
-                  </Text>
-                ) : null}
-                {isDesktop ? (
-                  <Text
-                    style={[styles.tableHeadCell, styles.tableColLast]}
-                  >
-                    Último suceso
-                  </Text>
-                ) : null}
-                <Text
-                  style={[styles.tableHeadCell, styles.tableColActions]}
-                >
-                  Acciones
-                </Text>
-              </View>
-
-              <ScrollView
-                horizontal={!isDesktop}
-                style={styles.tableScroll}
-                contentContainerStyle={styles.tableScrollContent}
-                showsHorizontalScrollIndicator={false}
-              >
-                <View style={styles.tableBody}>
-                  {paginatedStudents.map((student) => {
-                    const summary = summaryByStudentId.get(student.id);
-                    return (
-                      <View
-                        key={student.id}
-                        nativeID={`screens-admin-trajectory-list-table-row-${student.id}`}
-                        style={styles.tableRow}
-                        testID={`screens-admin-trajectory-list-table-row-${student.id}`}
-                      >
-                        <View
-                          style={[
-                            styles.tableCell,
-                            styles.tableColStudent,
-                            !isDesktop
-                              ? mobileStyles.tableColStudent
-                              : null,
-                          ]}
-                        >
-                          <Text
-                            style={styles.studentName}
-                            numberOfLines={1}
-                          >
-                            {student.first_name} {student.last_name}
-                          </Text>
-                          <Text style={styles.studentCode}>
-                            {student.unique_code}
-                          </Text>
-                        </View>
-
-                        <View
-                          style={[
-                            styles.tableCell,
-                            styles.tableColBelt,
-                            !isDesktop ? mobileStyles.tableColBelt : null,
-                          ]}
-                        >
-                          <BeltIndicator
-                            beltLevel={student.current_belt_level}
-                            size="xs"
-                            stripe={student.current_stripe}
-                            testID={`screens-admin-trajectory-list-row-belt-value-${student.id}`}
-                          />
-                        </View>
-
-                        {isDesktop ? (
-                          <View
-                            style={[
-                              styles.tableCell,
-                              styles.tableColStatus,
-                            ]}
-                          >
-                            <Text style={styles.statusText}>
-                              {formatStudentStatus(student.status)}
-                            </Text>
-                          </View>
-                        ) : null}
-
-                        {isDesktop ? (
-                          <View
-                            style={[
-                              styles.tableCell,
-                              styles.tableColCount,
-                            ]}
-                          >
-                            <Text style={styles.countText}>
-                              {summary?.total_events ?? 0}
-                            </Text>
-                          </View>
-                        ) : null}
-
-                        {isDesktop ? (
-                          <View
-                            style={[styles.tableCell, styles.tableColLast]}
-                          >
-                            <Text style={styles.lastEventText}>
-                              {summary?.last_event_date
-                                ? formatDate(summary.last_event_date)
-                                : "—"}
-                            </Text>
-                          </View>
-                        ) : null}
-
-                        <View
-                          style={[
-                            styles.tableCell,
-                            styles.tableColActions,
-                            !isDesktop
-                              ? mobileStyles.tableColActions
-                              : null,
-                          ]}
-                        >
-                          <Pressable
-                            accessibilityRole="link"
-                            hitSlop={{
-                              bottom: 8,
-                              left: 8,
-                              right: 8,
-                              top: 8,
-                            }}
-                            nativeID={`screens-admin-trajectory-list-edit-link-${student.id}`}
-                            onPress={() =>
-                              navigation.navigate("TrajectoryDetail", {
-                                studentId: student.id,
-                              })
-                            }
-                            style={(state) => {
-                              const hovered =
-                                (state as typeof state & { hovered?: boolean })
-                                  .hovered ?? false;
-                              return [
-                                styles.inlineLink,
-                                hovered
-                                  ? styles.inlineLinkHovered
-                                  : null,
-                                state.pressed
-                                  ? styles.inlineLinkPressed
-                                  : null,
-                              ];
-                            }}
-                            testID={`screens-admin-trajectory-list-edit-link-${student.id}`}
-                          >
-                            <Text
-                              style={[
-                                styles.inlineLinkLabel,
-                                styles.inlineLinkLabelUnderlined,
-                              ]}
-                            >
-                              Editar trayectoria
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-
-              {totalPages > 1 ? (
-                <View style={styles.paginationRow}>
-                  <Text style={styles.paginationMeta}>
-                    Página {currentPage} de {totalPages}
-                  </Text>
-                </View>
-              ) : null}
-            </AppCard>
-          )}
-        </View>
       </AdminShell>
     </Screen>
   );
