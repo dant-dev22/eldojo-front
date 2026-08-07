@@ -291,6 +291,37 @@ export function StudentDetailModal({ visible, studentId, onClose }: StudentDetai
 
           <View style={styles.divider} />
 
+          <View style={styles.recordBlock} testID="components-student-detail-modal-record-block">
+            <View style={styles.recordHeader} testID="components-student-detail-modal-record-header">
+              <Text style={styles.sectionLabel}>Récord deportivo</Text>
+              <Text style={styles.recordTotal}>
+                Total {student.rd_victorias + student.rd_empates + student.rd_derrotas}
+              </Text>
+            </View>
+            <View style={styles.recordStats} testID="components-student-detail-modal-record-stats">
+              <RecordStat
+                idPrefix="components-student-detail-modal-record-wins"
+                label="Victorias"
+                value={student.rd_victorias}
+                tone="success"
+              />
+              <RecordStat
+                idPrefix="components-student-detail-modal-record-draws"
+                label="Empates"
+                value={student.rd_empates}
+                tone="warning"
+              />
+              <RecordStat
+                idPrefix="components-student-detail-modal-record-losses"
+                label="Derrotas"
+                value={student.rd_derrotas}
+                tone="danger"
+              />
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
           <View style={styles.infoBlock} testID="components-student-detail-modal-guardian-block">
             <Text style={styles.sectionLabel}>Contacto y notas</Text>
             <InfoRow
@@ -541,6 +572,64 @@ const ErrorState = memo(function ErrorState({
   );
 });
 
+type RecordStatTone = "success" | "warning" | "danger";
+
+function RecordStat({
+  label,
+  value,
+  tone,
+  idPrefix,
+}: {
+  label: string;
+  value: number;
+  tone: RecordStatTone;
+  idPrefix?: string;
+}) {
+  const baseId = idPrefix ?? `components-student-detail-modal-record-stat-${label.toLowerCase()}`;
+
+  const toneConfig = {
+    success: {
+      bg: colors.successSoft,
+      text: colors.success,
+      accent: colors.success,
+    },
+    warning: {
+      bg: colors.warningSoft,
+      text: colors.warning,
+      accent: colors.warning,
+    },
+    danger: {
+      bg: colors.dangerSoft,
+      text: colors.danger,
+      accent: colors.danger,
+    },
+  }[tone];
+
+  return (
+    <View
+      nativeID={baseId}
+      style={[styles.recordStatBox, { backgroundColor: toneConfig.bg }]}
+      testID={baseId}
+    >
+      <Text
+        nativeID={`${baseId}-value`}
+        style={[styles.recordStatValue, { color: toneConfig.text }]}
+        testID={`${baseId}-value`}
+      >
+        {value}
+      </Text>
+      <View nativeID={`${baseId}-accent`} style={[styles.recordStatAccent, { backgroundColor: toneConfig.accent }]} testID={`${baseId}-accent`} />
+      <Text
+        nativeID={`${baseId}-label`}
+        style={styles.recordStatLabel}
+        testID={`${baseId}-label`}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 const InfoRow = memo(function InfoRow({
   label,
   value,
@@ -774,6 +863,53 @@ const styles = StyleSheet.create({
   infoBlock: {
     flex: 1,
     gap: spacing.xs,
+  },
+  recordBlock: {
+    gap: spacing.xs,
+  },
+  recordHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  recordTotal: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  recordStats: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  recordStatBox: {
+    alignItems: "center",
+    borderRadius: 16,
+    flex: 1,
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: spacing.sm,
+  },
+  recordStatValue: {
+    fontFamily: typography.headingFamily,
+    fontSize: 26,
+    fontWeight: "800",
+    lineHeight: 30,
+  },
+  recordStatAccent: {
+    borderRadius: 999,
+    height: 3,
+    opacity: 0.85,
+    width: 32,
+  },
+  recordStatLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   sectionLabel: {
     color: colors.textMuted,

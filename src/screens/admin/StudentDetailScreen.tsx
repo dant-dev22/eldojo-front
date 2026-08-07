@@ -296,6 +296,40 @@ export function StudentDetailScreen({ navigation, route }: Props) {
               value={primaryClass?.name ?? "No asignada"}
             />
           </AppCard>
+
+          <AppCard nativeID="screens-admin-student-detail-record-card" style={styles.summaryCard} testID="screens-admin-student-detail-record-card">
+            <View nativeID="screens-admin-student-detail-record-header" style={styles.recordHeader} testID="screens-admin-student-detail-record-header">
+              <Text nativeID="screens-admin-student-detail-record-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-record-card-title">
+                Récord deportivo
+              </Text>
+              <AppBadge
+                label={`Total ${student.rd_victorias + student.rd_empates + student.rd_derrotas}`}
+                nativeID="screens-admin-student-detail-record-total-badge"
+                testID="screens-admin-student-detail-record-total-badge"
+                tone="neutral"
+              />
+            </View>
+            <View nativeID="screens-admin-student-detail-record-stats" style={styles.recordStats} testID="screens-admin-student-detail-record-stats">
+              <RecordStat
+                idPrefix="screens-admin-student-detail-record-wins"
+                label="Victorias"
+                value={student.rd_victorias}
+                tone="success"
+              />
+              <RecordStat
+                idPrefix="screens-admin-student-detail-record-draws"
+                label="Empates"
+                value={student.rd_empates}
+                tone="warning"
+              />
+              <RecordStat
+                idPrefix="screens-admin-student-detail-record-losses"
+                label="Derrotas"
+                value={student.rd_derrotas}
+                tone="danger"
+              />
+            </View>
+          </AppCard>
         </View>
 
         <View nativeID="screens-admin-student-detail-detail-grid" style={[styles.detailGrid, isDesktop ? desktopStyles.detailGrid : mobileStyles.detailGrid]} testID="screens-admin-student-detail-detail-grid">
@@ -364,6 +398,64 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       </View>
       </AdminShell>
     </Screen>
+  );
+}
+
+type RecordStatTone = "success" | "warning" | "danger";
+
+function RecordStat({
+  label,
+  value,
+  tone,
+  idPrefix,
+}: {
+  label: string;
+  value: number;
+  tone: RecordStatTone;
+  idPrefix?: string;
+}) {
+  const baseId = idPrefix ?? `screens-admin-student-detail-record-stat-${label.toLowerCase()}`;
+
+  const toneConfig = {
+    success: {
+      bg: colors.successSoft,
+      text: colors.success,
+      accent: colors.success,
+    },
+    warning: {
+      bg: colors.warningSoft,
+      text: colors.warning,
+      accent: colors.warning,
+    },
+    danger: {
+      bg: colors.dangerSoft,
+      text: colors.danger,
+      accent: colors.danger,
+    },
+  }[tone];
+
+  return (
+    <View
+      nativeID={baseId}
+      style={[styles.recordStatBox, { backgroundColor: toneConfig.bg }]}
+      testID={baseId}
+    >
+      <Text
+        nativeID={`${baseId}-value`}
+        style={[styles.recordStatValue, { color: toneConfig.text }]}
+        testID={`${baseId}-value`}
+      >
+        {value}
+      </Text>
+      <View nativeID={`${baseId}-accent`} style={[styles.recordStatAccent, { backgroundColor: toneConfig.accent }]} testID={`${baseId}-accent`} />
+      <Text
+        nativeID={`${baseId}-label`}
+        style={styles.recordStatLabel}
+        testID={`${baseId}-label`}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
 
@@ -473,6 +565,45 @@ const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: colors.surfaceAlt,
     gap: spacing.sm,
+    flex: 1,
+    minWidth: 0,
+  },
+  recordHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  recordStats: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  recordStatBox: {
+    alignItems: "center",
+    borderRadius: 16,
+    flex: 1,
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: spacing.sm,
+  },
+  recordStatValue: {
+    fontFamily: typography.headingFamily,
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 32,
+  },
+  recordStatAccent: {
+    borderRadius: 999,
+    height: 3,
+    opacity: 0.85,
+    width: 36,
+  },
+  recordStatLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   detailGrid: {
     gap: spacing.md,

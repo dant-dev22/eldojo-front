@@ -217,6 +217,9 @@ export interface Student {
   guardian_name: string | null;
   guardian_phone: string | null;
   notes: string | null;
+  rd_victorias: number;
+  rd_empates: number;
+  rd_derrotas: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -246,6 +249,9 @@ export interface StudentCreatePayload {
   guardian_name?: string | null;
   guardian_phone?: string | null;
   notes?: string | null;
+  rd_victorias?: number;
+  rd_empates?: number;
+  rd_derrotas?: number;
 }
 
 export interface StudentUpdatePayload {
@@ -270,6 +276,9 @@ export interface StudentUpdatePayload {
   guardian_name?: string | null;
   guardian_phone?: string | null;
   notes?: string | null;
+  rd_victorias?: number;
+  rd_empates?: number;
+  rd_derrotas?: number;
 }
 
 export interface Organization {
