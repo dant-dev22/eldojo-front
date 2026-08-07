@@ -30,6 +30,7 @@ interface AppSelectProps {
   error?: string | null;
   nativeID?: string;
   testID?: string;
+  fallbackLabel?: string;
 }
 
 export function AppSelect({
@@ -42,13 +43,17 @@ export function AppSelect({
   error,
   nativeID,
   testID,
+  fallbackLabel,
 }: AppSelectProps) {
   const baseId =
     nativeID ?? testID ?? `components-app-select-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   const hasValue = value && value !== "";
-  const selectedLabel =
-    items.find((i) => i.value === value)?.label ?? (hasValue ? value : "");
+  const matchedItem = items.find((i) => i.value === value);
+  const selectedLabel = matchedItem?.label
+    ?? (hasValue && fallbackLabel ? fallbackLabel : "")
+    ?? (hasValue && items.length === 0 ? placeholder : "")
+    ?? (hasValue ? value : "");
 
   if (Platform.OS === "web") {
     return (
@@ -56,6 +61,7 @@ export function AppSelect({
         baseId={baseId}
         enabled={enabled}
         error={error}
+        fallbackLabel={fallbackLabel}
         hasValue={!!hasValue}
         items={items}
         label={label}
@@ -139,6 +145,7 @@ interface WebDropdownProps extends Required<Pick<AppSelectProps, "label" | "valu
   baseId: string;
   enabled: boolean;
   error: string | null | undefined;
+  fallbackLabel?: string;
   hasValue: boolean;
   placeholder: string;
   selectedLabel: string;
@@ -148,6 +155,7 @@ function WebDropdown({
   baseId,
   enabled,
   error,
+  fallbackLabel: _fallbackLabel,
   hasValue,
   items,
   label,

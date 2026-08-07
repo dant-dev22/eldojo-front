@@ -1275,6 +1275,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   <AppSelect
                     enabled={!fixedBranchId}
                     error={formErrors.branchId}
+                    fallbackLabel={sidebarBranch?.name}
                     items={branchOptions}
                     label="Sucursal"
                     nativeID="screens-admin-students-list-form-branch-select"
