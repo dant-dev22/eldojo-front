@@ -700,10 +700,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </Text>
           <View nativeID="screens-admin-students-list-dashboard-links" style={styles.dashboardHeaderLinks} testID="screens-admin-students-list-dashboard-links">
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole="link"
               nativeID="screens-admin-students-list-new-link"
               onPress={handleOpenCreate}
-              style={({ pressed }) => [styles.inlineLink, pressed ? styles.inlineLinkPressed : null]}
+              style={(state) => {
+                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                return [
+                  styles.inlineLink,
+                  hovered ? styles.inlineLinkHovered : null,
+                  state.pressed ? styles.inlineLinkPressed : null,
+                ];
+              }}
               testID="screens-admin-students-list-new-link"
             >
               <Text nativeID="screens-admin-students-list-new-link-label" style={styles.inlineLinkLabel} testID="screens-admin-students-list-new-link-label">
@@ -762,14 +769,20 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </Text>
         </View>
       </View>
-      <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRow, isDesktop ? desktopStyles.searchRow : mobileStyles.searchRow]} testID="screens-admin-students-list-search-row">
+      <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitleInline} testID="screens-admin-students-list-results-title">lista de alumnos</Text>
+    </View>
+  );
+  const studentsHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
+    <View nativeID="screens-admin-students-list-header-main-content" style={styles.headerMainContent} testID="screens-admin-students-list-header-main-content">
+      <View nativeID="screens-admin-students-list-search-row" style={[styles.searchRowCompact, isDesktop ? desktopStyles.searchRowCompact : mobileStyles.searchRowCompact]} testID="screens-admin-students-list-search-row">
         <View nativeID="screens-admin-students-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-students-list-search-input-wrap">
           <AppInput
             label="Buscar por nombre"
             nativeID="screens-admin-students-list-search-input"
             onChangeText={setSearch}
             placeholder="Ej. Juan Pérez"
-            rightAdornment={<Feather color={colors.textMuted} name="search" size={18} />}
+            rightAdornment={<Feather color={colors.textMuted} name="search" size={16} />}
+            style={styles.compactSearchInput}
             testID="screens-admin-students-list-search-input"
             value={search}
           />
@@ -784,33 +797,11 @@ export function StudentsListScreen({ navigation, route }: Props) {
           />
         ) : null}
       </View>
-    </View>
-  );
-  const studentsHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
-    <View nativeID="screens-admin-students-list-header-main-content" style={styles.headerMainContent} testID="screens-admin-students-list-header-main-content">
-      <View nativeID="screens-admin-students-list-results-header" style={[styles.resultsHeader, isDesktop ? desktopStyles.resultsHeader : mobileStyles.resultsHeader]} testID="screens-admin-students-list-results-header">
-        <View nativeID="screens-admin-students-list-results-header-copy" style={styles.resultsHeaderCopy} testID="screens-admin-students-list-results-header-copy">
-          <Text nativeID="screens-admin-students-list-results-title" style={styles.resultsTitle} testID="screens-admin-students-list-results-title">Listado de alumnos</Text>
-          <Text nativeID="screens-admin-students-list-results-description" style={styles.resultsDescription} testID="screens-admin-students-list-results-description">
-            {hasActiveSearch
-              ? `Se encontraron ${students.length} coincidencias para "${debouncedSearch.trim()}".`
-              : `Mostrando ${students.length} alumnos disponibles en una sola vista.`}
-          </Text>
-          {students.length > 0 ? (
-            <Text nativeID="screens-admin-students-list-results-meta" style={styles.resultsMeta} testID="screens-admin-students-list-results-meta">
-              Mostrando {currentStudentsPageStart}-{currentStudentsPageEnd} de {students.length}
-            </Text>
-          ) : null}
-        </View>
-        {studentsQuery.isRefetching ? (
-          <AppBadge
-            label="Actualizando"
-            nativeID="screens-admin-students-list-results-refresh-badge"
-            testID="screens-admin-students-list-results-refresh-badge"
-            tone="info"
-          />
-        ) : null}
-      </View>
+      {students.length > 0 ? (
+        <Text nativeID="screens-admin-students-list-results-meta" style={styles.resultsMetaCompact} testID="screens-admin-students-list-results-meta">
+          mostrando {currentStudentsPageStart}-{currentStudentsPageEnd} de {students.length} alumnos en total
+        </Text>
+      ) : null}
       <AppCard nativeID="screens-admin-students-list-results-panel" style={styles.resultsPanel} testID="screens-admin-students-list-results-panel">
         {students.length > 0 ? (
           <View nativeID="screens-admin-students-list-table" style={styles.table} testID="screens-admin-students-list-table">
@@ -1424,26 +1415,59 @@ function StudentListRow({
         </View>
 
         <View nativeID={`screens-admin-students-list-row-status-${student.id}`} style={[styles.tableCell, styles.statusColumn]} testID={`screens-admin-students-list-row-status-${student.id}`}>
-          <View nativeID={`screens-admin-students-list-row-badges-${student.id}`} style={styles.tableBadges} testID={`screens-admin-students-list-row-badges-${student.id}`}>
-            <AppBadge
-              label={studentStatusLabel}
-              nativeID={`screens-admin-students-list-row-status-badge-${student.id}`}
-              testID={`screens-admin-students-list-row-status-badge-${student.id}`}
-              tone={studentStatusTone}
-            />
-            <AppBadge
-              label={paymentLabel}
-              nativeID={`screens-admin-students-list-row-payment-badge-${student.id}`}
-              testID={`screens-admin-students-list-row-payment-badge-${student.id}`}
-              tone={paymentTone}
-            />
+          <View nativeID={`screens-admin-students-list-row-badges-${student.id}`} style={styles.tableBadgesText} testID={`screens-admin-students-list-row-badges-${student.id}`}>
+            <Text nativeID={`screens-admin-students-list-row-status-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-status-badge-${student.id}`}>
+              {studentStatusLabel}
+            </Text>
+            <Text nativeID={`screens-admin-students-list-row-payment-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-payment-badge-${student.id}`}>
+              {paymentLabel}
+            </Text>
           </View>
         </View>
 
         <View nativeID={`screens-admin-students-list-row-actions-${student.id}`} style={[styles.tableCell, styles.actionsColumn, styles.tableActions]} testID={`screens-admin-students-list-row-actions-${student.id}`}>
-          <StudentRowActionButton nativeID={`screens-admin-students-list-detail-button-${student.id}`} label="Ver detalle" onPress={onViewDetail} />
-          <StudentRowActionButton nativeID={`screens-admin-students-list-edit-button-${student.id}`} label="Editar" onPress={onEdit} />
-          <StudentRowActionButton nativeID={`screens-admin-students-list-delete-button-${student.id}`} label="Dar de baja" onPress={onDelete} tone="danger" />
+          <Pressable
+            accessibilityLabel="Ver detalle del alumno"
+            accessibilityRole="link"
+            nativeID={`screens-admin-students-list-detail-button-${student.id}`}
+            onPress={onViewDetail}
+            style={(state) => {
+              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+              return [
+                styles.rowHyperlink,
+                hovered ? styles.rowHyperlinkHovered : null,
+                state.pressed ? styles.rowHyperlinkPressed : null,
+              ];
+            }}
+            testID={`screens-admin-students-list-detail-button-${student.id}`}
+          >
+            <Text nativeID={`screens-admin-students-list-detail-button-${student.id}-label`} style={styles.rowHyperlinkLabel} testID={`screens-admin-students-list-detail-button-${student.id}-label`}>
+              Ver detalle
+            </Text>
+          </Pressable>
+          <Text nativeID={`screens-admin-students-list-edit-button-${student.id}`} style={styles.rowEditText} testID={`screens-admin-students-list-edit-button-${student.id}`}>
+            Editar
+          </Text>
+          <Pressable
+            accessibilityLabel="Dar de baja al alumno"
+            accessibilityRole="link"
+            nativeID={`screens-admin-students-list-delete-button-${student.id}`}
+            onPress={onDelete}
+            style={(state) => {
+              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+              return [
+                styles.rowHyperlink,
+                styles.rowHyperlinkDanger,
+                hovered ? styles.rowHyperlinkHoveredDanger : null,
+                state.pressed ? styles.rowHyperlinkPressed : null,
+              ];
+            }}
+            testID={`screens-admin-students-list-delete-button-${student.id}`}
+          >
+            <Text nativeID={`screens-admin-students-list-delete-button-${student.id}-label`} style={[styles.rowHyperlinkLabel, styles.rowHyperlinkLabelDanger]} testID={`screens-admin-students-list-delete-button-${student.id}-label`}>
+              Dar de baja
+            </Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -1461,18 +1485,12 @@ function StudentListRow({
           </Text>
         </View>
         <View nativeID={`screens-admin-students-list-row-mobile-badges-${student.id}`} style={styles.mobileRowBadges} testID={`screens-admin-students-list-row-mobile-badges-${student.id}`}>
-          <AppBadge
-            label={studentStatusLabel}
-            nativeID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`}
-            testID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`}
-            tone={studentStatusTone}
-          />
-          <AppBadge
-            label={paymentLabel}
-            nativeID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`}
-            testID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`}
-            tone={paymentTone}
-          />
+          <Text nativeID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-mobile-status-badge-${student.id}`}>
+            {studentStatusLabel}
+          </Text>
+          <Text nativeID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-mobile-payment-badge-${student.id}`}>
+            {paymentLabel}
+          </Text>
         </View>
       </View>
 
@@ -1494,11 +1512,18 @@ function StudentListRow({
       <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
         <Pressable
           accessibilityLabel="Ver detalle del alumno"
-          accessibilityRole="button"
+          accessibilityRole="link"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           nativeID={`screens-admin-students-list-detail-link-${student.id}`}
           onPress={onViewDetail}
-          style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+          style={(state) => {
+            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+            return [
+              styles.mobileActionLink,
+              hovered ? styles.mobileActionLinkHovered : null,
+              state.pressed ? styles.mobileActionLinkPressed : null,
+            ];
+          }}
           testID={`screens-admin-students-list-detail-link-${student.id}`}
         >
           <Text nativeID={`screens-admin-students-list-detail-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-detail-link-label-${student.id}`}>
@@ -1507,11 +1532,18 @@ function StudentListRow({
         </Pressable>
         <Pressable
           accessibilityLabel="Editar alumno"
-          accessibilityRole="button"
+          accessibilityRole="link"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           nativeID={`screens-admin-students-list-edit-link-${student.id}`}
           onPress={onEdit}
-          style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null]}
+          style={(state) => {
+            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+            return [
+              styles.mobileActionLink,
+              hovered ? styles.mobileActionLinkHovered : null,
+              state.pressed ? styles.mobileActionLinkPressed : null,
+            ];
+          }}
           testID={`screens-admin-students-list-edit-link-${student.id}`}
         >
           <Text nativeID={`screens-admin-students-list-edit-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-edit-link-label-${student.id}`}>
@@ -1524,10 +1556,14 @@ function StudentListRow({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           nativeID={`screens-admin-students-list-context-button-${student.id}`}
           onPress={onContext}
-          style={({ pressed }) => [
-            styles.mobileContextButton,
-            pressed ? styles.mobileContextButtonPressed : null,
-          ]}
+          style={(state) => {
+            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+            return [
+              styles.mobileContextButton,
+              hovered ? styles.mobileContextButtonHovered : null,
+              state.pressed ? styles.mobileContextButtonPressed : null,
+            ];
+          }}
           testID={`screens-admin-students-list-context-button-${student.id}`}
         >
           <Feather color={colors.primary} name="more-horizontal" size={20} />
@@ -1665,6 +1701,13 @@ const styles = StyleSheet.create({
   },
   inlineLink: {
     alignSelf: "flex-start",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 6,
+  },
+  inlineLinkHovered: {
+    backgroundColor: colors.actionSoft ?? colors.primarySoft,
+    opacity: 1,
   },
   inlineLinkPressed: {
     opacity: 0.84,
@@ -1675,6 +1718,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
+  },
+  inlineLinkLabelHovered: {
+    textDecorationLine: "underline",
   },
   searchRow: {
     gap: spacing.sm,
@@ -1892,12 +1938,83 @@ const styles = StyleSheet.create({
   tableBadges: {
     gap: spacing.xs,
   },
+  tableBadgesText: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  tableBadgeText: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
   tableActions: {
     alignItems: "center",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.xs,
+    gap: spacing.sm,
     justifyContent: "flex-start",
+  },
+  rowHyperlink: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  rowHyperlinkHovered: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.sm,
+  },
+  rowHyperlinkHoveredDanger: {
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.sm,
+  },
+  rowHyperlinkPressed: {
+    opacity: 0.7,
+  },
+  rowHyperlinkDanger: {},
+  rowHyperlinkLabel: {
+    color: colors.primary,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  rowHyperlinkLabelDanger: {
+    color: colors.danger,
+  },
+  rowEditText: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 18,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  resultsTitleInline: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: spacing.xs,
+  },
+  searchRowCompact: {
+    gap: spacing.sm,
+  },
+  compactSearchInput: {
+    minHeight: 40,
+    paddingHorizontal: spacing.sm,
+    fontSize: 13,
+  },
+  resultsMetaCompact: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
   },
   mobileRow: {
     borderBottomColor: colors.border,
@@ -1954,6 +2071,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs,
   },
+  mobileActionLinkHovered: {
+    backgroundColor: colors.primarySoft,
+    textDecorationLine: "underline",
+  },
   mobileActionLinkPressed: {
     backgroundColor: colors.surfaceAlt,
     opacity: 0.8,
@@ -1972,6 +2093,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: "auto",
     width: 40,
+  },
+  mobileContextButtonHovered: {
+    backgroundColor: colors.primarySoft,
   },
   mobileContextButtonPressed: {
     backgroundColor: colors.surfaceAlt,
@@ -2154,6 +2278,9 @@ const mobileStyles = StyleSheet.create({
   searchRow: {
     flexDirection: "column",
   },
+  searchRowCompact: {
+    flexDirection: "column",
+  },
   inlineMetricsGrid: {
     flexDirection: "column",
   },
@@ -2184,6 +2311,10 @@ const desktopStyles = StyleSheet.create({
     justifyContent: "space-between",
   },
   searchRow: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+  },
+  searchRowCompact: {
     alignItems: "flex-end",
     flexDirection: "row",
   },
