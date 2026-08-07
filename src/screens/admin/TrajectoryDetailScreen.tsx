@@ -27,8 +27,20 @@ import {
   formatCurrency,
   formatDate,
   formatPaymentStatus,
-  formatStudentStatus as formatStudentStatusLabel,
 } from "@/utils/format";
+
+function formatStudentStatus(status: StudentStatus): string {
+  switch (status) {
+    case "active":
+      return "Activo";
+    case "frozen":
+      return "Congelado";
+    case "inactive":
+      return "Inactivo";
+    default:
+      return status;
+  }
+}
 
 type Props = NativeStackScreenProps<AdminStackParamList, "TrajectoryDetail">;
 
@@ -603,7 +615,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                       <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-student" testID="screens-admin-trajectory-detail-student-status-student">
                         <Text style={styles.summaryInfoRowLabel}>Alumno</Text>
                         <Text style={[styles.summaryInfoRowValue, { color: getStudentStatusColor(student.status) }]}>
-                          {formatStudentStatusLabel(student.status)}
+                          {formatStudentStatus(student.status)}
                         </Text>
                       </View>
                       <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-next" testID="screens-admin-trajectory-detail-student-status-next">
