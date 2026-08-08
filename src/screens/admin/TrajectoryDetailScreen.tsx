@@ -742,7 +742,10 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
               <>
                 <AppCard
                   nativeID="screens-admin-trajectory-detail-student-card"
-                  style={styles.summaryCard}
+                  style={[
+                    styles.summaryCard,
+                    Platform.OS === "web" ? (webStyles.studentCardRelative as never) : null,
+                  ]}
                   testID="screens-admin-trajectory-detail-student-card"
                 >
                   <View
@@ -973,6 +976,28 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                       </View>
                     )}
                   </View>
+
+                  <View style={styles.summaryDivider} />
+
+                  {Platform.OS === "web" ? (
+                    <div
+                      data-testid="screens-admin-trajectory-detail-calendar-portal"
+                      id="screens-admin-trajectory-detail-calendar-portal"
+                      style={webStyles.calendarPortal as React.CSSProperties}
+                    />
+                  ) : null}
+                  <View style={[styles.studentDatePickerWrap, isDesktop ? desktopStyles.studentDatePickerWrap : null]} testID="screens-admin-trajectory-detail-student-date-picker-wrap">
+                    <AppDateInput
+                      label="Ir a fecha"
+                      nativeID="screens-admin-trajectory-detail-date-picker"
+                      testID="screens-admin-trajectory-detail-date-picker"
+                      value={datePickerValue}
+                      onChangeText={handleDatePickerChange}
+                      placeholder="YYYY-MM-DD"
+                      inlineContainerId={Platform.OS === "web" ? "screens-admin-trajectory-detail-calendar-portal" : undefined}
+                      popperZIndex={100}
+                    />
+                  </View>
                 </AppCard>
 
                 <View
@@ -985,19 +1010,9 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                 >
                   <AppCard
                     nativeID="screens-admin-trajectory-detail-calendar-card"
-                    style={[
-                      styles.calendarCard,
-                      Platform.OS === "web" ? (webStyles.calendarCardRelative as never) : null,
-                    ]}
+                    style={styles.calendarCard}
                     testID="screens-admin-trajectory-detail-calendar-card"
                   >
-                    {Platform.OS === "web" ? (
-                      <div
-                        data-testid="screens-admin-trajectory-detail-calendar-portal"
-                        id="screens-admin-trajectory-detail-calendar-portal"
-                        style={webStyles.calendarPortal as React.CSSProperties}
-                      />
-                    ) : null}
                     <View style={[styles.calendarTopBar, isDesktop ? desktopStyles.calendarTopBar : mobileStyles.calendarTopBar]}>
                       <View style={styles.calendarHeader}>
                         <Pressable
@@ -1035,19 +1050,6 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                         >
                           <Feather name="chevron-right" size={20} color={colors.text} />
                         </Pressable>
-                      </View>
-
-                      <View style={styles.datePickerWrap}>
-                        <AppDateInput
-                          label="Ir a fecha"
-                          nativeID="screens-admin-trajectory-detail-date-picker"
-                          testID="screens-admin-trajectory-detail-date-picker"
-                          value={datePickerValue}
-                          onChangeText={handleDatePickerChange}
-                          placeholder="YYYY-MM-DD"
-                          inlineContainerId={Platform.OS === "web" ? "screens-admin-trajectory-detail-calendar-portal" : undefined}
-                          popperZIndex={100}
-                        />
                       </View>
                     </View>
 
@@ -1993,6 +1995,9 @@ const styles = StyleSheet.create({
   datePickerWrap: {
     width: "100%",
   },
+  studentDatePickerWrap: {
+    width: "100%",
+  },
   calendarHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -2435,13 +2440,16 @@ const desktopStyles = StyleSheet.create({
   datePickerWrap: {
     maxWidth: 320,
   },
+  studentDatePickerWrap: {
+    maxWidth: 320,
+  },
 });
 
 const webStyles = {
   calendarWrapRelative: {
     position: "relative" as const,
   },
-  calendarCardRelative: {
+  studentCardRelative: {
     position: "relative" as const,
   },
   calendarPortal: {
