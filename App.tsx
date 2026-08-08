@@ -8,9 +8,33 @@ import { Platform } from "react-native";
 
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
+import { UpdateBanner } from "./src/components/UpdateBanner";
 
 if (Platform.OS === "web") {
   require("./src/styles/web/index.css");
+}
+
+if (Platform.OS === "web" && typeof window !== "undefined") {
+  if ("serviceWorker" in navigator) {
+    void (async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) {
+          try {
+            await r.unregister();
+          } catch {
+            /* noop */
+          }
+        }
+        if ("caches" in window && window.caches?.keys) {
+          const keys = await window.caches.keys();
+          await Promise.all(keys.map((k) => window.caches.delete(k).catch(() => null)));
+        }
+      } catch {
+        /* noop */
+      }
+    })();
+  }
 }
 
 const queryClient = new QueryClient({
@@ -41,6 +65,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <StatusBar style="dark" />
+          <UpdateBanner />
           <AppNavigator />
         </AuthProvider>
       </QueryClientProvider>
