@@ -983,18 +983,21 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                   ]}
                   testID="screens-admin-trajectory-detail-calendar-wrap"
                 >
-                  {Platform.OS === "web" ? (
-                    <div
-                      data-testid="screens-admin-trajectory-detail-calendar-portal"
-                      id="screens-admin-trajectory-detail-calendar-portal"
-                      style={webStyles.calendarPortal as React.CSSProperties}
-                    />
-                  ) : null}
                   <AppCard
                     nativeID="screens-admin-trajectory-detail-calendar-card"
-                    style={styles.calendarCard}
+                    style={[
+                      styles.calendarCard,
+                      Platform.OS === "web" ? (webStyles.calendarCardRelative as never) : null,
+                    ]}
                     testID="screens-admin-trajectory-detail-calendar-card"
                   >
+                    {Platform.OS === "web" ? (
+                      <div
+                        data-testid="screens-admin-trajectory-detail-calendar-portal"
+                        id="screens-admin-trajectory-detail-calendar-portal"
+                        style={webStyles.calendarPortal as React.CSSProperties}
+                      />
+                    ) : null}
                     <View style={[styles.calendarTopBar, isDesktop ? desktopStyles.calendarTopBar : mobileStyles.calendarTopBar]}>
                       <View style={styles.calendarHeader}>
                         <Pressable
@@ -2438,6 +2441,9 @@ const webStyles = {
   calendarWrapRelative: {
     position: "relative" as const,
   },
+  calendarCardRelative: {
+    position: "relative" as const,
+  },
   calendarPortal: {
     position: "absolute" as const,
     width: 0,
@@ -2446,5 +2452,6 @@ const webStyles = {
     left: 0,
     zIndex: 100,
     overflow: "visible" as const,
+    pointerEvents: "none" as const,
   },
 };
