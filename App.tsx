@@ -8,7 +8,6 @@ import { Platform } from "react-native";
 
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
-import { UpdateBanner } from "./src/components/UpdateBanner";
 
 if (Platform.OS === "web") {
   require("./src/styles/web/index.css");
@@ -65,7 +64,6 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <StatusBar style="dark" />
-          <UpdateBanner />
           <AppNavigator />
         </AuthProvider>
       </QueryClientProvider>
