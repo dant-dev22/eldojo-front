@@ -4,7 +4,6 @@ import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AdminUserMenu } from "@/components/AdminUserMenu";
-import { AppButton } from "@/components/AppButton";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { LogoSvg } from "@/components/LogoSvg";
@@ -287,16 +286,6 @@ export function AdminShell({
             </View>
           </Pressable>
         ))}
-      </View>
-
-      <View nativeID="components-admin-shell-sidebar-footer" style={styles.sidebarFooter} testID="components-admin-shell-sidebar-footer">
-        <AppButton
-          label="Cerrar sesion"
-          nativeID="components-admin-shell-logout-button"
-          onPress={requestSignOut}
-          testID="components-admin-shell-logout-button"
-          variant="secondary"
-        />
       </View>
     </View>
   );
