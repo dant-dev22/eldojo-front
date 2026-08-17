@@ -163,16 +163,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const redirectQuery = redirectAfterLogin
       ? { redirect_to: redirectAfterLogin }
       : undefined;
+    const params = new URLSearchParams();
+    Object.entries(redirectQuery || {}).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
+    const qs = params.toString();
+    const path = `/iniciar-sesion${qs ? `?${qs}` : ""}`;
+    let destination: string;
     if (cfg.isPublicHostname) {
-      const params = new URLSearchParams();
-      Object.entries(redirectQuery || {}).forEach(([k, v]) => {
-        if (v) params.set(k, v);
-      });
-      const qs = params.toString();
-      window.location.assign(`/iniciar-sesion${qs ? `?${qs}` : ""}`);
+      destination = path;
     } else {
-      window.location.assign(buildPublicUrl("iniciar-sesion", redirectQuery));
+      destination = buildPublicUrl("iniciar-sesion", redirectQuery);
     }
+    const current = `${window.location.pathname}${window.location.search}`;
+    const resolvedDest = destination.startsWith("http")
+      ? new URL(destination).pathname + new URL(destination).search
+      : destination;
+    if (resolvedDest === current) {
+      return;
+    }
+    window.location.assign(destination);
   };
 
   const redirectToAppDashboard: AuthContextValue["redirectToAppDashboard"] = () => {

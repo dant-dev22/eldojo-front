@@ -87,15 +87,7 @@ export function getDomainConfig(): DomainConfig {
   let isAppHostname = false;
   let isPublicHostname = false;
 
-  if (currentHostname.startsWith("app.") || hostnameMatchesAny(currentHostname, [appWebOrigin])) {
-    isAppHostname = true;
-  } else if (
-    currentHostname === "eldojo.tech" ||
-    currentHostname === "www.eldojo.tech" ||
-    hostnameMatchesAny(currentHostname, [publicWebOrigin])
-  ) {
-    isPublicHostname = true;
-  } else if (currentHostname === "localhost" || currentHostname === "127.0.0.1") {
+  if (currentHostname === "localhost" || currentHostname === "127.0.0.1") {
     try {
       const port = new URL(currentOrigin).port;
       if (port === "8082") {
@@ -106,6 +98,14 @@ export function getDomainConfig(): DomainConfig {
     } catch {
       isPublicHostname = true;
     }
+  } else if (currentHostname.startsWith("app.") || hostnameMatchesAny(currentHostname, [appWebOrigin])) {
+    isAppHostname = true;
+  } else if (
+    currentHostname === "eldojo.tech" ||
+    currentHostname === "www.eldojo.tech" ||
+    hostnameMatchesAny(currentHostname, [publicWebOrigin])
+  ) {
+    isPublicHostname = true;
   } else {
     isPublicHostname = true;
   }
