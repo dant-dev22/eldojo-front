@@ -184,7 +184,6 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
   const [dayModalError, setDayModalError] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<"success" | "danger">("success");
-  const [datePickerValue, setDatePickerValue] = useState<string>("");
   const [isFightRecordModalVisible, setIsFightRecordModalVisible] = useState(false);
   const [isCreatingFightRecord, setIsCreatingFightRecord] = useState(false);
   const [editingFightRecordId, setEditingFightRecordId] = useState<number | null>(null);
@@ -578,20 +577,6 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     setCursor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
   }, []);
 
-  const handleDatePickerChange = useCallback((raw: string) => {
-    setDatePickerValue(raw);
-    const trimmed = raw.trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      return;
-    }
-    const parsed = fromDateKey(trimmed);
-    if (Number.isNaN(parsed.getTime())) {
-      return;
-    }
-    setCursor(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
-    setSelectedDateKey(trimmed);
-  }, []);
-
   const calendarCells = useMemo(() => {
     const year = cursor.getFullYear();
     const month = cursor.getMonth();
@@ -978,26 +963,6 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
                   </View>
 
                   <View style={styles.summaryDivider} />
-
-                  {Platform.OS === "web" ? (
-                    <div
-                      data-testid="screens-admin-trajectory-detail-calendar-portal"
-                      id="screens-admin-trajectory-detail-calendar-portal"
-                      style={webStyles.calendarPortal as React.CSSProperties}
-                    />
-                  ) : null}
-                  <View style={[styles.studentDatePickerWrap, isDesktop ? desktopStyles.studentDatePickerWrap : null]} testID="screens-admin-trajectory-detail-student-date-picker-wrap">
-                    <AppDateInput
-                      label="Ir a fecha"
-                      nativeID="screens-admin-trajectory-detail-date-picker"
-                      testID="screens-admin-trajectory-detail-date-picker"
-                      value={datePickerValue}
-                      onChangeText={handleDatePickerChange}
-                      placeholder="YYYY-MM-DD"
-                      inlineContainerId={Platform.OS === "web" ? "screens-admin-trajectory-detail-calendar-portal" : undefined}
-                      popperZIndex={100}
-                    />
-                  </View>
                 </AppCard>
 
                 <View
@@ -1992,12 +1957,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     width: "100%",
   },
-  datePickerWrap: {
-    width: "100%",
-  },
-  studentDatePickerWrap: {
-    width: "100%",
-  },
   calendarHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -2437,12 +2396,6 @@ const desktopStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  datePickerWrap: {
-    maxWidth: 320,
-  },
-  studentDatePickerWrap: {
-    maxWidth: 320,
-  },
 });
 
 const webStyles = {
@@ -2451,15 +2404,5 @@ const webStyles = {
   },
   studentCardRelative: {
     position: "relative" as const,
-  },
-  calendarPortal: {
-    position: "absolute" as const,
-    width: 0,
-    height: 0,
-    top: 0,
-    left: 0,
-    zIndex: 100,
-    overflow: "visible" as const,
-    pointerEvents: "none" as const,
   },
 };

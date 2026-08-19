@@ -299,6 +299,25 @@ export function AppNavigator() {
           );
         }
 
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        const alreadyOnPublicAuthPage =
+          currentPath === `/${PUBLIC_SCREEN_PATHS.SignIn}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.Home}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.CreateAccount}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.ConfirmAccount}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.About}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.Events}` ||
+          currentPath === `/${PUBLIC_SCREEN_PATHS.Stores}` ||
+          currentPath === "/";
+
+        if (alreadyOnPublicAuthPage) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <AuthFlow />
+            </NavigationContainer>
+          );
+        }
+
         redirectToPublicLogin(
           redirectTo || `${window.location.pathname}${window.location.search}`
         );

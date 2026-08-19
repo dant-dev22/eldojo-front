@@ -131,9 +131,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
   if (animated && Platform.OS === "web") {
     try {
       const motion = require("framer-motion");
-      const MotionSvg = motion.motion.createSvgComponent
-        ? motion.motion.createSvgComponent(motion.Svg)
-        : motion.motion.svg;
+      const MotionSvg = motion.motion.svg;
       const MotionG = motion.motion.g;
       const MotionPath = motion.motion.path;
 
@@ -285,7 +283,7 @@ export const LogoSvg: React.FC<LogoSvgProps> = ({
     } catch (_) {}
   }
 
-  if (animated) {
+  if (animated && Platform.OS !== "web") {
     try {
       const RNSvg = require("react-native-svg");
       const Animated = require("react-native").Animated;
