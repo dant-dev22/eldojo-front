@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
-import { publicAttendanceApi } from "@/api/publicAttendanceApi";
+import { publicAttendanceApi, type AttendanceSource } from "@/api/publicAttendanceApi";
 import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
@@ -12,6 +12,7 @@ import { AppInput } from "@/components/AppInput";
 import { LogoSvg } from "@/components/LogoSvg";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { AppSelect } from "@/components/AppSelect";
+import { QrScanner } from "@/components/QrScanner";
 import { StatusView } from "@/components/StatusView";
 import {
   agedWood as woodAged,
@@ -21,6 +22,7 @@ import {
   goldenYellow as amber,
   goldenYellowSoft as amberSoft,
   indigoBlue as indigo,
+  indigoBlueHover,
   indigoBlueSoft as indigoSoft,
   judogiRed,
   judogiRedSoft as judogiRedSoft,
@@ -29,8 +31,10 @@ import {
   spacing,
   tatamiGreen as matchaGreen,
   tatamiGreenSoft as matchaGreenSoft,
+  transitions,
   typography,
 } from "@/constants/theme";
+import { useCameraAvailability } from "@/hooks/useCameraAvailability";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
@@ -41,6 +45,14 @@ import type {
   PublicAttendanceResult,
   PublicAttendanceRouteParams,
 } from "@/types/publicAttendance";
+
+function getWebClassNameProps(className?: string) {
+  return Platform.OS === "web" && className ? ({ className } as { className: string }) : {};
+}
+
+function joinWebClassNames(...classNames: Array<string | false | null | undefined>) {
+  return classNames.filter(Boolean).join(" ");
+}
 
 interface PublicAttendanceScreenProps {
   routeParams?: PublicAttendanceRouteParams | null;
@@ -187,12 +199,15 @@ function getRecommendedClassId(classes: PublicAttendanceClassOption[], branchTim
 export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenProps) {
   const resolvedRoute = routeParams ?? getPublicAttendanceRoute();
   const { contentMaxWidth } = useResponsiveLayout();
+  const { status: cameraStatus, isEnabled: qrScannerEnabled } = useCameraAvailability();
   const [studentIdentifier, setStudentIdentifier] = useState("");
   const [debouncedStudentIdentifier, setDebouncedStudentIdentifier] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
   const [result, setResult] = useState<PublicAttendanceResult | null>(null);
   const [successCountdown, setSuccessCountdown] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [attendanceSource, setAttendanceSource] = useState<AttendanceSource>("manual");
 
   const contextQuery = useQuery({
     enabled: Boolean(resolvedRoute),
@@ -237,10 +252,15 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
   const registerMutation = useMutation({
     mutationFn: async () =>
-      publicAttendanceApi.register(resolvedRoute!.organizationSlug, resolvedRoute!.branchSlug, {
-        student_id: studentLookupQuery.data!.id,
-        class_id: selectedClassId ? Number(selectedClassId) : null,
-      }),
+      publicAttendanceApi.register(
+        resolvedRoute!.organizationSlug,
+        resolvedRoute!.branchSlug,
+        {
+          student_id: studentLookupQuery.data!.id,
+          class_id: selectedClassId ? Number(selectedClassId) : null,
+        },
+        attendanceSource
+      ),
     onSuccess: (response) => {
       setResult(response);
       setSuccessCountdown(3);
@@ -248,11 +268,26 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       setDebouncedStudentIdentifier("");
       setSelectedClassId(recommendedClassId);
       setFormError(null);
+      setAttendanceSource("manual");
     },
     onError: (error) => {
       setFormError(getErrorMessage(error));
+      setAttendanceSource("manual");
     },
   });
+
+  const handleQrCodeScanned = useCallback(
+    (code: string) => {
+      const normalizedCode = code.trim().toUpperCase();
+      if (!normalizedCode) return;
+
+      setStudentIdentifier(normalizedCode);
+      setDebouncedStudentIdentifier(normalizedCode);
+      setScannerVisible(false);
+      setAttendanceSource("qr");
+    },
+    []
+  );
 
   const recommendedClassId = useMemo(() => {
     if (!contextQuery.data) {
@@ -348,6 +383,16 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       ? studentLookupQuery.data
       : null;
 
+  useEffect(() => {
+    if (attendanceSource !== "qr") return;
+    if (registerMutation.isPending || registerMutation.isSuccess) return;
+    if (!resolvedStudent) return;
+    if (!selectedClassId) return;
+
+    setFormError(null);
+    registerMutation.mutate();
+  }, [attendanceSource, registerMutation, resolvedStudent, selectedClassId]);
+
   const lookupHelperText = studentLookupQuery.isFetching
     ? "Buscando alumno..."
     : resolvedStudent
@@ -364,6 +409,9 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       />
     );
   }
+
+  const desktopClass = isDesktop ? "eldojo-public-desktop-fade-in-delay-2" : "";
+  const formClass = `eldojo-public-desktop-form-fade-in ${desktopClass}`;
 
   return (
     <PublicPageChrome
@@ -384,8 +432,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       contentContainerStyle={[styles.screenContent, { alignItems: "center" }]}
       contentMaxWidth={contentMaxWidth}
     >
-      <View nativeID="screens-public-attendance-layout" style={[styles.layout, { maxWidth: isDesktop ? 880 : contentMaxWidth }]} testID="screens-public-attendance-layout">
-        <View nativeID="screens-public-attendance-hero" style={styles.heroRow} testID="screens-public-attendance-hero">
+      <View
+        nativeID="screens-public-attendance-layout"
+        style={[styles.layout, { maxWidth: isDesktop ? 880 : contentMaxWidth }]}
+        testID="screens-public-attendance-layout"
+      >
+        <View
+          nativeID="screens-public-attendance-hero"
+          style={styles.heroRow}
+          testID="screens-public-attendance-hero"
+          {...getWebClassNameProps(
+            isDesktop ? joinWebClassNames("eldojo-public-desktop-fade-in") : undefined
+          )}
+        >
           <View nativeID="screens-public-attendance-hero-icon-wrap" style={styles.heroIconWrap} testID="screens-public-attendance-hero-icon-wrap">
             <LogoSvg
               nativeID="screens-public-attendance-hero-glyph"
@@ -396,8 +455,8 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           </View>
           <View nativeID="screens-public-attendance-hero-copy" style={styles.heroCopy} testID="screens-public-attendance-hero-copy">
             <View nativeID="screens-public-attendance-hero-tag" style={styles.heroTagPill} testID="screens-public-attendance-hero-tag">
-              <Feather name="clock" size={13} color={woodAged} />
-              <Text style={styles.heroTagText}>Registro · Asistencia</Text>
+              <Feather name="check-square" size={13} color={matchaGreen} />
+              <Text style={styles.heroTagText}>Registro · Asistencia rapida</Text>
             </View>
             {contextQuery.isSuccess && contextQuery.data ? (
               <>
@@ -426,7 +485,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                 <View style={[styles.skeletonBlock, { width: 140, height: 22 }]} />
                 <View style={[styles.skeletonBlock, { width: 220, height: 12, marginTop: spacing.md }]} />
               </View>
-              <View style={[styles.skeletonBlock, { width: "100%", height: 52 }]} />
+              <View style={[styles.skeletonBlock, { width: "100%", height: 72, borderRadius: radius.lg }]} />
               <View style={[styles.skeletonBlock, { width: "100%", height: 52 }]} />
               <View style={[styles.skeletonBlock, { width: "100%", height: 48, borderRadius: radius.lg }]} />
             </View>
@@ -436,12 +495,14 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
               description={getErrorMessage(contextQuery.error)}
             />
           ) : result ? (
-            <AppCard nativeID="screens-public-attendance-success-card" style={styles.successCard} testID="screens-public-attendance-success-card">
+            <AppCard nativeID="screens-public-attendance-success-card" style={styles.successCard} testID="screens-public-attendance-success-card"
+              className={isDesktop ? formClass : undefined}
+            >
               <View nativeID="screens-public-attendance-success-top" style={styles.successTopRow} testID="screens-public-attendance-success-top">
                 <View nativeID="screens-public-attendance-success-icon" style={styles.successIconWrap} testID="screens-public-attendance-success-icon">
                   <Feather name="check-circle" size={22} color={matchaGreen} />
                 </View>
-                <AppBadge label="Asistencia registrada" nativeID="screens-public-attendance-success-badge" testID="screens-public-attendance-success-badge" tone="success" />
+                <AppBadge label="Asistencia confirmada" nativeID="screens-public-attendance-success-badge" testID="screens-public-attendance-success-badge" tone="success" />
               </View>
               <View nativeID="screens-public-attendance-success-divider" style={styles.successDivider} testID="screens-public-attendance-success-divider" />
               <Text nativeID="screens-public-attendance-success-title" style={styles.successTitle} testID="screens-public-attendance-success-title">{result.message}</Text>
@@ -468,21 +529,63 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
             </AppCard>
           ) : (
             <>
-              <AppCard nativeID="screens-public-attendance-form-card" style={styles.formCard} testID="screens-public-attendance-form-card">
+              <AppCard
+                nativeID="screens-public-attendance-form-card"
+                style={styles.formCard}
+                testID="screens-public-attendance-form-card"
+                className={isDesktop ? formClass : undefined}
+              >
                 <View nativeID="screens-public-attendance-form-divider-top" style={styles.formCardDivider} testID="screens-public-attendance-form-divider-top" />
                 <View nativeID="screens-public-attendance-context" style={styles.contextBlock} testID="screens-public-attendance-context">
                   <View style={styles.contextBadgeRow}>
-                    <View style={styles.contextBadgeIconWrap}>
-                      <Feather name="book-open" size={13} color={woodAged} />
+                    <View style={[styles.contextBadgeIconWrap, { backgroundColor: matchaGreenSoft }]}>
+                      <Feather name="zap" size={13} color={matchaGreen} />
                     </View>
-                    <AppBadge label="Formulario de asistencia" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="warning" />
+                    <AppBadge label="Flujo rapido · sin friccion" nativeID="screens-public-attendance-context-badge" testID="screens-public-attendance-context-badge" tone="success" />
                   </View>
                   <Text nativeID="screens-public-attendance-section-title" style={styles.sectionTitle} testID="screens-public-attendance-section-title">
                     Registrar asistencia
                   </Text>
                   <Text nativeID="screens-public-attendance-section-description" style={styles.sectionDescription} testID="screens-public-attendance-section-description">
-                    Elige la clase actual y escribe el ID del alumno. El sistema confirmara su identidad antes de marcar la asistencia.
+                    La opcion recomendada es escanear el QR del alumno. Como alternativa, puedes seleccionar la clase y escribir el codigo manualmente.
                   </Text>
+                </View>
+
+                <View nativeID="screens-public-attendance-qr-primary-wrap" style={styles.qrPrimaryWrap} testID="screens-public-attendance-qr-primary-wrap">
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={registerMutation.isPending || !qrScannerEnabled}
+                    nativeID="screens-public-attendance-scan-qr-button"
+                    onPress={() => {
+                      setFormError(null);
+                      setScannerVisible(true);
+                    }}
+                    style={(state) => {
+                      const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                      const hoverState = Boolean(hovered) || Boolean(state.pressed);
+                      return [
+                        styles.qrPrimaryButton,
+                        (registerMutation.isPending || !qrScannerEnabled) ? styles.qrPrimaryButtonDisabled : null,
+                        hoverState && qrScannerEnabled && !registerMutation.isPending ? styles.qrPrimaryButtonHover : null,
+                      ];
+                    }}
+                    testID="screens-public-attendance-scan-qr-button"
+                  >
+                    <View style={styles.qrPrimaryIconFrame}>
+                      <Feather name="maximize-2" size={20} color={colors.surface} />
+                    </View>
+                    <View style={styles.qrPrimaryCopy}>
+                      <Text style={styles.qrPrimaryLabel}>Escanear QR del alumno</Text>
+                      <Text style={styles.qrPrimaryHint}>
+                        {!qrScannerEnabled
+                          ? cameraStatus === "checking"
+                            ? "Verificando camara…"
+                            : "Dispositivo sin camara · Usa ingreso manual"
+                          : "Deteccion automatica · 1 paso"}
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color={colors.surface} />
+                  </Pressable>
                 </View>
 
                 <View nativeID="screens-public-attendance-select-wrap" style={styles.fieldWrap} testID="screens-public-attendance-select-wrap">
@@ -504,7 +607,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                 {selectedClassName ? (
                   <View nativeID="screens-public-attendance-selection-summary" style={styles.selectionSummary} testID="screens-public-attendance-selection-summary">
                     <AppBadge
-                      label={selectedClassId === recommendedClassId ? "Sugerida · ahora" : "Clase elegida"}
+                      label={selectedClassId === recommendedClassId ? "Clase sugerida · ahora" : "Clase elegida"}
                       nativeID="screens-public-attendance-selection-summary-badge"
                       testID="screens-public-attendance-selection-summary-badge"
                       tone="success"
@@ -516,11 +619,21 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                   </View>
                 ) : null}
 
+                <View style={styles.orDividerWrap}>
+                  <View style={styles.orDividerLine} />
+                  <View style={styles.orDividerPill}>
+                    <Text style={styles.orDividerLabel}>O INGRESA MANUALMENTE</Text>
+                  </View>
+                  <View style={styles.orDividerLine} />
+                </View>
+
                 <View nativeID="screens-public-attendance-input-wrap" style={styles.fieldWrap} testID="screens-public-attendance-input-wrap">
                   <AppInput
                     autoCapitalize="characters"
                     autoCorrect={false}
+                    containerClassName="screens-public-attendance-student-input-container"
                     editable={!registerMutation.isPending}
+                    inputClassName="screens-public-attendance-student-input-input"
                     keyboardType="default"
                     label="ID o codigo del alumno"
                     nativeID="screens-public-attendance-student-input"
@@ -528,8 +641,10 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                       setStudentIdentifier(value);
                       setFormError(null);
                     }}
-                    placeholder="Ejemplo: 125 o ELD-A1B2"
+                    placeholder="Ej: 125 · ELD-A1B2"
+                    style={styles.underlinedInput}
                     testID="screens-public-attendance-student-input"
+                    wrapperClassName="screens-public-attendance-student-input-wrapper"
                     value={studentIdentifier}
                   />
                 </View>
@@ -596,6 +711,15 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                   </View>
                 ) : null}
 
+                {attendanceSource === "qr" && resolvedStudent ? (
+                  <View nativeID="screens-public-attendance-source-badge" style={styles.sourceBadgeRow} testID="screens-public-attendance-source-badge">
+                    <View style={styles.sourceBadgeIconWrap}>
+                      <Feather name="smartphone" size={13} color={indigo} />
+                    </View>
+                    <Text style={styles.sourceBadgeText}>Lectura via QR · Asistencia en proceso</Text>
+                  </View>
+                ) : null}
+
                 <View nativeID="screens-public-attendance-submit-wrap" style={styles.submitWrap} testID="screens-public-attendance-submit-wrap">
                   <Pressable
                     disabled={!resolvedStudent || !selectedClassId || registerMutation.isPending}
@@ -626,6 +750,12 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           )}
         </View>
       </View>
+      <QrScanner
+        onCodeScanned={handleQrCodeScanned}
+        onClose={() => setScannerVisible(false)}
+        testID="screens-public-attendance-qr-scanner"
+        visible={scannerVisible}
+      />
     </PublicPageChrome>
   );
 }
@@ -677,8 +807,8 @@ const styles = StyleSheet.create({
   },
   heroTagPill: {
     alignItems: "center",
-    backgroundColor: amberSoft,
-    borderColor: "rgba(249, 168, 37, 0.3)",
+    backgroundColor: matchaGreenSoft,
+    borderColor: "rgba(85, 139, 47, 0.28)",
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: "row",
@@ -687,11 +817,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   heroTagText: {
-    color: amber,
+    color: matchaGreen,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: 0.25,
   },
   heroTitle: {
     color: colors.text,
@@ -721,7 +851,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 2.5,
     marginTop: spacing.sm,
     opacity: 0.75,
   },
@@ -737,8 +867,8 @@ const styles = StyleSheet.create({
   },
   lookupSkeleton: {
     alignItems: "center",
-    backgroundColor: woodSoftAccent,
-    borderColor: colors.border,
+    backgroundColor: indigoSoft,
+    borderColor: "rgba(26, 35, 126, 0.18)",
     borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: "row",
@@ -750,7 +880,7 @@ const styles = StyleSheet.create({
   },
   formCardDivider: {
     alignSelf: "center",
-    backgroundColor: woodAged,
+    backgroundColor: matchaGreen,
     borderRadius: 999,
     height: 4,
     marginBottom: spacing.lg,
@@ -758,15 +888,15 @@ const styles = StyleSheet.create({
   },
   formCard: {
     backgroundColor: colors.surface,
-    borderColor: "rgba(141,110,99,0.14)",
+    borderColor: "rgba(85,139,47,0.14)",
     borderRadius: 24,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.xl,
     shadowColor: shadows.cardElevated.shadowColor,
     shadowOffset: shadows.cardElevated.shadowOffset,
-    shadowOpacity: 0.06,
-    shadowRadius: 22,
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
   },
   contextBlock: {
     gap: spacing.xs,
@@ -798,8 +928,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
+  qrPrimaryWrap: {
+    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  qrPrimaryButton: {
+    alignItems: "center",
+    backgroundColor: indigo,
+    borderColor: indigo,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 76,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    shadowColor: indigo,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    ...Platform.select({
+      web: {
+        transition: `background-color ${transitions.base}ms ease, transform ${transitions.fast}ms ease, box-shadow ${transitions.base}ms ease, border-color ${transitions.base}ms ease`,
+      } as any,
+    }),
+  },
+  qrPrimaryButtonHover: {
+    backgroundColor: indigoBlueHover,
+    borderColor: indigoBlueHover,
+    shadowOpacity: 0.32,
+    transform: [{ translateY: -1 }],
+  },
+  qrPrimaryButtonDisabled: {
+    backgroundColor: "rgba(26, 35, 126, 0.45)",
+    borderColor: "rgba(26, 35, 126, 0.45)",
+    shadowOpacity: 0,
+  },
+  qrPrimaryIconFrame: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(255,255,255,0.22)",
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  qrPrimaryCopy: {
+    alignItems: "flex-start",
+    flex: 1,
+    gap: 2,
+  },
+  qrPrimaryLabel: {
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+  qrPrimaryHint: {
+    color: "rgba(255,255,255,0.78)",
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 0.3,
+  },
   fieldWrap: {
     marginTop: spacing.sm,
+  },
+  orDividerWrap: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
+  },
+  orDividerLine: {
+    backgroundColor: colors.woodSoft,
+    flex: 1,
+    height: 1,
+  },
+  orDividerPill: {
+    alignItems: "center",
+    backgroundColor: amberSoft,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  orDividerLabel: {
+    color: amber,
+    fontFamily: typography.headingFamily,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  underlinedInput: {
+    backgroundColor: "transparent",
   },
   selectionSummary: {
     alignItems: "center",
@@ -867,14 +1092,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: indigo,
     borderRadius: 999,
-    height: 44,
+    height: 48,
     justifyContent: "center",
-    width: 44,
+    width: 48,
   },
   studentAvatarText: {
     color: colors.surface,
     fontFamily: typography.headingFamily,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
   },
   studentSummaryBadgeRow: {
@@ -896,7 +1121,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   submitWrap: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     width: "100%",
   },
   submitButton: {
@@ -908,16 +1133,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
+    minHeight: 56,
     paddingVertical: spacing.md,
     shadowColor: shadows.cardElevated.shadowColor,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 18,
     width: "100%",
+    ...Platform.select({
+      web: {
+        transition: `background-color ${transitions.base}ms ease, transform ${transitions.fast}ms ease, box-shadow ${transitions.base}ms ease, opacity ${transitions.fast}ms ease`,
+      } as any,
+    }),
   },
   submitButtonHover: {
     backgroundColor: woodAgedHover,
     shadowOpacity: 0.28,
+    transform: [{ translateY: -1 }],
   },
   submitButtonDisabled: {
     backgroundColor: "rgba(141,110,99,0.14)",
@@ -934,11 +1166,16 @@ const styles = StyleSheet.create({
   },
   successCard: {
     backgroundColor: matchaGreenSoft,
-    borderColor: "rgba(85, 139, 47, 0.28)",
+    borderColor: "rgba(85, 139, 47, 0.30)",
     borderRadius: 24,
     borderWidth: 1,
     gap: spacing.lg,
     padding: spacing.xl,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 20px 60px rgba(85,139,47,0.18)",
+      } as any,
+    }),
   },
   successTopRow: {
     alignItems: "center",
@@ -949,13 +1186,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: matchaGreen,
     borderRadius: 999,
-    height: 40,
+    height: 44,
     justifyContent: "center",
     shadowColor: matchaGreen,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    width: 40,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    width: 44,
   },
   successDivider: {
     alignSelf: "center",
@@ -982,6 +1219,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     flexDirection: "row",
     gap: spacing.sm,
+    minHeight: 56,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
@@ -990,7 +1228,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     textTransform: "uppercase",
     width: 68,
   },
@@ -1006,6 +1244,33 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     fontWeight: "700",
+    letterSpacing: 0.2,
     textAlign: "center",
+  },
+  sourceBadgeRow: {
+    alignItems: "center",
+    backgroundColor: amberSoft,
+    borderColor: "rgba(249, 168, 37, 0.30)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  sourceBadgeIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    height: 24,
+    justifyContent: "center",
+    width: 24,
+  },
+  sourceBadgeText: {
+    color: amber,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.25,
   },
 });

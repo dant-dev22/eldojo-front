@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { AppInputProps } from "@/components/AppInput";
 import { colors, radius, spacing } from "@/constants/theme";
-import "react-datepicker/dist/react-datepicker.css";
+import "react-datepicker/dist/react-datepicker.min.css";
 
 interface AppDateInputProps extends Omit<AppInputProps, "rightAdornment"> {
   inlineContainerId?: string;

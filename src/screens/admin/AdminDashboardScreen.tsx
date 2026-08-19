@@ -32,6 +32,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
 import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
+import { getDomainConfig } from "@/utils/domains";
 
 import type { AdminDashboardSection, AdminStackParamList } from "@/navigation/types";
 import type {
@@ -564,7 +565,8 @@ function buildAttendanceUpdatePayload(
 }
 
 async function openPublicAttendancePage(organizationSlug: string, branchName: string): Promise<void> {
-  const origin = "https://eldojo.tech";
+  const cfg = getDomainConfig();
+  const origin = cfg.publicWebOrigin;
   const path = buildPublicAttendanceUrl(origin, organizationSlug, branchName);
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -642,7 +644,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const isCompact = width < 480;
   const { completeFirstTimeTutorial, user } = useAuth();
   const queryClient = useQueryClient();
-  const publicAttendanceOrigin = "https://eldojo.tech";
+  const domainConfig = getDomainConfig();
+  const publicAttendanceOrigin = domainConfig.publicWebOrigin;
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
   const scopedBranchId = currentAssignment?.branch_id ?? null;
@@ -2350,6 +2353,23 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
               Vista general del dojo con indicadores visuales y foco rápido en la estructura activa.
             </Text>
+            <View nativeID="screens-admin-dashboard-operations-central-dashboard-meta" style={styles.operationsQuickLinkWrap} testID="screens-admin-dashboard-operations-central-dashboard-meta">
+              <Pressable
+                accessibilityRole="link"
+                nativeID="screens-admin-dashboard-operations-quick-attendance-link"
+                onPress={() => {
+                  if (organization && currentBranch) {
+                    void openPublicAttendancePage(organization.slug, currentBranch.name);
+                  }
+                }}
+                style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
+                testID="screens-admin-dashboard-operations-quick-attendance-link"
+              >
+                <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
+                  Ir rapido a prueba 2
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -2632,7 +2652,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             testID="screens-admin-dashboard-operations-quick-attendance-link"
           >
             <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
-              Ir rapido a asistencias
+              Ir rapido a prueba 2
             </Text>
           </Pressable>
         </View>
