@@ -163,6 +163,7 @@ export function TrajectoryListScreen({ navigation }: Props) {
         onGoPayments={() =>
           navigation.navigate("AdminHome", { section: "payments" })
         }
+        onGoQrCodes={() => navigation.navigate("QrCodesList")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}

@@ -673,6 +673,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
+        onGoQrCodes={() => navigation.navigate("QrCodesList")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         onGoTrajectory={handleGoBack}
         sidebarSummary={sidebarSummary}

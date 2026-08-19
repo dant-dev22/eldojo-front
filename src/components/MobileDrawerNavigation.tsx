@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { LogoSvg } from "@/components/LogoSvg";
 import { activeBorderWidth, colors, radius, spacing, transitions, typography } from "@/constants/theme";
 
-type AdminSection = "dashboard" | "students" | "trajectory" | "branches" | "operations" | "payments" | "dojo" | "reports" | "settings";
+type AdminSection = "dashboard" | "students" | "trajectory" | "branches" | "operations" | "payments" | "qr-codes" | "dojo" | "reports" | "settings";
 
 interface DrawerNavItem {
   key: AdminSection;
