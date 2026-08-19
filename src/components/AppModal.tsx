@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import { PropsWithChildren } from "react";
 import {
   Modal,
@@ -59,15 +60,15 @@ export function AppModal({ visible, title, description, onClose, children, nativ
                 ) : null}
               </View>
               <Pressable
+                accessibilityLabel="Cerrar"
                 accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 nativeID={`${baseId}-close-button`}
                 onPress={onClose}
-                style={styles.closeButton}
+                style={({ pressed }) => [styles.closeButton, pressed ? styles.closeButtonPressed : null]}
                 testID={`${baseId}-close-button`}
               >
-                <Text nativeID={`${baseId}-close-label`} style={styles.closeLabel} testID={`${baseId}-close-label`}>
-                  Cerrar
-                </Text>
+                <Feather color={colors.textMuted} name="x" size={20} />
               </Pressable>
             </View>
             <ScrollView
@@ -133,19 +134,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   closeButton: {
+    alignItems: "center",
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
-  closeLabel: {
-    color: colors.ink,
-    fontFamily: typography.headingFamily,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+  closeButtonPressed: {
+    backgroundColor: colors.hover,
+    opacity: 0.92,
   },
   content: {
     gap: spacing.md,

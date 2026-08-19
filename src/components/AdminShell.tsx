@@ -20,6 +20,7 @@ export type AdminSection =
   | "branches"
   | "operations"
   | "payments"
+  | "qr-codes"
   | "dojo"
   | "reports"
   | "settings";
@@ -34,6 +35,7 @@ interface AdminShellProps extends PropsWithChildren {
   onGoBranches: () => void;
   onGoOperations: () => void;
   onGoPayments: () => void;
+  onGoQrCodes: () => void;
   onGoDojo: () => void;
   onGoReports?: () => void;
   onGoSettings?: () => void;
@@ -94,6 +96,7 @@ export function AdminShell({
   onGoBranches,
   onGoOperations,
   onGoPayments,
+  onGoQrCodes,
   onGoDojo,
   onGoReports,
   onGoSettings,
@@ -173,6 +176,13 @@ export function AdminShell({
         icon: "credit-card",
         onPress: onGoPayments,
       });
+      base.push({
+        key: "qr-codes",
+        label: "Códigos QR",
+        description: "Credenciales y escaneo QR de alumnos",
+        icon: "camera",
+        onPress: onGoQrCodes,
+      });
       if (onGoSettings) {
         base.push({
           key: "settings",
@@ -191,7 +201,7 @@ export function AdminShell({
       });
       return base;
     },
-    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoReports, onGoSettings, onGoStudents, onGoTrajectory],
+    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoQrCodes, onGoReports, onGoSettings, onGoStudents, onGoTrajectory],
   );
 
   const displayName = useMemo(
@@ -302,12 +312,16 @@ export function AdminShell({
   );
 
   const quickActions = useMemo<BottomSheetAction[]>(
-    () => [
-      { key: "new-student", label: "Nuevo alumno", icon: "user-plus", tone: "primary", onPress: onGoStudents },
-      { key: "new-class", label: "Registrar clase", icon: "calendar", tone: "success", onPress: onGoOperations },
-      { key: "new-payment", label: "Registrar pago", icon: "dollar-sign", tone: "warning", onPress: onGoPayments },
-      { key: "view-reports", label: "Ver reportes", icon: "bar-chart-2", onPress: () => onGoReports?.() },
-    ],
+    () => {
+      const actions: BottomSheetAction[] = [
+        { key: "new-student", label: "Nuevo alumno", icon: "user-plus", tone: "primary", onPress: onGoStudents },
+        { key: "new-class", label: "Registrar clase", icon: "calendar", tone: "success", onPress: onGoOperations },
+        { key: "new-payment", label: "Registrar pago", icon: "dollar-sign", tone: "warning", onPress: onGoPayments },
+        { key: "view-reports", label: "Ver reportes", icon: "bar-chart-2", onPress: () => onGoReports?.() },
+      ];
+
+      return actions;
+    },
     [onGoOperations, onGoPayments, onGoReports, onGoStudents],
   );
 

@@ -55,50 +55,10 @@ export function CredencialQRModal({
   const { width: windowWidth } = useWindowDimensions();
   const baseId = nativeID ?? testID ?? "credential-qr-modal";
   const qrSvgRef = useRef<QRCodeProps>(null);
-  const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   const cardMaxWidth = Math.min(windowWidth - spacing.lg * 2 - spacing.lg * 2, 380);
   const qrSize = Math.min(cardMaxWidth - spacing.lg * 2, 240);
-
-  async function handleSaveToGallery() {
-    if (Platform.OS === "web") {
-      Alert.alert("Guardar imagen", "En el navegador web, manten presionada la imagen y seleccioná 'Guardar imagen'.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const MediaLibrary = await import("expo-media-library");
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permiso requerido",
-          "Necesitamos permiso para guardar la credencial QR en tu galeria. Podés habilitarlo desde ajustes del sistema."
-        );
-        return;
-      }
-
-      const dataUri = await getQrDataUri();
-      if (!dataUri) {
-        Alert.alert("No disponible", "Todavia no pudimos generar la imagen. Volve a intentar en unos segundos.");
-        return;
-      }
-
-      const filename = `${sanitizeFilename(studentFullName)}-${uniqueCode}-eldojo-qr.png`;
-      const cacheDirectory = (FileSystemLegacy as unknown as { cacheDirectory?: string | null }).cacheDirectory ?? "";
-      const cachePath = `${cacheDirectory}${filename}`;
-      const base64Payload = dataUri.replace(/^data:image\/png;base64,/, "");
-      await FileSystemLegacy.writeAsStringAsync(cachePath, base64Payload, { encoding: FileSystemLegacy.EncodingType.Base64 });
-      await MediaLibrary.saveToLibraryAsync(cachePath);
-
-      Alert.alert("Listo", "La credencial QR se guardo en tu galeria. Ahora podes compartirla por WhatsApp.");
-    } catch (error) {
-      Alert.alert("Error", "No pudimos guardar la imagen. Intenta nuevamente.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleShare() {
     try {
@@ -277,25 +237,6 @@ export function CredencialQRModal({
             onPress={handleShare}
             loading={sharing}
             leadingIcon={<Ionicons name="share-social" size={18} color={colors.onPrimary} />}
-            style={{ minHeight: 50 }}
-          />
-          <AppButton
-            label={Platform.OS === "web" ? "Ver código en pantalla" : "Guardar en galería"}
-            nativeID={`${baseId}-save-button`}
-            testID={`${baseId}-save-button`}
-            onPress={handleSaveToGallery}
-            loading={saving}
-            leadingIcon={<Ionicons name="download" size={18} color={colors.onPrimary} />}
-            variant="secondary"
-            style={{ minHeight: 50 }}
-          />
-          <AppButton
-            label="Copiar código único"
-            nativeID={`${baseId}-copy-button`}
-            testID={`${baseId}-copy-button`}
-            onPress={handleCopyCode}
-            leadingIcon={<Ionicons name="copy-outline" size={18} color={colors.text} />}
-            variant="secondary"
             style={{ minHeight: 50 }}
           />
         </View>

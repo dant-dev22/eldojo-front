@@ -789,58 +789,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
           key: "medical",
           label: "Ver ficha médica",
           icon: "heart",
-          tone: "danger",
           onPress: () => {
             setShowContextSheet(false);
             handleOpenMedicalCard(contextSheetStudent);
           },
         },
         {
-          key: "view",
-          label: "Ver detalle",
-          icon: "eye",
-          tone: "primary",
+          key: "info",
+          label: "Información general",
+          icon: "user",
           onPress: () => {
             setShowContextSheet(false);
-            handleOpenDetail(contextSheetStudent.id);
+            navigation.navigate("StudentDetail", { studentId: contextSheetStudent.id });
           },
-        },
-        {
-          key: "edit",
-          label: "Editar alumno",
-          icon: "edit-3",
-          onPress: () => handleOpenEdit(contextSheetStudent),
-        },
-        {
-          key: "payment",
-          label: "Registrar pago",
-          icon: "dollar-sign",
-          tone: "success",
-          onPress: () => {
-            setFeedbackMessage(
-              `Funcionalidad de registro de pago para ${contextSheetStudent.first_name} ${contextSheetStudent.last_name} próximamente.`
-            );
-            setFeedbackTone("success");
-          },
-        },
-        {
-          key: "attendance",
-          label: "Marcar asistencia",
-          icon: "check-circle",
-          tone: "warning",
-          onPress: () => {
-            setFeedbackMessage(
-              `Asistencia marcada para ${contextSheetStudent.first_name}.`
-            );
-            setFeedbackTone("success");
-          },
-        },
-        {
-          key: "delete",
-          label: "Eliminar alumno",
-          icon: "trash-2",
-          destructive: true,
-          onPress: () => setStudentToDelete(contextSheetStudent),
         },
       ];
     },
@@ -1173,6 +1134,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
+        onGoQrCodes={() => navigation.navigate("QrCodesList")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}
@@ -1193,7 +1155,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
               </Text>
               <Text nativeID="screens-admin-students-list-feedback-description" style={styles.feedbackDescription} testID="screens-admin-students-list-feedback-description">{feedbackMessage}</Text>
             </View>
-            <AppButton label="Cerrar aviso" nativeID="screens-admin-students-list-feedback-close-button" onPress={() => setFeedbackMessage(null)} testID="screens-admin-students-list-feedback-close-button" variant="secondary" />
+            <Pressable
+              accessibilityLabel="Cerrar aviso"
+              accessibilityRole="button"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              nativeID="screens-admin-students-list-feedback-close-button"
+              onPress={() => setFeedbackMessage(null)}
+              style={({ pressed }) => [styles.feedbackCloseButton, pressed ? { opacity: 0.8 } : null]}
+              testID="screens-admin-students-list-feedback-close-button"
+            >
+              <Feather color={colors.text} name="x" size={18} />
+            </Pressable>
           </AppCard>
         ) : null}
 
@@ -2187,12 +2159,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 testID="screens-admin-students-list-medical-edit-button"
                 variant="secondary"
               />
-              <AppButton
-                label="Cerrar"
+              <Pressable
+                accessibilityLabel="Cerrar"
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 nativeID="screens-admin-students-list-medical-close-button"
                 onPress={handleCloseMedicalCard}
+                style={({ pressed }) => [styles.medicalCloseButton, pressed ? styles.medicalCloseButtonPressed : null]}
                 testID="screens-admin-students-list-medical-close-button"
-              />
+              >
+                <Feather color={colors.text} name="x" size={18} />
+              </Pressable>
             </View>
           </View>
         ) : (
@@ -2469,71 +2446,23 @@ function StudentListRow({
         </View>
 
         <View nativeID={`screens-admin-students-list-row-actions-${student.id}`} style={[styles.tableCell, styles.actionsColumn, styles.tableActions]} testID={`screens-admin-students-list-row-actions-${student.id}`}>
-          {onOpenMedicalCard ? (
-            <Pressable
-              accessibilityLabel="Ver ficha médica del alumno"
-              accessibilityRole="link"
-              nativeID={`screens-admin-students-list-medical-button-${student.id}`}
-              onPress={onOpenMedicalCard}
-              style={(state) => {
-                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-                return [
-                  styles.rowHyperlink,
-                  hovered ? styles.rowHyperlinkHovered : null,
-                  state.pressed ? styles.rowHyperlinkPressed : null,
-                ];
-              }}
-              testID={`screens-admin-students-list-medical-button-${student.id}`}
-            >
-              <View style={styles.rowIconHyperlink}>
-                <Feather color={colors.danger} name="heart" size={14} />
-                <Text nativeID={`screens-admin-students-list-medical-button-${student.id}-label`} style={[styles.rowHyperlinkLabel, { color: colors.danger }]} testID={`screens-admin-students-list-medical-button-${student.id}-label`}>
-                  Ficha médica
-                </Text>
-              </View>
-            </Pressable>
-          ) : null}
           <Pressable
-            accessibilityLabel="Ver detalle del alumno"
-            accessibilityRole="link"
-            nativeID={`screens-admin-students-list-detail-button-${student.id}`}
-            onPress={onViewDetail}
+            accessibilityLabel="Acciones del alumno"
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            nativeID={`screens-admin-students-list-context-button-${student.id}`}
+            onPress={onContext}
             style={(state) => {
               const hovered = (state as typeof state & { hovered?: boolean }).hovered;
               return [
-                styles.rowHyperlink,
-                hovered ? styles.rowHyperlinkHovered : null,
-                state.pressed ? styles.rowHyperlinkPressed : null,
+                styles.rowContextMenuButton,
+                hovered ? styles.rowContextMenuButtonHovered : null,
+                state.pressed ? styles.rowContextMenuButtonPressed : null,
               ];
             }}
-            testID={`screens-admin-students-list-detail-button-${student.id}`}
+            testID={`screens-admin-students-list-context-button-${student.id}`}
           >
-            <Text nativeID={`screens-admin-students-list-detail-button-${student.id}-label`} style={styles.rowHyperlinkLabel} testID={`screens-admin-students-list-detail-button-${student.id}-label`}>
-              Ver detalle
-            </Text>
-          </Pressable>
-          <Text nativeID={`screens-admin-students-list-edit-button-${student.id}`} style={styles.rowEditText} testID={`screens-admin-students-list-edit-button-${student.id}`}>
-            Editar
-          </Text>
-          <Pressable
-            accessibilityLabel="Dar de baja al alumno"
-            accessibilityRole="link"
-            nativeID={`screens-admin-students-list-delete-button-${student.id}`}
-            onPress={onDelete}
-            style={(state) => {
-              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-              return [
-                styles.rowHyperlink,
-                styles.rowHyperlinkDanger,
-                hovered ? styles.rowHyperlinkHoveredDanger : null,
-                state.pressed ? styles.rowHyperlinkPressed : null,
-              ];
-            }}
-            testID={`screens-admin-students-list-delete-button-${student.id}`}
-          >
-            <Text nativeID={`screens-admin-students-list-delete-button-${student.id}-label`} style={[styles.rowHyperlinkLabel, styles.rowHyperlinkLabelDanger]} testID={`screens-admin-students-list-delete-button-${student.id}-label`}>
-              Dar de baja
-            </Text>
+            <Feather color={colors.text} name="more-vertical" size={18} />
           </Pressable>
         </View>
       </View>
@@ -2589,73 +2518,8 @@ function StudentListRow({
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
-        {onOpenMedicalCard ? (
-          <Pressable
-            accessibilityLabel="Ver ficha médica"
-            accessibilityRole="link"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            nativeID={`screens-admin-students-list-medical-link-${student.id}`}
-            onPress={onOpenMedicalCard}
-            style={(state) => {
-              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-              return [
-                styles.mobileActionLink,
-                hovered ? styles.mobileActionLinkHovered : null,
-                state.pressed ? styles.mobileActionLinkPressed : null,
-              ];
-            }}
-            testID={`screens-admin-students-list-medical-link-${student.id}`}
-          >
-            <View style={styles.rowIconHyperlink}>
-              <Feather color={colors.danger} name="heart" size={14} />
-              <Text nativeID={`screens-admin-students-list-medical-link-label-${student.id}`} style={[styles.mobileActionLinkLabel, { color: colors.danger }]} testID={`screens-admin-students-list-medical-link-label-${student.id}`}>
-                Médica
-              </Text>
-            </View>
-          </Pressable>
-        ) : null}
         <Pressable
-          accessibilityLabel="Ver detalle del alumno"
-          accessibilityRole="link"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          nativeID={`screens-admin-students-list-detail-link-${student.id}`}
-          onPress={onViewDetail}
-          style={(state) => {
-            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-            return [
-              styles.mobileActionLink,
-              hovered ? styles.mobileActionLinkHovered : null,
-              state.pressed ? styles.mobileActionLinkPressed : null,
-            ];
-          }}
-          testID={`screens-admin-students-list-detail-link-${student.id}`}
-        >
-          <Text nativeID={`screens-admin-students-list-detail-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-detail-link-label-${student.id}`}>
-            Ver detalle
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Editar alumno"
-          accessibilityRole="link"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          nativeID={`screens-admin-students-list-edit-link-${student.id}`}
-          onPress={onEdit}
-          style={(state) => {
-            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-            return [
-              styles.mobileActionLink,
-              hovered ? styles.mobileActionLinkHovered : null,
-              state.pressed ? styles.mobileActionLinkPressed : null,
-            ];
-          }}
-          testID={`screens-admin-students-list-edit-link-${student.id}`}
-        >
-          <Text nativeID={`screens-admin-students-list-edit-link-label-${student.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-students-list-edit-link-label-${student.id}`}>
-            Editar
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Más acciones"
+          accessibilityLabel="Acciones del alumno"
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           nativeID={`screens-admin-students-list-context-button-${student.id}`}
@@ -2670,7 +2534,7 @@ function StudentListRow({
           }}
           testID={`screens-admin-students-list-context-button-${student.id}`}
         >
-          <Feather color={colors.primary} name="more-horizontal" size={20} />
+          <Feather color={colors.text} name="more-horizontal" size={20} />
         </Pressable>
       </View>
     </View>
@@ -2759,6 +2623,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 20,
+  },
+  feedbackCloseButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.06)",
+    borderRadius: radius.pill,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
   dashboardHeaderBlock: {
     width: "100%",
@@ -3090,6 +2962,25 @@ const styles = StyleSheet.create({
   rowHyperlinkLabelDanger: {
     color: colors.danger,
   },
+  rowContextMenuButton: {
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    minWidth: 44,
+    width: 44,
+  },
+  rowContextMenuButtonHovered: {
+    backgroundColor: colors.hover,
+    borderColor: colors.border,
+  },
+  rowContextMenuButtonPressed: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.9,
+  },
   rowEditText: {
     color: colors.text,
     fontFamily: typography.bodyFamily,
@@ -3199,7 +3090,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   mobileContextButtonHovered: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.hover,
   },
   mobileContextButtonPressed: {
     backgroundColor: colors.surfaceAlt,
@@ -3547,6 +3438,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "flex-end",
     marginTop: spacing.sm,
+  },
+  medicalCloseButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  medicalCloseButtonPressed: {
+    backgroundColor: colors.hover,
+    opacity: 0.92,
   },
   mobileBeltRow: {
     alignItems: "center",

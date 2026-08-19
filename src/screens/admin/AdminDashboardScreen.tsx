@@ -2366,7 +2366,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 testID="screens-admin-dashboard-operations-quick-attendance-link"
               >
                 <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
-                  Ir rapido a prueba 2
+                 Registro de asistencia 
                 </Text>
               </Pressable>
             </View>
@@ -2652,7 +2652,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             testID="screens-admin-dashboard-operations-quick-attendance-link"
           >
             <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
-              Ir rapido a prueba 2
+             Registro de Asistencia 
             </Text>
           </Pressable>
         </View>
@@ -3144,6 +3144,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
         onGoOperations={() => navigation.navigate("AdminHome", { section: "operations" })}
         onGoPayments={() => navigation.navigate("AdminHome", { section: "payments" })}
+        onGoQrCodes={() => navigation.navigate("QrCodesList")}
         onGoStudents={() => navigation.navigate("StudentsList")}
         onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         sidebarSummary={sidebarSummary}
@@ -5064,18 +5065,13 @@ function FirstTimeTutorialBubble({
         <Pressable
           accessibilityLabel="Cerrar tutorial"
           accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           nativeID={`screens-admin-dashboard-tutorial-close-button-${currentStep}`}
           onPress={onDismiss}
           style={({ pressed }) => [styles.tutorialCloseButton, pressed ? styles.tutorialCloseButtonPressed : null]}
           testID={`screens-admin-dashboard-tutorial-close-button-${currentStep}`}
         >
-          <Text
-            nativeID={`screens-admin-dashboard-tutorial-close-label-${currentStep}`}
-            style={styles.tutorialCloseLabel}
-            testID={`screens-admin-dashboard-tutorial-close-label-${currentStep}`}
-          >
-            ×
-          </Text>
+          <Feather color={colors.textMuted} name="x" size={18} />
         </Pressable>
       </View>
       <Text style={styles.tutorialDescription}>{description}</Text>
@@ -5248,15 +5244,8 @@ const styles = StyleSheet.create({
     width: 36,
   },
   tutorialCloseButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.96 }],
-  },
-  tutorialCloseLabel: {
-    color: colors.ink,
-    fontFamily: typography.headingFamily,
-    fontSize: 20,
-    fontWeight: "800",
-    lineHeight: 24,
+    backgroundColor: colors.hover,
+    opacity: 0.92,
   },
   heroActions: {
     gap: spacing.sm,
