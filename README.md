@@ -2,6 +2,67 @@
 
 Portal responsive para administrar dojos de BJJ con una UX diferenciada entre mobile y desktop.
 
+## Local Set Up
+
+> Terminal recomendada: **Git Bash** (bash / MSYS2). Los comandos usan `make` incluido en Git Bash for Windows.
+
+Este repositorio es el frontend Expo (web admin + mobile). **Antes de arrancarlo, el backend `eldojo-backend-api` debe estar corriendo en el puerto 8000.**
+
+### Prerrequisitos
+- Backend `eldojo-backend-api` corriendo en `http://localhost:8000`
+- Node.js 20+
+- npm (incluido con Node.js)
+- make (disponible en Git Bash)
+
+### Paso 1: Configurar variables de entorno
+```bash
+cp .env.example .env
+```
+
+Contenido recomendado para `.env`:
+```env
+EXPO_PUBLIC_API_URL=http://localhost:8000/api/v1
+```
+
+El valor por defecto del `.env.example` ya apunta al backend local correcto.
+
+### Paso 2: Instalar dependencias
+```bash
+make install
+```
+
+Equivalente a `npm install`.
+
+### Paso 3: Levantar Expo Web (panel admin)
+```bash
+make web
+```
+
+Esto corre `expo start --web` y abre el navegador automáticamente.
+
+La interfaz admin (modo desarrollo):
+- Public site: `http://localhost:8081`
+- Alternativo (bundler directo): `http://localhost:19006`
+
+### Otros comandos make útiles
+```bash
+make help         # lista todos los comandos
+make start        # npx expo start (menú interactivo: presiona w para web, a para android, i para ios)
+make android      # npx expo start --android
+make ios          # npx expo start --ios (solo macOS con Xcode)
+make build-web    # expo export --platform web (genera dist/ para producción)
+make typecheck    # tsc --noEmit (chequeo de tipos TypeScript)
+```
+
+### Acceso demo
+Usa las credenciales del usuario admin semilla (seed del backend):
+```text
+email: dantedev22@gmail.com
+password: d4nt3r4d
+```
+
+---
+
 ## Stack
 
 - Expo managed + TypeScript

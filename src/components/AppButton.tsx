@@ -1,4 +1,5 @@
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { ReactNode } from "react";
 
 import { colors, radius, shadows, spacing, typography } from "@/constants/theme";
 
@@ -13,6 +14,8 @@ interface AppButtonProps {
   accessibilityLabel?: string;
   className?: string;
   labelClassName?: string;
+  leadingIcon?: ReactNode;
+  style?: StyleProp<ViewStyle>;
 }
 
 function getWebClassNameProps(className?: string) {
@@ -34,6 +37,8 @@ export function AppButton({
   accessibilityLabel,
   className,
   labelClassName,
+  leadingIcon,
+  style,
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
   const baseId = nativeID ?? testID ?? `components-app-button-${label.toLowerCase().replace(/\s+/g, "-")}`;
@@ -76,6 +81,7 @@ export function AppButton({
             : null,
           isDisabled && styles.disabled,
           state.pressed && !isDisabled ? styles.pressed : null,
+          style,
         ];
       }}
     >
@@ -92,24 +98,27 @@ export function AppButton({
           testID={`${baseId}-spinner`}
         />
       ) : (
-        <Text
-          nativeID={`${baseId}-label`}
-          style={[
-            styles.label,
-            variant === "secondary" ? styles.secondaryLabel : null,
-            variant === "danger" ? styles.dangerLabel : null,
-            variant === "success" ? styles.successLabel : null,
-          ]}
-          testID={`${baseId}-label`}
-          {...getWebClassNameProps(
-            joinWebClassNames(
-              `components-app-button-label`,
-              labelClassName ?? `${baseId}-label`
-            )
-          )}
-        >
-          {label}
-        </Text>
+        <View style={styles.contentRow}>
+          {leadingIcon ? <View style={styles.leadingIconSlot}>{leadingIcon}</View> : null}
+          <Text
+            nativeID={`${baseId}-label`}
+            style={[
+              styles.label,
+              variant === "secondary" ? styles.secondaryLabel : null,
+              variant === "danger" ? styles.dangerLabel : null,
+              variant === "success" ? styles.successLabel : null,
+            ]}
+            testID={`${baseId}-label`}
+            {...getWebClassNameProps(
+              joinWebClassNames(
+                `components-app-button-label`,
+                labelClassName ?? `${baseId}-label`
+              )
+            )}
+          >
+            {label}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -125,6 +134,16 @@ const styles = StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+  },
+  contentRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+  },
+  leadingIconSlot: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   primary: {
     backgroundColor: colors.primary,

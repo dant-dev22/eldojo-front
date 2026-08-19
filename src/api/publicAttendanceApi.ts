@@ -11,6 +11,8 @@ function encodeSegment(value: string): string {
   return encodeURIComponent(value.trim());
 }
 
+export type AttendanceSource = "manual" | "qr";
+
 export const publicAttendanceApi = {
   async getContext(organizationSlug: string, branchSlug: string): Promise<PublicAttendanceContext> {
     const { data } = await http.get<PublicAttendanceContext>(
@@ -36,11 +38,17 @@ export const publicAttendanceApi = {
   async register(
     organizationSlug: string,
     branchSlug: string,
-    payload: PublicAttendanceCreatePayload
+    payload: PublicAttendanceCreatePayload,
+    source: AttendanceSource = "manual"
   ): Promise<PublicAttendanceResult> {
     const { data } = await http.post<PublicAttendanceResult>(
       `/public/attendance/${encodeSegment(organizationSlug)}/${encodeSegment(branchSlug)}`,
-      payload
+      payload,
+      {
+        headers: {
+          "X-Attendance-Source": source,
+        },
+      }
     );
     return data;
   },

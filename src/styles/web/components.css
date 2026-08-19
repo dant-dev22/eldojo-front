@@ -200,3 +200,56 @@
     0 4px 14px rgba(26, 26, 26, 0.04);
   width: 100%;
 }
+
+.screens-public-attendance-student-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+}
+
+.screens-public-attendance-student-input-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--color-wood-soft) !important;
+  min-height: 52px;
+  width: 100%;
+  padding: 0 2px;
+  transition:
+    border-color var(--transition-base) ease,
+    background-color var(--transition-base) ease;
+}
+
+.screens-public-attendance-student-input-container:hover {
+  border-color: var(--color-border-strong) !important;
+}
+
+.screens-public-attendance-student-input-container:focus-within {
+  border-color: var(--color-primary) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: none !important;
+}
+
+.screens-public-attendance-student-input-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 !important;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-heading);
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+  letter-spacing: 0.4px;
+  color: var(--color-text);
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}

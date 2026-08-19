@@ -1,5 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { branchesApi } from "@/api/branchesApi";
@@ -11,6 +13,7 @@ import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { BeltIndicator } from "@/components/BeltIndicator";
+import { CredencialQRModal } from "@/components/CredencialQRModal";
 import { AdminShell } from "@/components/AdminShell";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
@@ -78,6 +81,7 @@ function formatStudentStatus(status: StudentStatus): string {
 export function StudentDetailScreen({ navigation, route }: Props) {
   const { isDesktop } = useResponsiveLayout();
   const { studentId } = route.params;
+  const [qrModalVisible, setQrModalVisible] = useState(false);
 
   const studentQuery = useQuery({
     queryKey: ["student", studentId],
@@ -238,6 +242,32 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       >
       <View nativeID="screens-admin-student-detail-content" style={styles.container} testID="screens-admin-student-detail-content">
 
+        <AppCard nativeID="screens-admin-student-detail-qr-cta-card" style={styles.qrCtaCard} testID="screens-admin-student-detail-qr-cta-card">
+          <View nativeID="screens-admin-student-detail-qr-cta-row" style={[styles.qrCtaRow, isDesktop ? desktopStyles.qrCtaRow : mobileStyles.qrCtaRow]} testID="screens-admin-student-detail-qr-cta-row">
+            <View nativeID="screens-admin-student-detail-qr-cta-copy" style={styles.qrCtaCopy} testID="screens-admin-student-detail-qr-cta-copy">
+              <View nativeID="screens-admin-student-detail-qr-cta-title-row" style={styles.qrCtaTitleRow} testID="screens-admin-student-detail-qr-cta-title-row">
+                <View style={styles.qrCtaIconDot}>
+                  <Ionicons name="qr-code" size={18} color={colors.gold} />
+                </View>
+                <Text nativeID="screens-admin-student-detail-qr-cta-title" style={styles.qrCtaTitle} testID="screens-admin-student-detail-qr-cta-title">
+                  Credencial QR de asistencia
+                </Text>
+              </View>
+              <Text nativeID="screens-admin-student-detail-qr-cta-description" style={styles.qrCtaDescription} testID="screens-admin-student-detail-qr-cta-description">
+                Mostra este código al alumno para que lo guarde en su celular o compartilo por WhatsApp. El código es permanente.
+              </Text>
+            </View>
+            <AppButton
+              label="Ver credencial QR"
+              nativeID="screens-admin-student-detail-open-qr-button"
+              testID="screens-admin-student-detail-open-qr-button"
+              onPress={() => setQrModalVisible(true)}
+              leadingIcon={<Ionicons name="qr-code" size={18} color={colors.onPrimary} />}
+              style={{ minHeight: 50 }}
+            />
+          </View>
+        </AppCard>
+
         <View nativeID="screens-admin-student-detail-summary-grid" style={[styles.summaryGrid, isDesktop ? desktopStyles.summaryGrid : mobileStyles.summaryGrid]} testID="screens-admin-student-detail-summary-grid">
           <AppCard nativeID="screens-admin-student-detail-status-card" style={styles.summaryCard} testID="screens-admin-student-detail-status-card">
             <Text nativeID="screens-admin-student-detail-status-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-status-card-title">Estado actual</Text>
@@ -397,6 +427,18 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         </AppCard>
       </View>
       </AdminShell>
+      <CredencialQRModal
+        visible={qrModalVisible}
+        onClose={() => setQrModalVisible(false)}
+        uniqueCode={student.unique_code}
+        studentFullName={`${student.first_name} ${student.last_name}`}
+        studentPhotoUrl={student.photo_url}
+        branchName={branch?.name ?? null}
+        enrollmentDateText={formatDate(student.enrollment_date)}
+        organizationName={branch?.name ? null : sidebarSummary.organizationName}
+        nativeID="screens-admin-student-detail-credential-modal"
+        testID="screens-admin-student-detail-credential-modal"
+      />
     </Screen>
   );
 }
@@ -536,6 +578,48 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
     width: "100%",
+  },
+  qrCtaCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.gold,
+    borderWidth: 1.5,
+    gap: spacing.sm,
+  },
+  qrCtaRow: {
+    gap: spacing.md,
+  },
+  qrCtaCopy: {
+    flex: 1,
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  qrCtaTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  qrCtaIconDot: {
+    alignItems: "center",
+    aspectRatio: 1,
+    backgroundColor: colors.goldSoft,
+    borderColor: colors.gold,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  qrCtaTitle: {
+    color: colors.woodStrong,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  qrCtaDescription: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 20,
   },
   header: {
     gap: spacing.sm,
@@ -753,6 +837,9 @@ const mobileStyles = StyleSheet.create({
   inlineActions: {
     flexDirection: "column",
   },
+  qrCtaRow: {
+    flexDirection: "column",
+  },
   summaryGrid: {
     flexDirection: "column",
   },
@@ -773,6 +860,11 @@ const desktopStyles = StyleSheet.create({
   inlineActions: {
     alignItems: "center",
     flexDirection: "row",
+  },
+  qrCtaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   summaryGrid: {
     flexDirection: "row",
