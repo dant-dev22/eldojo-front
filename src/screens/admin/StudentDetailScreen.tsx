@@ -1,87 +1,69 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { RefreshControl, StyleSheet, Text, View } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
 import { getErrorMessage } from "@/api/http";
 import { paymentsApi } from "@/api/paymentsApi";
 import { studentsApi } from "@/api/studentsApi";
-import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
-import { AppCard } from "@/components/AppCard";
-import { BeltIndicator } from "@/components/BeltIndicator";
-import { CredencialQRModal } from "@/components/CredencialQRModal";
 import { AdminShell } from "@/components/AdminShell";
+import { CredencialQRModal } from "@/components/CredencialQRModal";
+import { PaymentsListModal } from "@/components/PaymentsListModal";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
+import { StudentEditForm, editableToPayload, studentToEditable, type EditableFields } from "@/components/StudentEditForm";
 import { colors, spacing, typography } from "@/constants/theme";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
+import { formatDate } from "@/utils/format";
 
 import type { AdminStackParamList } from "@/navigation/types";
-import type { Payment, PaymentRecordStatus, PaymentStatus, StudentStatus } from "@/types/api";
+import type { StudentUpdatePayload } from "@/types/api";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StudentDetail">;
 
-function getStudentPaymentTone(status: PaymentStatus): "success" | "warning" | "danger" | "neutral" {
-  switch (status) {
-    case "up_to_date":
-      return "success";
-    case "partial":
-    case "due_soon":
-      return "warning";
-    case "late":
-    case "overdue":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
+const MIN_TOUCH_TARGET = 44;
+const TOUCH_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
-function getStudentStatusTone(status: StudentStatus): "success" | "warning" | "neutral" {
-  switch (status) {
-    case "active":
-      return "success";
-    case "frozen":
-      return "warning";
-    default:
-      return "neutral";
-  }
-}
-
-function getPaymentRecordTone(status: PaymentRecordStatus): "success" | "warning" | "danger" {
-  switch (status) {
-    case "paid":
-      return "success";
-    case "pending":
-      return "warning";
-    case "void":
-      return "danger";
-    default:
-      return "warning";
-  }
-}
-
-function formatStudentStatus(status: StudentStatus): string {
-  switch (status) {
-    case "active":
-      return "Activo";
-    case "frozen":
-      return "Congelado";
-    case "inactive":
-      return "Inactivo";
-    default:
-      return status;
-  }
-}
+const EDITABLE_FIELD_LABELS: Readonly<Partial<Record<keyof EditableFields, string>>> = {
+  first_name: "Nombre",
+  last_name: "Apellidos",
+  birth_date: "Fecha de nacimiento",
+  birth_place: "Lugar de nacimiento",
+  height_cm: "Altura (cm)",
+  enrollment_date: "Fecha de inscripción",
+  branch_id: "Sucursal",
+  primary_class_id: "Clase principal",
+  monthly_fee: "Mensualidad",
+  currency: "Moneda",
+  next_payment_date: "Próxima fecha de pago",
+  payment_status: "Estatus de pago",
+  status: "Estatus del alumno",
+  guardian_name: "Nombre del tutor(a)",
+  guardian_phone: "Teléfono del tutor(a)",
+  phone: "Teléfono",
+  email: "Correo electrónico",
+  is_minor: "¿Es menor de edad?",
+  notes: "Notas generales",
+  rd_victorias: "Victorias (record deportivo)",
+  rd_empates: "Empates (record deportivo)",
+  rd_derrotas: "Derrotas (record deportivo)",
+};
 
 export function StudentDetailScreen({ navigation, route }: Props) {
   const { isDesktop } = useResponsiveLayout();
   const { studentId } = route.params;
+  const queryClient = useQueryClient();
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [paymentsModalVisible, setPaymentsModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [fields, setFields] = useState<EditableFields | null>(null);
 
   const studentQuery = useQuery({
     queryKey: ["student", studentId],
@@ -119,7 +101,22 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     enabled: Boolean(studentQuery.data?.organization_id && studentQuery.data?.branch_id),
   });
 
-  function handleRefresh() {
+  const student = studentQuery.data;
+  const payments = paymentsQuery.data ?? [];
+  const branches = branchesQuery.data ?? [];
+  const classes = classesQuery.data ?? [];
+  const branch = student ? branches.find((item) => item.id === student.branch_id) ?? null : null;
+  const primaryClass = student
+    ? classes.find((item) => item.id === student.primary_class_id) ?? null
+    : null;
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!isEditing || !student || !fields) return false;
+    const payload = editableToPayload(fields, student);
+    return Object.keys(payload).length > 0;
+  }, [isEditing, student, fields]);
+
+  const handleRefresh = useCallback(() => {
     void studentQuery.refetch();
     void paymentsQuery.refetch();
     if (branchesQuery.isEnabled) {
@@ -128,14 +125,114 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     if (classesQuery.isEnabled) {
       void classesQuery.refetch();
     }
-  }
+  }, [studentQuery, paymentsQuery, branchesQuery, classesQuery]);
+
+  const handleEnterEdit = useCallback(() => {
+    if (!student) return;
+    setFields(studentToEditable(student));
+    setSubmitError(null);
+    setIsEditing(true);
+  }, [student]);
+
+  const handleCancelEdit = useCallback(() => {
+    if (!student) return;
+    const payload = fields ? editableToPayload(fields, student) : {};
+    const changedKeys = Object.keys(payload) as Array<keyof EditableFields>;
+
+    if (changedKeys.length === 0) {
+      setFields(studentToEditable(student));
+      setSubmitError(null);
+      setIsEditing(false);
+      return;
+    }
+
+    const labels = changedKeys
+      .map((key) => EDITABLE_FIELD_LABELS[key] ?? key)
+      .filter(Boolean);
+    const changedText =
+      labels.length === 1
+        ? `el campo "${labels[0]}" fue editado`
+        : `los campos ${labels.slice(0, 3).map((l) => `"${l}"`).join(", ")}${labels.length > 3 ? ` y ${labels.length - 3} más` : ""} fueron editados`;
+
+    Alert.alert(
+      "¿Estás seguro de cancelar?",
+      `Notamos que ${changedText} y los cambios no han sido guardados. Si cancelas ahora, perderás estas modificaciones.\n\n¿Deseas continuar?`,
+      [
+        {
+          isPreferred: true,
+          onPress: () => {},
+          style: "default",
+          text: "Seguir editando",
+        },
+        {
+          onPress: () => {
+            setFields(studentToEditable(student));
+            setSubmitError(null);
+            setIsEditing(false);
+          },
+          style: "destructive",
+          text: "Descartar cambios",
+        },
+      ],
+      { cancelable: true, onDismiss: () => {} },
+    );
+  }, [student, fields]);
+
+  const handleFieldsChange = useCallback(<K extends keyof EditableFields>(key: K, value: EditableFields[K]) => {
+    setFields((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    if (!student || !fields) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const payload = editableToPayload(fields, student);
+      if (Object.keys(payload).length > 0) {
+        await studentsApi.update(studentId, payload as StudentUpdatePayload);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["student", studentId] }),
+          queryClient.invalidateQueries({ queryKey: ["students"] }),
+          queryClient.invalidateQueries({ queryKey: ["payments", "student", studentId] }),
+        ]);
+      }
+      setIsEditing(false);
+      setFields(null);
+    } catch (err) {
+      setSubmitError(getErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [student, fields, studentId, queryClient]);
+
+  const handlePressPhoto = useCallback(() => {
+    // TODO: Implementar cuando esté studentsApi.uploadPhoto
+  }, []);
+
+  const sidebarSummary = useMemo(() => ({
+    organizationName: null,
+    suffix: null,
+    branchName: branch?.name ?? null,
+    location: branch
+      ? [branch.city, branch.state, branch.country].filter(Boolean).join(", ") || branch.address
+      : null,
+    mainSchedule: null,
+  }), [branch]);
 
   if (studentQuery.isLoading) {
     return (
       <Screen contentStyle={styles.screenContent}>
         <AdminShell
           activeSection="students"
-          headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-loading-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-loading-back-button" variant="secondary" />}
+          headerQuickLinks={
+            <HeaderTextLink
+              icon={<Ionicons name="arrow-back-outline" size={14} color={colors.textMuted} />}
+              label="Volver al listado"
+              nativeID="screens-admin-student-detail-loading-back-link"
+              onPress={() => navigation.goBack()}
+              testID="screens-admin-student-detail-loading-back-link"
+            />
+          }
           onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -147,25 +244,33 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           subtitle="Preparando la ficha principal y el historial financiero del alumno."
           title="Detalle de alumno"
         >
-        <View nativeID="screens-admin-student-detail-loading-state" style={styles.container} testID="screens-admin-student-detail-loading-state">
-          <StatusView
-            nativeID="screens-admin-student-detail-loading-status"
-            title="Cargando detalle del alumno"
-            description="Obteniendo la ficha principal y preparando el historial de pagos."
-            loading
-          />
-        </View>
+          <View nativeID="screens-admin-student-detail-loading-state" style={styles.loadingContainer} testID="screens-admin-student-detail-loading-state">
+            <StatusView
+              nativeID="screens-admin-student-detail-loading-status"
+              title="Cargando detalle del alumno"
+              description="Obteniendo la ficha principal y preparando el historial de pagos."
+              loading
+            />
+          </View>
         </AdminShell>
       </Screen>
     );
   }
 
-  if (studentQuery.isError || !studentQuery.data) {
+  if (studentQuery.isError || !student) {
     return (
       <Screen contentStyle={styles.screenContent}>
         <AdminShell
           activeSection="students"
-          headerActions={<AppButton label="Volver al listado" nativeID="screens-admin-student-detail-error-back-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-back-button" variant="secondary" />}
+          headerQuickLinks={
+            <HeaderTextLink
+              icon={<Ionicons name="arrow-back-outline" size={14} color={colors.textMuted} />}
+              label="Volver al listado"
+              nativeID="screens-admin-student-detail-error-back-link"
+              onPress={() => navigation.goBack()}
+              testID="screens-admin-student-detail-error-back-link"
+            />
+          }
           onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
           onGoDashboard={() => navigation.navigate("AdminHome")}
           onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -177,59 +282,89 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           subtitle="No fue posible cargar la informacion del alumno."
           title="Detalle de alumno"
         >
-        <View nativeID="screens-admin-student-detail-error-state" style={styles.container} testID="screens-admin-student-detail-error-state">
-          <StatusView
-            nativeID="screens-admin-student-detail-error-status"
-            title="No pudimos cargar al alumno"
-            description={getErrorMessage(studentQuery.error)}
-          />
-          <View nativeID="screens-admin-student-detail-error-actions" style={[styles.inlineActions, isDesktop ? desktopStyles.inlineActions : mobileStyles.inlineActions]} testID="screens-admin-student-detail-error-actions">
-            <AppButton label="Volver" nativeID="screens-admin-student-detail-error-return-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-return-button" variant="secondary" />
-            <AppButton label="Reintentar" nativeID="screens-admin-student-detail-error-retry-button" onPress={() => studentQuery.refetch()} testID="screens-admin-student-detail-error-retry-button" />
+          <View nativeID="screens-admin-student-detail-error-state" style={styles.loadingContainer} testID="screens-admin-student-detail-error-state">
+            <StatusView
+              nativeID="screens-admin-student-detail-error-status"
+              title="No pudimos cargar al alumno"
+              description={getErrorMessage(studentQuery.error)}
+            />
+            <View nativeID="screens-admin-student-detail-error-actions" style={[styles.inlineActions, isDesktop ? desktopStyles.inlineActions : mobileStyles.inlineActions]} testID="screens-admin-student-detail-error-actions">
+              <AppButton label="Volver" nativeID="screens-admin-student-detail-error-return-button" onPress={() => navigation.goBack()} testID="screens-admin-student-detail-error-return-button" variant="secondary" />
+              <AppButton label="Reintentar" nativeID="screens-admin-student-detail-error-retry-button" onPress={() => studentQuery.refetch()} testID="screens-admin-student-detail-error-retry-button" />
+            </View>
           </View>
-        </View>
         </AdminShell>
       </Screen>
     );
   }
 
-  const student = studentQuery.data;
-  const payments = paymentsQuery.data ?? [];
-  const branch = (branchesQuery.data ?? []).find((item) => item.id === student.branch_id) ?? null;
-  const primaryClass =
-    (classesQuery.data ?? []).find((item) => item.id === student.primary_class_id) ?? null;
-  const lastPayment = payments[0] ?? null;
-  const sidebarSummary = {
-    organizationName: null,
-    suffix: null,
-    branchName: branch?.name ?? null,
-    location: branch ? [branch.city, branch.state, branch.country].filter(Boolean).join(", ") || branch.address : null,
-    mainSchedule: null,
-  };
+  const studentName = `${student.first_name} ${student.last_name}`;
 
   return (
     <Screen
-      scrollable
-      contentStyle={styles.screenContent}
+      contentStyle={styles.screenContentFlex}
       nativeID="screens-admin-student-detail-screen"
-      refreshControl={
-        <RefreshControl
-          refreshing={studentQuery.isRefetching || paymentsQuery.isRefetching}
-          onRefresh={handleRefresh}
-        />
-      }
       testID="screens-admin-student-detail-screen"
     >
       <AdminShell
         activeSection="students"
-        headerActions={
-          <AppButton
-            label="Volver al listado"
-            nativeID="screens-admin-student-detail-back-button"
-            onPress={() => navigation.goBack()}
-            testID="screens-admin-student-detail-back-button"
-            variant="secondary"
+        bodyNoSidePadding
+        headerLeadingContent={
+          <EditableStudentPhoto
+            idPrefix="screens-admin-student-detail-photo"
+            onPressChange={handlePressPhoto}
+            photoInitials={`${student.first_name.charAt(0)}${student.last_name.charAt(0)}`}
+            photoUrl={student.photo_url ?? null}
+            studentFullName={studentName}
           />
+        }
+        headerQuickLinks={
+          <>
+            <HeaderTextLink
+              icon={<Ionicons name="arrow-back-outline" size={14} color={colors.textMuted} />}
+              label="Volver al listado"
+              nativeID="screens-admin-student-detail-back-link"
+              onPress={() => navigation.goBack()}
+              testID="screens-admin-student-detail-back-link"
+            />
+            <HeaderTextLink
+              icon={<Ionicons name="qr-code-outline" size={14} color={colors.gold} />}
+              label="Ver QR"
+              nativeID="screens-admin-student-detail-qr-link"
+              onPress={() => setQrModalVisible(true)}
+              testID="screens-admin-student-detail-qr-link"
+            />
+            {!isEditing ? (
+              <HeaderTextLink
+                emphasis
+                icon={<Ionicons name="create-outline" size={14} color={colors.wood} />}
+                label="Editar información"
+                nativeID="screens-admin-student-detail-enter-edit-link"
+                onPress={handleEnterEdit}
+                testID="screens-admin-student-detail-enter-edit-link"
+              />
+            ) : (
+              <>
+                <HeaderTextLink
+                  disabled={isSubmitting}
+                  label="Cancelar"
+                  nativeID="screens-admin-student-detail-cancel-link"
+                  onPress={handleCancelEdit}
+                  testID="screens-admin-student-detail-cancel-link"
+                  tone="muted"
+                />
+                <HeaderTextLink
+                  disabled={isSubmitting || !hasUnsavedChanges}
+                  emphasis
+                  icon={<Ionicons name="checkmark-circle" size={14} color={colors.wood} />}
+                  label={isSubmitting ? "Guardando..." : "Guardar cambios"}
+                  nativeID="screens-admin-student-detail-save-link"
+                  onPress={() => { void handleSubmit(); }}
+                  testID="screens-admin-student-detail-save-link"
+                />
+              </>
+            )}
+          </>
         }
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
@@ -240,201 +375,37 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         onGoTrajectory={() => navigation.navigate("TrajectoryList")}
         onGoQrCodes={() => navigation.navigate("QrCodesList")}
         sidebarSummary={sidebarSummary}
-        subtitle={`Codigo ${student.unique_code}. Consulta la ficha general y el historial financiero del alumno.`}
-        title={`${student.first_name} ${student.last_name}`}
+        subtitle={`Código ${student.unique_code}. ${isEditing ? "Editando la ficha general del alumno." : "Edita la ficha general del alumno y su historial financiero."}`}
+        title={studentName}
       >
-      <View nativeID="screens-admin-student-detail-content" style={styles.container} testID="screens-admin-student-detail-content">
-
-        <AppCard nativeID="screens-admin-student-detail-qr-cta-card" style={styles.qrCtaCard} testID="screens-admin-student-detail-qr-cta-card">
-          <View nativeID="screens-admin-student-detail-qr-cta-row" style={[styles.qrCtaRow, isDesktop ? desktopStyles.qrCtaRow : mobileStyles.qrCtaRow]} testID="screens-admin-student-detail-qr-cta-row">
-            <View nativeID="screens-admin-student-detail-qr-cta-copy" style={styles.qrCtaCopy} testID="screens-admin-student-detail-qr-cta-copy">
-              <View nativeID="screens-admin-student-detail-qr-cta-title-row" style={styles.qrCtaTitleRow} testID="screens-admin-student-detail-qr-cta-title-row">
-                <View style={styles.qrCtaIconDot}>
-                  <Ionicons name="qr-code" size={18} color={colors.gold} />
-                </View>
-                <Text nativeID="screens-admin-student-detail-qr-cta-title" style={styles.qrCtaTitle} testID="screens-admin-student-detail-qr-cta-title">
-                  Credencial QR de asistencia
-                </Text>
-              </View>
-              <Text nativeID="screens-admin-student-detail-qr-cta-description" style={styles.qrCtaDescription} testID="screens-admin-student-detail-qr-cta-description">
-                Mostra este código al alumno para que lo guarde en su celular o compartilo por WhatsApp. El código es permanente.
-              </Text>
+        <View nativeID="screens-admin-student-detail-content" style={styles.formContainer} testID="screens-admin-student-detail-content">
+          {submitError ? (
+            <View nativeID="screens-admin-student-detail-submit-error" style={styles.errorBanner} testID="screens-admin-student-detail-submit-error">
+              <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
+              <Text style={styles.errorBannerText}>{submitError}</Text>
             </View>
-            <AppButton
-              label="Ver credencial QR"
-              nativeID="screens-admin-student-detail-open-qr-button"
-              testID="screens-admin-student-detail-open-qr-button"
-              onPress={() => setQrModalVisible(true)}
-              leadingIcon={<Ionicons name="qr-code" size={18} color={colors.onPrimary} />}
-              style={{ minHeight: 50 }}
-            />
-          </View>
-        </AppCard>
-
-        <View nativeID="screens-admin-student-detail-summary-grid" style={[styles.summaryGrid, isDesktop ? desktopStyles.summaryGrid : mobileStyles.summaryGrid]} testID="screens-admin-student-detail-summary-grid">
-          <AppCard nativeID="screens-admin-student-detail-status-card" style={styles.summaryCard} testID="screens-admin-student-detail-status-card">
-            <Text nativeID="screens-admin-student-detail-status-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-status-card-title">Estado actual</Text>
-            <View nativeID="screens-admin-student-detail-status-badges" style={styles.badgesRow} testID="screens-admin-student-detail-status-badges">
-              <AppBadge
-                label={formatPaymentStatus(student.payment_status)}
-                nativeID="screens-admin-student-detail-payment-status-badge"
-                testID="screens-admin-student-detail-payment-status-badge"
-                tone={getStudentPaymentTone(student.payment_status)}
-              />
-              <AppBadge
-                label={formatStudentStatus(student.status)}
-                nativeID="screens-admin-student-detail-student-status-badge"
-                testID="screens-admin-student-detail-student-status-badge"
-                tone={getStudentStatusTone(student.status)}
-              />
-            </View>
-            <DetailRow idPrefix="screens-admin-student-detail-status-next-payment" label="Próximo pago" value={formatDate(student.next_payment_date)} />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-status-monthly-fee"
-              label="Mensualidad"
-              value={formatCurrency(student.monthly_fee, student.currency)}
-            />
-            <DetailRow idPrefix="screens-admin-student-detail-status-currency" label="Moneda" value={student.currency} />
-          </AppCard>
-
-          <AppCard nativeID="screens-admin-student-detail-profile-card" style={styles.summaryCard} testID="screens-admin-student-detail-profile-card">
-            <Text nativeID="screens-admin-student-detail-profile-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-profile-card-title">Ficha general</Text>
-            <View nativeID="screens-admin-student-detail-profile-belt-row" style={styles.beltRow} testID="screens-admin-student-detail-profile-belt-row">
-              <BeltIndicator
-                beltLevel={student.current_belt_level}
-                size="lg"
-                stripe={student.current_stripe}
-                testID="screens-admin-student-detail-profile-belt-indicator"
-              />
-            </View>
-            <DetailRow
-              idPrefix="screens-admin-student-detail-profile-birth"
-              label="Nacimiento"
-              value={`${formatDate(student.birth_date)} · ${student.birth_place}`}
-            />
-            <DetailRow idPrefix="screens-admin-student-detail-profile-enrollment" label="Inscripción" value={formatDate(student.enrollment_date)} />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-profile-height"
-              label="Altura"
-              value={student.height_cm ? `${student.height_cm} cm` : "No disponible"}
-            />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-profile-branch"
-              label="Sucursal"
-              value={branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
-            />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-profile-class"
-              label="Clase principal"
-              value={primaryClass?.name ?? "No asignada"}
-            />
-          </AppCard>
-
-          <AppCard nativeID="screens-admin-student-detail-record-card" style={styles.summaryCard} testID="screens-admin-student-detail-record-card">
-            <View nativeID="screens-admin-student-detail-record-header" style={styles.recordHeader} testID="screens-admin-student-detail-record-header">
-              <Text nativeID="screens-admin-student-detail-record-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-record-card-title">
-                Récord deportivo
-              </Text>
-              <AppBadge
-                label={`Total ${student.rd_victorias + student.rd_empates + student.rd_derrotas}`}
-                nativeID="screens-admin-student-detail-record-total-badge"
-                testID="screens-admin-student-detail-record-total-badge"
-                tone="neutral"
-              />
-            </View>
-            <View nativeID="screens-admin-student-detail-record-stats" style={styles.recordStats} testID="screens-admin-student-detail-record-stats">
-              <RecordStat
-                idPrefix="screens-admin-student-detail-record-wins"
-                label="Victorias"
-                value={student.rd_victorias}
-                tone="success"
-              />
-              <RecordStat
-                idPrefix="screens-admin-student-detail-record-draws"
-                label="Empates"
-                value={student.rd_empates}
-                tone="warning"
-              />
-              <RecordStat
-                idPrefix="screens-admin-student-detail-record-losses"
-                label="Derrotas"
-                value={student.rd_derrotas}
-                tone="danger"
-              />
-            </View>
-          </AppCard>
+          ) : null}
+          <StudentEditForm
+            idPrefix="screens-admin-student-detail"
+            isEditing={isEditing}
+            isSubmitting={isSubmitting}
+            student={student}
+            payments={payments}
+            branch={branch}
+            primaryClass={primaryClass}
+            branches={branches}
+            classes={classes}
+            fields={fields}
+            onFieldChange={handleFieldsChange}
+            onViewPayments={() => setPaymentsModalVisible(true)}
+          />
         </View>
-
-        <View nativeID="screens-admin-student-detail-detail-grid" style={[styles.detailGrid, isDesktop ? desktopStyles.detailGrid : mobileStyles.detailGrid]} testID="screens-admin-student-detail-detail-grid">
-          <AppCard nativeID="screens-admin-student-detail-guardian-card" style={styles.infoCard} testID="screens-admin-student-detail-guardian-card">
-            <Text nativeID="screens-admin-student-detail-guardian-card-title" style={styles.cardTitle} testID="screens-admin-student-detail-guardian-card-title">Tutor y observaciones</Text>
-            <DetailRow idPrefix="screens-admin-student-detail-guardian-name" label="Tutor" value={student.guardian_name ?? "No registrado"} />
-            <DetailRow idPrefix="screens-admin-student-detail-guardian-phone" label="Teléfono" value={student.guardian_phone ?? "No registrado"} />
-            <DetailRow idPrefix="screens-admin-student-detail-guardian-notes" label="Notas" value={student.notes ?? "Sin notas"} />
-          </AppCard>
-
-          <AppCard nativeID="screens-admin-student-detail-payments-summary-card" style={styles.infoCard} testID="screens-admin-student-detail-payments-summary-card">
-            <Text nativeID="screens-admin-student-detail-payments-summary-title" style={styles.cardTitle} testID="screens-admin-student-detail-payments-summary-title">Resumen de pagos</Text>
-            <DetailRow idPrefix="screens-admin-student-detail-payments-count" label="Pagos registrados" value={String(payments.length)} />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-payments-last-movement"
-              label="Último movimiento"
-              value={lastPayment ? formatDateTime(lastPayment.paid_at) : "Sin pagos registrados"}
-            />
-            <DetailRow
-              idPrefix="screens-admin-student-detail-payments-last-amount"
-              label="Último monto"
-              value={
-                lastPayment
-                  ? formatCurrency(lastPayment.amount, lastPayment.currency)
-                  : "Sin pagos registrados"
-              }
-            />
-          </AppCard>
-        </View>
-
-        <AppCard nativeID="screens-admin-student-detail-history-card" style={styles.historyCard} testID="screens-admin-student-detail-history-card">
-          <View nativeID="screens-admin-student-detail-history-header" style={[styles.historyHeader, isDesktop ? desktopStyles.historyHeader : mobileStyles.historyHeader]} testID="screens-admin-student-detail-history-header">
-            <View nativeID="screens-admin-student-detail-history-header-copy" style={styles.historyHeaderCopy} testID="screens-admin-student-detail-history-header-copy">
-              <Text nativeID="screens-admin-student-detail-history-title" style={styles.cardTitle} testID="screens-admin-student-detail-history-title">Historial de pagos</Text>
-              <Text nativeID="screens-admin-student-detail-history-description" style={styles.sectionDescription} testID="screens-admin-student-detail-history-description">
-                El backend entrega los pagos ordenados del más reciente al más antiguo por fecha de pago.
-              </Text>
-            </View>
-            <AppBadge label={`${payments.length} registros`} nativeID="screens-admin-student-detail-history-badge" testID="screens-admin-student-detail-history-badge" tone="neutral" />
-          </View>
-
-          {paymentsQuery.isLoading ? (
-            <InlineStatus title="Cargando pagos" description="Preparando el historial financiero del alumno." loading />
-          ) : paymentsQuery.isError ? (
-            <View nativeID="screens-admin-student-detail-history-error" style={styles.historyState} testID="screens-admin-student-detail-history-error">
-              <InlineStatus
-                idPrefix="screens-admin-student-detail-payments-error-status"
-                title="No pudimos cargar los pagos"
-                description={getErrorMessage(paymentsQuery.error)}
-              />
-              <AppButton label="Reintentar pagos" nativeID="screens-admin-student-detail-payments-retry-button" onPress={() => paymentsQuery.refetch()} testID="screens-admin-student-detail-payments-retry-button" />
-            </View>
-          ) : payments.length === 0 ? (
-            <InlineStatus
-              title="Sin pagos registrados"
-              description="Todavía no existen movimientos financieros asociados a este alumno."
-            />
-          ) : (
-            <View nativeID="screens-admin-student-detail-payments-list" style={styles.paymentsList} testID="screens-admin-student-detail-payments-list">
-              {payments.map((payment) => (
-                <PaymentRow key={payment.id} payment={payment} idPrefix={`screens-admin-student-detail-payment-${payment.id}`} />
-              ))}
-            </View>
-          )}
-        </AppCard>
-      </View>
       </AdminShell>
       <CredencialQRModal
         visible={qrModalVisible}
         onClose={() => setQrModalVisible(false)}
         uniqueCode={student.unique_code}
-        studentFullName={`${student.first_name} ${student.last_name}`}
+        studentFullName={studentName}
         studentPhotoUrl={student.photo_url}
         branchName={branch?.name ?? null}
         enrollmentDateText={formatDate(student.enrollment_date)}
@@ -442,135 +413,126 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         nativeID="screens-admin-student-detail-credential-modal"
         testID="screens-admin-student-detail-credential-modal"
       />
+      <PaymentsListModal
+        visible={paymentsModalVisible}
+        onClose={() => setPaymentsModalVisible(false)}
+        payments={payments}
+        studentFullName={studentName}
+        nativeID="screens-admin-student-detail-payments-modal"
+        testID="screens-admin-student-detail-payments-modal"
+      />
     </Screen>
   );
 }
 
-type RecordStatTone = "success" | "warning" | "danger";
-
-function RecordStat({
-  label,
-  value,
-  tone,
-  idPrefix,
-}: {
+interface HeaderTextLinkProps {
   label: string;
-  value: number;
-  tone: RecordStatTone;
-  idPrefix?: string;
-}) {
-  const baseId = idPrefix ?? `screens-admin-student-detail-record-stat-${label.toLowerCase()}`;
+  onPress: () => void;
+  nativeID: string;
+  testID: string;
+  icon?: React.ReactNode;
+  emphasis?: boolean;
+  disabled?: boolean;
+  tone?: "default" | "muted";
+}
 
-  const toneConfig = {
-    success: {
-      bg: colors.successSoft,
-      text: colors.success,
-      accent: colors.success,
-    },
-    warning: {
-      bg: colors.warningSoft,
-      text: colors.warning,
-      accent: colors.warning,
-    },
-    danger: {
-      bg: colors.dangerSoft,
-      text: colors.danger,
-      accent: colors.danger,
-    },
-  }[tone];
+function HeaderTextLink({
+  label,
+  onPress,
+  nativeID,
+  testID,
+  icon,
+  emphasis = false,
+  disabled = false,
+  tone = "default",
+}: HeaderTextLinkProps) {
+  const labelStyle = useMemo(() => {
+    if (disabled) {
+      return [styles.headerLinkLabel, styles.headerLinkLabelDisabled];
+    }
+    if (emphasis) {
+      return [styles.headerLinkLabel, styles.headerLinkLabelEmphasis];
+    }
+    if (tone === "muted") {
+      return [styles.headerLinkLabel, styles.headerLinkLabelMuted];
+    }
+    return styles.headerLinkLabel;
+  }, [emphasis, disabled, tone]);
 
   return (
-    <View
-      nativeID={baseId}
-      style={[styles.recordStatBox, { backgroundColor: toneConfig.bg }]}
-      testID={baseId}
+    <Pressable
+      accessibilityDisabled={disabled}
+      accessibilityLabel={label}
+      accessibilityRole="link"
+      disabled={disabled}
+      hitSlop={TOUCH_HIT_SLOP}
+      nativeID={nativeID}
+      onPress={onPress}
+      style={({ hovered, pressed }) => [
+        styles.headerLinkWrap,
+        hovered ? styles.headerLinkWrapHovered : null,
+        pressed ? styles.headerLinkWrapPressed : null,
+        disabled ? styles.headerLinkWrapDisabled : null,
+        { minHeight: MIN_TOUCH_TARGET },
+      ]}
+      testID={testID}
     >
-      <Text
-        nativeID={`${baseId}-value`}
-        style={[styles.recordStatValue, { color: toneConfig.text }]}
-        testID={`${baseId}-value`}
-      >
-        {value}
-      </Text>
-      <View nativeID={`${baseId}-accent`} style={[styles.recordStatAccent, { backgroundColor: toneConfig.accent }]} testID={`${baseId}-accent`} />
-      <Text
-        nativeID={`${baseId}-label`}
-        style={styles.recordStatLabel}
-        testID={`${baseId}-label`}
-      >
-        {label}
-      </Text>
-    </View>
+      {icon ? <View style={styles.headerLinkIcon}>{icon}</View> : null}
+      <Text style={labelStyle}>{label}</Text>
+    </Pressable>
   );
 }
 
-function InlineStatus({
-  title,
-  description,
-  loading = false,
+interface EditableStudentPhotoProps {
+  idPrefix: string;
+  photoUrl: string | null;
+  photoInitials: string;
+  studentFullName: string;
+  onPressChange: () => void;
+}
+
+function EditableStudentPhoto({
   idPrefix,
-}: {
-  title: string;
-  description: string;
-  loading?: boolean;
-  idPrefix?: string;
-}) {
-  const baseId = idPrefix ?? "screens-admin-student-detail-inline-status";
-
+  photoUrl,
+  photoInitials,
+  studentFullName,
+  onPressChange,
+}: EditableStudentPhotoProps) {
   return (
-    <View nativeID={baseId} style={styles.inlineStatus} testID={baseId}>
-      {loading ? <Text nativeID={`${baseId}-spinner`} style={styles.inlineStatusSpinner} testID={`${baseId}-spinner`}>Cargando...</Text> : null}
-      <Text nativeID={`${baseId}-title`} style={styles.inlineStatusTitle} testID={`${baseId}-title`}>{title}</Text>
-      <Text nativeID={`${baseId}-description`} style={styles.inlineStatusDescription} testID={`${baseId}-description`}>{description}</Text>
-    </View>
-  );
-}
-
-function DetailRow({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
-  const baseId =
-    idPrefix ?? `screens-admin-student-detail-detail-row-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-
-  return (
-    <View nativeID={baseId} style={styles.detailRow} testID={baseId}>
-      <Text nativeID={`${baseId}-label`} style={styles.detailLabel} testID={`${baseId}-label`}>{label}</Text>
-      <Text nativeID={`${baseId}-value`} style={styles.detailValue} testID={`${baseId}-value`}>{value}</Text>
-    </View>
-  );
-}
-
-function PaymentRow({ payment, idPrefix }: { payment: Payment; idPrefix?: string }) {
-  const baseId = idPrefix ?? `screens-admin-student-detail-payment-${payment.id}`;
-
-  return (
-    <View nativeID={baseId} style={styles.paymentRow} testID={baseId}>
-      <View nativeID={`${baseId}-top`} style={styles.paymentRowTop} testID={`${baseId}-top`}>
-        <View nativeID={`${baseId}-amount-block`} style={styles.paymentAmountBlock} testID={`${baseId}-amount-block`}>
-          <Text nativeID={`${baseId}-amount`} style={styles.paymentAmount} testID={`${baseId}-amount`}>
-            {formatCurrency(payment.amount, payment.currency)}
-          </Text>
-          <Text nativeID={`${baseId}-meta`} style={styles.paymentMeta} testID={`${baseId}-meta`}>Pago #{payment.id}</Text>
+    <Pressable
+      accessibilityLabel={`Cambiar foto de perfil de ${studentFullName}`}
+      accessibilityRole="button"
+      hitSlop={TOUCH_HIT_SLOP}
+      nativeID={`${idPrefix}-block`}
+      onPress={onPressChange}
+      style={({ hovered, pressed }) => [
+        styles.photoBlock,
+        hovered ? styles.photoBlockHovered : null,
+        pressed ? styles.photoBlockPressed : null,
+        { minHeight: MIN_TOUCH_TARGET, minWidth: MIN_TOUCH_TARGET },
+      ]}
+      testID={`${idPrefix}-block`}
+    >
+      {photoUrl ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          source={{ uri: photoUrl }}
+          style={styles.photoImg}
+          testID={`${idPrefix}-photo`}
+        />
+      ) : (
+        <View style={styles.photoPlaceholder} testID={`${idPrefix}-photo-placeholder`}>
+          <Text style={styles.photoInitials}>{photoInitials}</Text>
         </View>
-        <AppBadge
-          label={formatPaymentRecordStatus(payment.status)}
-          nativeID={`${baseId}-status-badge`}
-          testID={`${baseId}-status-badge`}
-          tone={getPaymentRecordTone(payment.status)}
-        />
+      )}
+      <View
+        nativeID={`${idPrefix}-edit-dot`}
+        style={styles.photoEditDot}
+        testID={`${idPrefix}-edit-dot`}
+      >
+        <Ionicons name="camera-outline" size={11} color={colors.textOnPrimary} />
       </View>
-
-      <View nativeID={`${baseId}-meta-grid`} style={styles.paymentMetaGrid} testID={`${baseId}-meta-grid`}>
-        <DetailRow idPrefix={`${baseId}-paid-at`} label="Fecha de pago" value={formatDateTime(payment.paid_at)} />
-        <DetailRow idPrefix={`${baseId}-method`} label="Método" value={formatPaymentMethod(payment.method)} />
-        <DetailRow
-          idPrefix={`${baseId}-period`}
-          label="Período"
-          value={`${formatDate(payment.period_start)} al ${formatDate(payment.period_end)}`}
-        />
-        <DetailRow idPrefix={`${baseId}-recorded-by`} label="Registrado por" value={`Usuario ${payment.recorded_by}`} />
-      </View>
-
-      {payment.notes ? <Text nativeID={`${baseId}-notes`} style={styles.paymentNotes} testID={`${baseId}-notes`}>Notas: {payment.notes}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -578,306 +540,145 @@ const styles = StyleSheet.create({
   screenContent: {
     flexGrow: 1,
   },
-  container: {
-    gap: spacing.lg,
+  screenContentFlex: {
+    flex: 1,
+  },
+  formContainer: {
+    flex: 1,
     width: "100%",
   },
-  qrCtaCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.gold,
-    borderWidth: 1.5,
-    gap: spacing.sm,
-  },
-  qrCtaRow: {
-    gap: spacing.md,
-  },
-  qrCtaCopy: {
-    flex: 1,
-    gap: spacing.sm,
-    minWidth: 0,
-  },
-  qrCtaTitleRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  qrCtaIconDot: {
-    alignItems: "center",
-    aspectRatio: 1,
-    backgroundColor: colors.goldSoft,
-    borderColor: colors.gold,
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: "center",
-    width: 36,
-  },
-  qrCtaTitle: {
-    color: colors.woodStrong,
-    fontFamily: typography.headingFamily,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  qrCtaDescription: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  header: {
-    gap: spacing.sm,
-  },
-  headerCopy: {
-    gap: 4,
-  },
-  title: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
+  loadingContainer: {
+    gap: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.lg,
+    width: "100%",
   },
   inlineActions: {
     gap: spacing.sm,
   },
-  summaryGrid: {
-    gap: spacing.md,
-  },
-  summaryCard: {
-    backgroundColor: colors.surfaceAlt,
-    gap: spacing.sm,
-    flex: 1,
-    minWidth: 0,
-  },
-  recordHeader: {
+  errorBanner: {
     alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  recordStats: {
-    flexDirection: "row",
-    gap: spacing.xs,
-  },
-  recordStatBox: {
-    alignItems: "center",
-    borderRadius: 16,
-    flex: 1,
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: spacing.sm,
-  },
-  recordStatValue: {
-    fontFamily: typography.headingFamily,
-    fontSize: 28,
-    fontWeight: "800",
-    lineHeight: 32,
-  },
-  recordStatAccent: {
-    borderRadius: 999,
-    height: 3,
-    opacity: 0.85,
-    width: 36,
-  },
-  recordStatLabel: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  detailGrid: {
-    gap: spacing.md,
-  },
-  infoCard: {
-    backgroundColor: colors.surfaceAlt,
-    gap: spacing.sm,
-  },
-  cardTitle: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  badgesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  beltRow: {
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 12,
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
+    borderRadius: spacing.sm,
     borderWidth: 1,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginHorizontal: spacing.sm,
+    marginVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  detailRow: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    gap: 4,
-    paddingBottom: spacing.sm,
-  },
-  detailLabel: {
-    color: colors.textMuted,
-    fontFamily: typography.headingFamily,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  detailValue: {
-    color: colors.text,
+  errorBannerText: {
+    color: colors.danger,
+    flex: 1,
     fontFamily: typography.bodyFamily,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
-    lineHeight: 21,
   },
-  historyCard: {
-    backgroundColor: colors.surface,
-    gap: spacing.md,
-  },
-  historyHeader: {
-    gap: spacing.sm,
-  },
-  historyHeaderCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  sectionDescription: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  historyState: {
-    gap: spacing.sm,
-  },
-  paymentsList: {
-    gap: spacing.md,
-  },
-  paymentRow: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  paymentRowTop: {
-    alignItems: "flex-start",
+  headerLinkWrap: {
+    alignItems: "center",
     flexDirection: "row",
-    gap: spacing.sm,
-    justifyContent: "space-between",
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  paymentAmountBlock: {
-    flex: 1,
-    gap: 4,
+  headerLinkWrapHovered: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: spacing.sm,
   },
-  paymentAmount: {
+  headerLinkWrapPressed: {
+    backgroundColor: colors.borderStrong,
+    borderRadius: spacing.sm,
+    opacity: 0.9,
+  },
+  headerLinkWrapDisabled: {
+    opacity: 0.45,
+  },
+  headerLinkIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerLinkLabel: {
+    color: colors.wood,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  headerLinkLabelEmphasis: {
     color: colors.text,
+    fontWeight: "700",
+  },
+  headerLinkLabelMuted: {
+    color: colors.textMuted,
+    fontWeight: "500",
+  },
+  headerLinkLabelDisabled: {
+    color: colors.textMuted,
+  },
+  photoBlock: {
+    alignContent: "center",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: spacing.lg,
+    flexDirection: "row",
+    justifyContent: "center",
+    padding: spacing.xs,
+  },
+  photoBlockHovered: {
+    backgroundColor: colors.surfaceAlt,
+  },
+  photoBlockPressed: {
+    backgroundColor: colors.woodSoft,
+  },
+  photoImg: {
+    borderRadius: spacing["2xl"],
+    borderColor: colors.borderStrong,
+    borderWidth: 1,
+    height: 56,
+    width: 56,
+  },
+  photoPlaceholder: {
+    alignItems: "center",
+    backgroundColor: colors.woodSoft,
+    borderRadius: spacing["2xl"],
+    borderColor: colors.border,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
+  },
+  photoInitials: {
+    color: colors.woodStrong,
     fontFamily: typography.headingFamily,
     fontSize: 20,
     fontWeight: "800",
   },
-  paymentMeta: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 13,
-  },
-  paymentMetaGrid: {
-    gap: spacing.sm,
-  },
-  paymentNotes: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  inlineStatus: {
+  photoEditDot: {
     alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: 22,
-    borderWidth: 1,
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  inlineStatusSpinner: {
-    color: colors.accent,
-    fontFamily: typography.headingFamily,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  inlineStatusTitle: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  inlineStatusDescription: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
+    backgroundColor: colors.wood,
+    borderColor: colors.surface,
+    borderRadius: spacing["2xl"],
+    borderWidth: 1.5,
+    bottom: 2,
+    height: 20,
+    justifyContent: "center",
+    position: "absolute",
+    right: 2,
+    width: 20,
   },
 });
 
 const mobileStyles = StyleSheet.create({
-  header: {
-    flexDirection: "column",
-  },
   inlineActions: {
     flexDirection: "column",
-  },
-  qrCtaRow: {
-    flexDirection: "column",
-  },
-  summaryGrid: {
-    flexDirection: "column",
-  },
-  detailGrid: {
-    flexDirection: "column",
-  },
-  historyHeader: {
-    flexDirection: "column",
+    width: "100%",
   },
 });
 
 const desktopStyles = StyleSheet.create({
-  header: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
   inlineActions: {
-    alignItems: "center",
     flexDirection: "row",
-  },
-  qrCtaRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  summaryGrid: {
-    flexDirection: "row",
-  },
-  detailGrid: {
-    flexDirection: "row",
-  },
-  historyHeader: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
 });

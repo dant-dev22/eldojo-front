@@ -1,4 +1,4 @@
-import type { PaymentMethod, PaymentRecordStatus, PaymentStatus } from "@/types/api";
+import type { PaymentMethod, PaymentRecordStatus, PaymentStatus, StudentStatus } from "@/types/api";
 
 export function formatDate(value: string | null): string {
   if (!value) {
@@ -87,6 +87,19 @@ export function formatPaymentRecordStatus(status: PaymentRecordStatus): string {
       return "Pendiente";
     case "void":
       return "Anulado";
+    default:
+      return status;
+  }
+}
+
+export function formatStudentStatus(status: StudentStatus): string {
+  switch (status) {
+    case "active":
+      return "Activo";
+    case "frozen":
+      return "Congelado";
+    case "inactive":
+      return "Inactivo";
     default:
       return status;
   }

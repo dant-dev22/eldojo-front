@@ -40,11 +40,14 @@ interface AdminShellProps extends PropsWithChildren {
   onGoReports?: () => void;
   onGoSettings?: () => void;
   headerActions?: ReactNode;
+  headerQuickLinks?: ReactNode;
+  headerLeadingContent?: ReactNode;
   headerBottomContent?: ReactNode;
   headerSearch?: ReactNode;
   headerMainContent?: ReactNode;
   onBack?: () => void;
   showBackButton?: boolean;
+  bodyNoSidePadding?: boolean;
   sidebarSummary?: {
     organizationName?: string | null;
     suffix?: string | null;
@@ -101,11 +104,14 @@ export function AdminShell({
   onGoReports,
   onGoSettings,
   headerActions,
+  headerQuickLinks,
+  headerLeadingContent,
   headerBottomContent,
   headerSearch,
   headerMainContent,
   onBack,
   showBackButton = false,
+  bodyNoSidePadding = false,
   sidebarSummary,
   children,
 }: AdminShellProps) {
@@ -341,23 +347,37 @@ export function AdminShell({
       testID="components-admin-shell-header"
     >
       <View nativeID="components-admin-shell-header-top-row" style={[styles.headerTopRow, isDesktop ? desktopStyles.headerTopRow : tabletStyles.headerTopRow]} testID="components-admin-shell-header-top-row">
-        <View nativeID="components-admin-shell-header-copy" style={styles.headerCopy} testID="components-admin-shell-header-copy">
-          <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
-            <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
-              Centro de Operaciones
+        <View nativeID="components-admin-shell-header-copy" style={styles.headerCopyWithLeading} testID="components-admin-shell-header-copy">
+          {headerLeadingContent ? (
+            <View
+              nativeID="components-admin-shell-header-leading"
+              style={[
+                styles.headerLeadingContent,
+                isDesktop ? desktopStyles.headerLeadingContent : null,
+              ]}
+              testID="components-admin-shell-header-leading"
+            >
+              {headerLeadingContent}
+            </View>
+          ) : null}
+          <View style={styles.headerCopyTextBlock} testID="components-admin-shell-header-copy-text-block">
+            <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
+              <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
+                Centro de Operaciones
+              </Text>
+            </View>
+            <Text
+              nativeID="components-admin-shell-page-title"
+              style={[
+                styles.pageTitle,
+                isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : null,
+              ]}
+              testID="components-admin-shell-page-title"
+            >
+              {title}
             </Text>
+            <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
           </View>
-          <Text
-            nativeID="components-admin-shell-page-title"
-            style={[
-              styles.pageTitle,
-              isDesktop ? desktopStyles.pageTitle : isTablet ? tabletStyles.pageTitle : null,
-            ]}
-            testID="components-admin-shell-page-title"
-          >
-            {title}
-          </Text>
-          <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
         </View>
 
         <View
@@ -368,6 +388,15 @@ export function AdminShell({
           ]}
           testID="components-admin-shell-header-actions"
         >
+          {headerQuickLinks ? (
+            <View
+              nativeID="components-admin-shell-quick-links-row"
+              style={styles.quickLinksRow}
+              testID="components-admin-shell-quick-links-row"
+            >
+              {headerQuickLinks}
+            </View>
+          ) : null}
           {isTablet ? (
             <Pressable
               accessibilityLabel="Acciones rápidas"
@@ -474,6 +503,7 @@ export function AdminShell({
         style={[
           styles.contentWrap,
           { maxWidth: contentMaxWidth, paddingBottom: insets.bottom + spacing.md },
+          bodyNoSidePadding ? { paddingLeft: 0, paddingRight: 0 } : null,
         ]}
         testID="components-admin-shell-body-wrap"
       >
@@ -490,6 +520,7 @@ export function AdminShell({
         style={[
           styles.contentWrap,
           { maxWidth: contentMaxWidth },
+          bodyNoSidePadding ? { paddingLeft: 0, paddingRight: 0 } : null,
         ]}
         testID="components-admin-shell-body-wrap"
       >
@@ -835,9 +866,20 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     width: "100%",
   },
-  headerCopy: {
+  headerCopyWithLeading: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    minWidth: 0,
+  },
+  headerLeadingContent: {
+    flexShrink: 0,
+  },
+  headerCopyTextBlock: {
     flex: 1,
     gap: 4,
+    minWidth: 0,
   },
   pageKicker: {
     alignSelf: "flex-start",
@@ -870,8 +912,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  quickLinksRow: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    justifyContent: "flex-end",
+    paddingVertical: 2,
+  },
   headerActions: {
+    alignItems: "flex-end",
+    flexDirection: "column",
     gap: spacing.sm,
+    justifyContent: "flex-start",
     minWidth: 0,
   },
   headerBottomContent: {
@@ -1100,6 +1154,9 @@ const desktopStyles = StyleSheet.create({
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  headerLeadingContent: {
+    alignSelf: "center",
   },
   pageTitle: {
     fontSize: 34,

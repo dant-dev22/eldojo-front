@@ -19,6 +19,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { BeltIndicator } from "@/components/BeltIndicator";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
+import { StudentView } from "@/components/StudentView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
@@ -493,6 +494,18 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     navigation.navigate("TrajectoryList");
   }, [navigation]);
 
+  const handleGoToEventDate = useCallback((eventDate: string) => {
+    const d = fromDateKey(eventDate);
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+    setSelectedDateKey(eventDate);
+    setIsDayModalVisible(true);
+    setIsCreatingNew(false);
+    setDraftContent("");
+    setEditingEventId(null);
+    setEditingContent("");
+    setDayModalError(null);
+  }, []);
+
   const handleOpenDay = useCallback((dateKey: string) => {
     setSelectedDateKey(dateKey);
     setIsDayModalVisible(true);
@@ -726,245 +739,19 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
               </View>
             ) : (
               <>
-                <AppCard
-                  nativeID="screens-admin-trajectory-detail-student-card"
-                  style={[
-                    styles.summaryCard,
-                    Platform.OS === "web" ? (webStyles.studentCardRelative as never) : null,
-                  ]}
-                  testID="screens-admin-trajectory-detail-student-card"
-                >
-                  <View
-                    style={[
-                      styles.summaryHeaderSection,
-                      isDesktop ? desktopStyles.summaryHeaderSection : mobileStyles.summaryHeaderSection,
-                    ]}
-                  >
-                    <View style={styles.summaryPhotoBlock} testID="screens-admin-trajectory-detail-student-photo-block">
-                      {student.photo_url ? (
-                        <Image
-                          accessibilityLabel={`Foto de ${student.first_name} ${student.last_name}`}
-                          source={{ uri: student.photo_url }}
-                          style={styles.summaryPhoto}
-                          testID="screens-admin-trajectory-detail-student-photo"
-                        />
-                      ) : (
-                        <View
-                          accessibilityLabel={`Iniciales del alumno ${student.first_name} ${student.last_name}`}
-                          style={styles.summaryPhotoPlaceholder}
-                          testID="screens-admin-trajectory-detail-student-photo-placeholder"
-                        >
-                          <Text style={styles.summaryPhotoInitials} accessible={false}>
-                            {student.first_name.charAt(0)}
-                            {student.last_name.charAt(0)}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.summaryHeaderCopy} testID="screens-admin-trajectory-detail-student-header-copy">
-                      <Text style={styles.summaryHeaderName} testID="screens-admin-trajectory-detail-student-name">
-                        {student.first_name} {student.last_name}
-                      </Text>
-                      <Text style={styles.summaryHeaderCode} testID="screens-admin-trajectory-detail-student-code">
-                        Código {student.unique_code}
-                      </Text>
-                      <View style={styles.summaryHeaderBeltRow} testID="screens-admin-trajectory-detail-student-belt-row">
-                        <BeltIndicator
-                          beltLevel={student.current_belt_level}
-                          size="sm"
-                          stripe={student.current_stripe}
-                          testID={`screens-admin-trajectory-detail-belt-${student.id}`}
-                        />
-                      </View>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.summaryStatsBlock,
-                        isDesktop ? null : mobileStyles.summaryStatsBlock,
-                      ]}
-                    >
-                      <View style={styles.summaryStatItem}>
-                        <Text style={styles.summaryStatValue}>{totalEvents}</Text>
-                        <Text style={styles.summaryStatLabel}>sucesos</Text>
-                      </View>
-                      <View style={styles.summaryStatItem}>
-                        <Text style={styles.summaryStatValue}>{uniqueDays}</Text>
-                        <Text style={styles.summaryStatLabel}>días</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.summaryDivider} />
-
-                  <View
-                    style={[
-                      styles.summaryTwoColGrid,
-                      isDesktop ? desktopStyles.summaryTwoColGrid : mobileStyles.summaryTwoColGrid,
-                    ]}
-                  >
-                    <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-status-block">
-                      <Text style={styles.summarySectionLabel}>Estado</Text>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-payment" testID="screens-admin-trajectory-detail-student-status-payment">
-                        <Text style={styles.summaryInfoRowLabel}>Pago</Text>
-                        <Text style={[styles.summaryInfoRowValue, { color: getStudentPaymentColor(student.payment_status) }]}>
-                          {formatPaymentStatus(student.payment_status)}
-                        </Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-student" testID="screens-admin-trajectory-detail-student-status-student">
-                        <Text style={styles.summaryInfoRowLabel}>Alumno</Text>
-                        <Text style={[styles.summaryInfoRowValue, { color: getStudentStatusColor(student.status) }]}>
-                          {formatStudentStatus(student.status)}
-                        </Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-next" testID="screens-admin-trajectory-detail-student-status-next">
-                        <Text style={styles.summaryInfoRowLabel}>Próximo pago</Text>
-                        <Text style={styles.summaryInfoRowValue}>{formatDate(student.next_payment_date)}</Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-status-fee" testID="screens-admin-trajectory-detail-student-status-fee">
-                        <Text style={styles.summaryInfoRowLabel}>Mensualidad</Text>
-                        <Text style={styles.summaryInfoRowValue}>{formatCurrency(student.monthly_fee, student.currency)}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-profile-block">
-                      <Text style={styles.summarySectionLabel}>Perfil</Text>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-birth" testID="screens-admin-trajectory-detail-student-profile-birth">
-                        <Text style={styles.summaryInfoRowLabel}>Nacimiento</Text>
-                        <Text style={styles.summaryInfoRowValue}>
-                          {formatDate(student.birth_date)} · {student.birth_place}
-                        </Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-enrollment" testID="screens-admin-trajectory-detail-student-profile-enrollment">
-                        <Text style={styles.summaryInfoRowLabel}>Inscripción</Text>
-                        <Text style={styles.summaryInfoRowValue}>{formatDate(student.enrollment_date)}</Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-branch" testID="screens-admin-trajectory-detail-student-profile-branch">
-                        <Text style={styles.summaryInfoRowLabel}>Sucursal</Text>
-                        <Text style={styles.summaryInfoRowValue}>
-                          {branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
-                        </Text>
-                      </View>
-                      <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-profile-class" testID="screens-admin-trajectory-detail-student-profile-class">
-                        <Text style={styles.summaryInfoRowLabel}>Clase</Text>
-                        <Text style={styles.summaryInfoRowValue}>{primaryClass?.name ?? "No asignada"}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.summaryDivider} />
-
-                  <View style={styles.summaryInfoBlock} testID="screens-admin-trajectory-detail-student-contact-block">
-                    <Text style={styles.summarySectionLabel}>Contacto</Text>
-                    <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-guardian-name" testID="screens-admin-trajectory-detail-student-guardian-name">
-                      <Text style={styles.summaryInfoRowLabel}>Tutor</Text>
-                      <Text style={styles.summaryInfoRowValue}>{student.guardian_name ?? "No registrado"}</Text>
-                    </View>
-                    <View style={styles.summaryInfoRow} nativeID="screens-admin-trajectory-detail-student-guardian-phone" testID="screens-admin-trajectory-detail-student-guardian-phone">
-                      <Text style={styles.summaryInfoRowLabel}>Teléfono</Text>
-                      <Text style={styles.summaryInfoRowValue}>{student.guardian_phone ?? "No registrado"}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.summaryDivider} />
-
-                  <View
-                    nativeID="screens-admin-trajectory-detail-student-fight-record-block"
-                    style={styles.fightRecordBlock}
-                    testID="screens-admin-trajectory-detail-student-fight-record-block"
-                  >
-                    <View style={styles.fightRecordHeaderRow}>
-                      <Text style={styles.summarySectionLabel}>Récord deportivo</Text>
-                      <AppButton
-                        label="Editar"
-                        nativeID="screens-admin-trajectory-detail-student-fight-record-edit-button"
-                        onPress={handleOpenFightRecord}
-                        testID="screens-admin-trajectory-detail-student-fight-record-edit-button"
-                        variant="secondary"
-                      />
-                    </View>
-                    <View style={styles.fightRecordStatsRow} testID="screens-admin-trajectory-detail-student-fight-record-stats">
-                      <FightRecordStat
-                        idPrefix="screens-admin-trajectory-detail-student-fight-record-wins"
-                        label="Victorias"
-                        value={fightTotals.victoria}
-                        tone="victoria"
-                      />
-                      <FightRecordStat
-                        idPrefix="screens-admin-trajectory-detail-student-fight-record-draws"
-                        label="Empates"
-                        value={fightTotals.empate}
-                        tone="empate"
-                      />
-                      <FightRecordStat
-                        idPrefix="screens-admin-trajectory-detail-student-fight-record-losses"
-                        label="Derrotas"
-                        value={fightTotals.derrota}
-                        tone="derrota"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.summaryDivider} />
-
-                  <View style={styles.summaryLastEventBlock} testID="screens-admin-trajectory-detail-student-last-event-block">
-                    <View style={styles.summaryLastEventHeader}>
-                      <Text style={styles.summarySectionLabel}>Último suceso</Text>
-                      <Feather name="award" size={14} color={colors.gold} />
-                    </View>
-                    {lastEvent ? (
-                      <View style={styles.summaryLastEventCard}>
-                        <View style={styles.summaryLastEventTopRow}>
-                          <Text style={styles.summaryLastEventDate}>
-                            {formatLongDate(lastEvent.event_date)}
-                          </Text>
-                          <Text style={styles.summaryLastEventMeta}>
-                            Guardado el {formatDate(lastEvent.created_at)}
-                          </Text>
-                        </View>
-                        <Text style={styles.summaryLastEventContent}>{lastEvent.content}</Text>
-                        <Pressable
-                          accessibilityRole="link"
-                          hitSlop={{ bottom: 8, left: 8, right: 8, top: 8 }}
-                          onPress={() => {
-                            const d = fromDateKey(lastEvent.event_date);
-                            setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-                            setSelectedDateKey(lastEvent.event_date);
-                            setIsDayModalVisible(true);
-                            setIsCreatingNew(false);
-                            setDraftContent("");
-                            setEditingEventId(null);
-                            setEditingContent("");
-                            setDayModalError(null);
-                          }}
-                          style={(state) => {
-                            const hovered =
-                              (state as typeof state & { hovered?: boolean }).hovered ?? false;
-                            return [
-                              styles.summaryLastEventLink,
-                              hovered ? styles.summaryLastEventLinkHovered : null,
-                              state.pressed ? styles.summaryLastEventLinkPressed : null,
-                            ];
-                          }}
-                        >
-                          <Text style={[styles.summaryLastEventLinkLabel, styles.summaryLastEventLinkUnderlined]}>
-                            Ver en el calendario
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ) : (
-                      <View style={styles.summaryLastEventEmpty}>
-                        <Text style={styles.summaryLastEventEmptyTitle}>Sin sucesos registrados</Text>
-                        <Text style={styles.summaryLastEventEmptyDesc}>
-                          Selecciona un día en el calendario para agregar el primer recuerdo de la trayectoria de {student.first_name}.
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.summaryDivider} />
-                </AppCard>
+                <StudentView
+                  student={student}
+                  branch={branch}
+                  primaryClass={primaryClass}
+                  fightTotals={fightTotals}
+                  totalEvents={totalEvents}
+                  uniqueDays={uniqueDays}
+                  lastEvent={lastEvent}
+                  isDesktop={isDesktop}
+                  idPrefix="screens-admin-trajectory-detail-studentview"
+                  onOpenFightRecord={handleOpenFightRecord}
+                  onGoToEventDate={handleGoToEventDate}
+                />
 
                 <View
                   nativeID="screens-admin-trajectory-detail-calendar-wrap"

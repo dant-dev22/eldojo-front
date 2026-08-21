@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -144,6 +144,8 @@ interface WebDropdownProps extends Required<Pick<AppSelectProps, "label" | "valu
   selectedLabel: string;
 }
 
+const NONE_MENU_VALUE = "__appselect_none__";
+
 function WebDropdown({
   baseId,
   enabled,
@@ -158,60 +160,142 @@ function WebDropdown({
 }: WebDropdownProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const menuHostRef = useRef<HTMLDivElement | null>(null);
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const animatedTranslate = useRef(new Animated.Value(-6)).current;
   const overlayAnimatedOpacity = useRef(new Animated.Value(0)).current;
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  const onValueChangeRef = useRef(onValueChange);
+  useEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
 
   useEffect(() => {
-    if (!enabled) {
-      setOpen(false);
-    }
+    if (!enabled) setOpen(false);
   }, [enabled]);
 
+  const updateMenuPosition = useCallback(() => {
+    const triggerNode = triggerRef.current;
+    if (!triggerNode) {
+      setMenuCoords(null);
+      return;
+    }
+    try {
+      const rect = triggerNode.getBoundingClientRect();
+      const win = typeof window !== "undefined" ? window : null;
+      setMenuCoords({
+        top: rect.bottom + 8 + (win ? win.scrollY : 0),
+        left: rect.left + (win ? win.scrollX : 0),
+        width: Math.max(rect.width, 200),
+      });
+    } catch {
+      setMenuCoords(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    if (Platform.OS !== "web") return;
+    const win = typeof window !== "undefined" ? window : null;
+    if (!win) return;
+    const handler = () => updateMenuPosition();
+    win.addEventListener("resize", handler);
+    win.addEventListener("scroll", handler, true);
+    return () => {
+      win.removeEventListener("resize", handler);
+      win.removeEventListener("scroll", handler, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  // ===== Portal host setup (DOM directo para el menú) =====
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const root = typeof document !== "undefined" ? document : null;
-    if (!root) return;
+    const doc = typeof document !== "undefined" ? document : null;
+    if (!doc) return;
+    let host = doc.getElementById("app-select-portal-host") as HTMLDivElement | null;
+    if (!host) {
+      host = doc.createElement("div");
+      host.id = "app-select-portal-host";
+      host.setAttribute("data-app-select-portal-root", "true");
+      Object.assign(host.style, {
+        position: "absolute",
+        top: "0px",
+        left: "0px",
+        width: "0px",
+        height: "0px",
+        pointerEvents: "none",
+        zIndex: "99999",
+        overflow: "visible",
+      });
+      doc.body.appendChild(host);
+    }
+    const inner = doc.createElement("div");
+    Object.assign(inner.style, {
+      position: "absolute",
+      top: "0px",
+      left: "0px",
+      pointerEvents: "auto",
+      overflow: "visible",
+      width: "0px",
+      height: "0px",
+    });
+    host.appendChild(inner);
+    menuHostRef.current = inner;
+    return () => {
+      try {
+        if (inner && host && host.contains(inner)) host.removeChild(inner);
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  // ===== Click outside + choose option handlers (native DOM listeners) =====
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const doc = typeof document !== "undefined" ? document : null;
+    if (!doc) return;
 
     function handlePointerDown(evt: MouseEvent) {
-      const node = wrapRef.current;
-      if (!node) return;
-      if (evt.target instanceof Node && !node.contains(evt.target)) {
-        setOpen(false);
-      }
+      if (!openRef.current) return;
+      const wrap = wrapRef.current;
+      const menuHost = menuHostRef.current;
+      if (!(evt.target instanceof Node)) return;
+      const insideWrap = wrap && wrap.contains(evt.target);
+      const insideMenu = menuHost && menuHost.contains(evt.target);
+      if (insideWrap || insideMenu) return;
+      setOpen(false);
     }
     function handleKey(evt: KeyboardEvent) {
-      if (evt.key === "Escape") {
-        setOpen(false);
-      }
+      if (evt.key === "Escape") setOpen(false);
     }
     function handleResize() {
       setOpen(false);
     }
-    function handleScroll(evt: Event) {
-      const target = evt.target;
-      const node = wrapRef.current;
-      if (target instanceof Node && node && !node.contains(target)) {
-        setOpen(false);
-      }
-    }
 
-    root.addEventListener("mousedown", handlePointerDown as any);
-    root.addEventListener("keydown", handleKey as any);
-    root.addEventListener("scroll", handleScroll as any, true);
+    doc.addEventListener("mousedown", handlePointerDown as any);
+    doc.addEventListener("keydown", handleKey as any);
     if (typeof window !== "undefined") {
       window.addEventListener("resize", handleResize);
     }
     return () => {
-      root.removeEventListener("mousedown", handlePointerDown as any);
-      root.removeEventListener("keydown", handleKey as any);
-      root.removeEventListener("scroll", handleScroll as any, true);
+      doc.removeEventListener("mousedown", handlePointerDown as any);
+      doc.removeEventListener("keydown", handleKey as any);
       if (typeof window !== "undefined") {
         window.removeEventListener("resize", handleResize);
       }
     };
   }, []);
 
+  // ===== Open/close animations (fade + slide) =====
   useEffect(() => {
     const duration = transitions.fast;
     Animated.parallel([
@@ -238,24 +322,247 @@ function WebDropdown({
 
   function toggle() {
     if (!enabled) return;
-    if (!open && typeof Keyboard !== "undefined") {
-      Keyboard.dismiss();
-    }
+    if (!open && typeof Keyboard !== "undefined") Keyboard.dismiss();
+    if (!open) updateMenuPosition();
     setOpen((prev) => !prev);
   }
 
-  function choose(nextValue: string) {
-    onValueChange(nextValue);
+  function choose(nextRaw: string) {
+    const nextValue = nextRaw === NONE_MENU_VALUE ? "" : nextRaw;
+    onValueChangeRef.current(nextValue);
     setOpen(false);
   }
+
+  const totalOptions = items.length + 1;
+  const estimatedHeight = Math.min(totalOptions * 44 + 12, 300);
 
   const containerWebProps = useMemo(
     () => (Platform.OS === "web" ? { ref: wrapRef as any } : {}),
     [],
   );
 
-  const totalOptions = items.length + 1;
-  const estimatedHeight = Math.min(totalOptions * 44 + 12, 300);
+  const triggerWebProps =
+    Platform.OS === "web"
+      ? ({
+          ref: (el: any) => {
+            try {
+              (triggerRef as any).current = el ? (el as HTMLElement) : null;
+            } catch {
+              /* ignore */
+            }
+          },
+        } as any)
+      : undefined;
+
+  // ===== Build menu as native DOM elements (web) so clicks work inside portal =====
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const host = menuHostRef.current;
+    if (!host) return;
+    const doc = host.ownerDocument ?? document;
+
+    // Clear previous content
+    while (host.firstChild) host.removeChild(host.firstChild);
+
+    if (!open) {
+      host.style.display = "none";
+      return;
+    }
+    host.style.display = "block";
+
+    const topPx = menuCoords ? `${menuCoords.top}px` : "0px";
+    const leftPx = menuCoords ? `${menuCoords.left}px` : "0px";
+    const widthPx = menuCoords ? `${menuCoords.width}px` : "220px";
+
+    const container = doc.createElement("div");
+    container.id = `${baseId}-menu`;
+    container.setAttribute("role", "listbox");
+    container.setAttribute("data-testid", `${baseId}-menu`);
+    container.setAttribute("native-id", `${baseId}-menu`);
+    // Copy styles.menu + styles.menuPortalled CSS
+    Object.assign(container.style, {
+      position: "absolute" as const,
+      top: topPx,
+      left: leftPx,
+      width: widthPx,
+      minWidth: "220px",
+      maxWidth: `calc(100vw - ${menuCoords ? menuCoords.left + 24 : 24}px)`,
+      backgroundColor: "#FFFFFF",
+      borderRadius: "12px",
+      border: "1px solid rgba(26, 26, 26, 0.08)",
+      boxShadow: "0 10px 30px rgba(26, 26, 26, 0.12)",
+      padding: "6px",
+      zIndex: 99999,
+      pointerEvents: "auto",
+      overflow: "hidden",
+      backdropFilter: "blur(4px)",
+      // animate opacity / maxHeight with CSS transition
+      opacity: 0,
+      transform: "translateY(-6px)",
+      transition: `opacity ${transitions.fast}ms ease, transform ${transitions.fast}ms ease, max-height ${transitions.fast}ms ease, min-height ${transitions.fast}ms ease`,
+      minHeight: 0,
+      maxHeight: 0,
+    });
+
+    // Force reflow so transition triggers
+    requestAnimationFrame(() => {
+      container.style.opacity = "1";
+      container.style.transform = "translateY(0)";
+      container.style.minHeight = "56px";
+      container.style.maxHeight = `${estimatedHeight}px`;
+    });
+
+    const scroll = doc.createElement("div");
+    Object.assign(scroll.style, {
+      overflowY: "auto" as const,
+      overflowX: "hidden" as const,
+      width: "100%",
+      maxHeight: `${estimatedHeight - 12}px`,
+      padding: "0px",
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "2px",
+    });
+
+    const optionRows: Array<{ __placeholder: boolean; label: string; value: string }> = [
+      { __placeholder: true, label: placeholder, value: NONE_MENU_VALUE },
+      ...items.map((i) => ({ __placeholder: false, label: i.label, value: i.value })),
+    ];
+
+    optionRows.forEach((row, idx) => {
+      const selected = row.__placeholder ? !hasValue : value === row.value;
+      const rowEl = doc.createElement("div");
+      rowEl.setAttribute("role", "option");
+      rowEl.setAttribute("aria-selected", selected ? "true" : "false");
+      rowEl.setAttribute(
+        "data-testid",
+        row.__placeholder ? `${baseId}-option-placeholder` : `${baseId}-option-${row.value}`,
+      );
+      rowEl.setAttribute(
+        "native-id",
+        row.__placeholder ? `${baseId}-option-placeholder` : `${baseId}-option-${idx}`,
+      );
+      Object.assign(rowEl.style, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+        minHeight: "44px",
+        padding: "10px 12px",
+        width: "100%",
+        boxSizing: "border-box",
+        borderRadius: "8px",
+        cursor: "pointer",
+        userSelect: "none",
+        backgroundColor: selected ? colors.successSoft : "transparent",
+        transition: `background-color ${transitions.fast}ms ease`,
+      });
+
+      const labelEl = doc.createElement("div");
+      Object.assign(labelEl.style, {
+        flex: "1 1 auto",
+        fontFamily: typography.bodyFamily,
+        fontSize: "15px",
+        color: row.__placeholder && !selected ? colors.textMuted : colors.text,
+        fontWeight: selected ? "600" : "400",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      });
+      labelEl.textContent = row.label;
+
+      const checkWrapper = doc.createElement("div");
+      Object.assign(checkWrapper.style, {
+        flex: "0 0 auto",
+        width: "20px",
+        height: "20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: colors.success,
+      });
+      if (selected) {
+        // Feather "check" SVG inline
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = doc.createElementNS(svgNS, "svg");
+        svg.setAttribute("xmlns", svgNS);
+        svg.setAttribute("width", "16");
+        svg.setAttribute("height", "16");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "2.5");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        svg.setAttribute("aria-hidden", "true");
+        const path = doc.createElementNS(svgNS, "polyline");
+        path.setAttribute("points", "20 6 9 17 4 12");
+        svg.appendChild(path);
+        checkWrapper.appendChild(svg);
+      }
+
+      rowEl.appendChild(labelEl);
+      rowEl.appendChild(checkWrapper);
+
+      // Hover style
+      const applyHover = (hovered: boolean, pressed: boolean) => {
+        if (pressed || hovered) {
+          rowEl.style.backgroundColor = colors.success;
+          labelEl.style.color = "#FFFFFF";
+          checkWrapper.style.color = "#FFFFFF";
+        } else if (selected) {
+          rowEl.style.backgroundColor = colors.successSoft;
+          labelEl.style.color = row.__placeholder && !selected ? colors.textMuted : colors.text;
+          labelEl.style.fontWeight = "600";
+          checkWrapper.style.color = colors.success;
+        } else {
+          rowEl.style.backgroundColor = "transparent";
+          labelEl.style.color = row.__placeholder ? colors.textMuted : colors.text;
+          labelEl.style.fontWeight = "400";
+          checkWrapper.style.color = colors.success;
+        }
+      };
+
+      rowEl.addEventListener("mouseenter", () => applyHover(true, false));
+      rowEl.addEventListener("mouseleave", () => applyHover(false, false));
+      rowEl.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+        applyHover(true, true);
+      });
+      rowEl.addEventListener("mouseup", (e) => {
+        e.stopPropagation();
+        applyHover(true, false);
+      });
+      // Click handler — PRIMARY: must stopPropagation so outside click listener won't fire before this
+      rowEl.addEventListener(
+        "click",
+        (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          choose(row.value);
+        },
+        true,
+      );
+
+      scroll.appendChild(rowEl);
+    });
+
+    container.appendChild(scroll);
+    host.appendChild(container);
+
+    // Safety: if host still has no pointer-events auto for whatever reason, force it:
+    host.style.pointerEvents = "auto";
+  }, [
+    baseId,
+    estimatedHeight,
+    hasValue,
+    items,
+    menuCoords,
+    open,
+    placeholder,
+    transitions.fast,
+    value,
+  ]);
 
   return (
     <View
@@ -289,6 +596,7 @@ function WebDropdown({
           role="combobox"
           style={styles.trigger}
           testID={`${baseId}-trigger`}
+          {...triggerWebProps}
         >
           <View
             nativeID={`${baseId}-value-line`}
@@ -336,97 +644,6 @@ function WebDropdown({
             onPress={() => setOpen(false)}
           />
         ) : null}
-
-        {enabled ? (
-          <Animated.View
-            aria-hidden={!open}
-            id={`${baseId}-menu`}
-            nativeID={`${baseId}-menu`}
-            pointerEvents={open ? "auto" : "none"}
-            role={"listbox" as any}
-            style={[
-              styles.menu,
-              {
-                opacity: animatedOpacity,
-                transform: [{ translateY: animatedTranslate }],
-                minHeight: open ? 56 : 0,
-                maxHeight: open ? estimatedHeight : 0,
-              },
-            ]}
-            testID={`${baseId}-menu`}
-          >
-            <ScrollView
-              bounces={false}
-              contentContainerStyle={styles.menuScrollContent}
-              indicatorStyle="black"
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={totalOptions > 6}
-              stickyHeaderIndices={[]}
-              style={{ width: "100%" }}
-            >
-              {[
-                { __placeholder: true as const, label: placeholder, value: "" },
-                ...items.map((i) => ({
-                  __placeholder: false as const,
-                  label: i.label,
-                  value: i.value,
-                })),
-              ].map((row, idx) => {
-                const selected = row.__placeholder ? !hasValue : value === row.value;
-                return (
-                  <Pressable
-                    key={row.__placeholder ? "__placeholder" : row.value}
-                    aria-selected={selected}
-                    nativeID={
-                      row.__placeholder
-                        ? `${baseId}-option-placeholder`
-                        : `${baseId}-option-${idx}`
-                    }
-                    onPress={() => choose(row.value)}
-                    role="option"
-                    style={(state: any) => [
-                      styles.option,
-                      selected ? styles.optionSelected : null,
-                      state.hovered || state.pressed ? styles.optionHover : null,
-                    ]}
-                    testID={
-                      row.__placeholder
-                        ? `${baseId}-option-placeholder`
-                        : `${baseId}-option-${row.value}`
-                    }
-                  >
-                    {(state: any) => {
-                      const isHover = state.hovered || state.pressed;
-                      return (
-                        <>
-                          <Text
-                            numberOfLines={1}
-                            style={[
-                              styles.optionText,
-                              row.__placeholder && !selected ? styles.placeholderText : null,
-                              selected ? styles.optionTextSelected : null,
-                              isHover ? styles.optionTextHover : null,
-                            ]}
-                          >
-                            {row.label}
-                          </Text>
-                          {selected ? (
-                            <Feather
-                              color={isHover ? "#FFFFFF" : colors.success}
-                              name="check"
-                              size={16}
-                            />
-                          ) : null}
-                        </>
-                      );
-                    }}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Animated.View>
-        ) : null}
       </View>
 
       {error ? (
@@ -472,12 +689,23 @@ function WebGlobalStyles() {
       }
 
       [data-app-select-portal-root] {
-        pointer-events: none;
+        pointer-events: none !important;
+      }
+      [data-app-select-portal-root] > * {
+        pointer-events: auto;
       }
 
       #app-select-portal-layer {
         position: fixed !important;
         inset: 0 !important;
+        z-index: 99998 !important;
+      }
+
+      #app-select-portal-host {
+        pointer-events: none !important;
+      }
+      #app-select-portal-host > * {
+        pointer-events: auto !important;
       }
     `}</style>
   );
@@ -590,6 +818,18 @@ const styles = StyleSheet.create({
       web: {
         backdropFilter: "blur(4px)",
         backfaceVisibility: "hidden",
+      } as any,
+    }),
+  },
+  menuPortalled: {
+    ...Platform.select({
+      web: {
+        position: "absolute" as any,
+        top: "auto",
+        left: "auto",
+        right: "auto",
+        zIndex: 99999 as any,
+        minWidth: 220,
       } as any,
     }),
   },

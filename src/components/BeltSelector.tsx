@@ -75,7 +75,7 @@ export const BeltSelector: React.FC<BeltSelectorProps> = ({
       value: String(s.id),
     }));
     if (includeNoneOption) {
-      return [{ label: "Sin punto / stripe", value: NONE_STRIPE_VALUE }, ...items];
+      return [{ label: "Sin stripe", value: NONE_STRIPE_VALUE }, ...items];
     }
     return items;
   }, [sortedStripes, includeNoneOption]);
@@ -133,11 +133,11 @@ export const BeltSelector: React.FC<BeltSelectorProps> = ({
               testID={testID ? `${testID}-belt-level` : "student-belt-level"}
             />
             <AppSelect
-              label="Punto / stripe"
+              label="Stripe"
               value={currentStripeValue}
               onValueChange={handleStripeChange}
               items={stripeItems}
-              placeholder={includeNoneOption ? "Sin punto / stripe" : "Selecciona un stripe"}
+              placeholder={includeNoneOption ? "Sin stripe" : "Selecciona un stripe"}
               enabled={enabled && sortedStripes.length > 0}
               error={stripeError}
               nativeID={stripeNativeID ?? "student-belt-stripe"}
@@ -179,13 +179,13 @@ const BeltMiniPreview: React.FC<MiniPreviewProps> = ({ beltLevel, stripeId }) =>
         {stripe ? (
           <View
             style={[
-              styles.previewDot,
+              styles.previewStripeBar,
               {
-                backgroundColor: stripe.color_hex,
+                backgroundColor: "#000000",
                 borderColor: fg,
               },
             ]}
-            {...getWebClassNameProps("belt-selector__preview-dot")}
+            {...getWebClassNameProps("belt-selector__preview-stripe")}
           />
         ) : null}
       </View>
@@ -240,15 +240,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 0.5,
   },
-  previewDot: {
+  previewStripeBar: {
     position: "absolute",
-    top: "50%",
-    right: 3,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    transform: [{ translateY: "-50%" }],
+    top: -2,
+    bottom: -2,
+    right: 4,
+    width: 5,
+    borderRadius: 2,
+    borderWidth: 1,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+      } as any,
+    }),
   },
 });
 

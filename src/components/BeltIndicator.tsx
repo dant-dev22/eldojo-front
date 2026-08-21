@@ -21,16 +21,17 @@ const SIZE_CONFIG: Record<
   {
     barHeight: number;
     barWidth: number;
-    stripeSize: number;
+    stripeWidth: number;
+    stripeInset: number;
     labelSize: number;
     barRadius: number;
     gap: number;
   }
 > = {
-  xs: { barHeight: 8, barWidth: 46, stripeSize: 10, labelSize: 11, barRadius: 3, gap: 4 },
-  sm: { barHeight: 10, barWidth: 56, stripeSize: 12, labelSize: 12, barRadius: 4, gap: 6 },
-  md: { barHeight: 14, barWidth: 72, stripeSize: 16, labelSize: 13, barRadius: 5, gap: 8 },
-  lg: { barHeight: 18, barWidth: 92, stripeSize: 20, labelSize: 15, barRadius: 6, gap: 10 },
+  xs: { barHeight: 8, barWidth: 46, stripeWidth: 3, stripeInset: 4, labelSize: 11, barRadius: 3, gap: 4 },
+  sm: { barHeight: 10, barWidth: 56, stripeWidth: 4, stripeInset: 6, labelSize: 12, barRadius: 4, gap: 6 },
+  md: { barHeight: 14, barWidth: 72, stripeWidth: 5, stripeInset: 8, labelSize: 13, barRadius: 5, gap: 8 },
+  lg: { barHeight: 18, barWidth: 92, stripeWidth: 6, stripeInset: 10, labelSize: 15, barRadius: 6, gap: 10 },
 };
 
 function buildLabel(
@@ -40,7 +41,7 @@ function buildLabel(
   if (!beltLevel) return "Sin cinta asignada";
   const base = `Cinta ${beltLevel.display_name.toLowerCase()}`;
   if (!stripe) return base;
-  return `${base} (punto ${stripe.display_name.toLowerCase()})`;
+  return `${base} (stripe ${stripe.display_name.toLowerCase()})`;
 }
 
 export const BeltIndicator: React.FC<BeltIndicatorProps> = ({
@@ -102,17 +103,17 @@ export const BeltIndicator: React.FC<BeltIndicatorProps> = ({
           {stripe ? (
             <View
               style={[
-                styles.stripeDot,
+                styles.stripeBar,
                 {
-                  width: cfg.stripeSize,
-                  height: cfg.stripeSize,
-                  borderRadius: cfg.stripeSize / 2,
-                  backgroundColor: stripe.color_hex,
+                  width: cfg.stripeWidth,
+                  right: cfg.stripeInset,
+                  backgroundColor: "#000000",
                   borderColor: beltTextColor,
                   borderWidth: size === "xs" ? 1 : 2,
+                  borderRadius: Math.max(1, cfg.barRadius - 2),
                 },
               ]}
-              {...getWebClassNameProps("belt-indicator__stripe-dot")}
+              {...getWebClassNameProps("belt-indicator__stripe-bar")}
             />
           ) : null}
         </View>
@@ -158,11 +159,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 0.5,
   },
-  stripeDot: {
+  stripeBar: {
     position: "absolute",
-    top: "50%",
-    right: 6,
-    transform: [{ translateY: "-50%" }],
+    top: -2,
+    bottom: -2,
   },
   label: {
     flexShrink: 1,
