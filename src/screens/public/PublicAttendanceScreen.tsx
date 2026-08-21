@@ -547,45 +547,8 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
                     Registrar asistencia
                   </Text>
                   <Text nativeID="screens-public-attendance-section-description" style={styles.sectionDescription} testID="screens-public-attendance-section-description">
-                    La opcion recomendada es escanear el QR del alumno. Como alternativa, puedes seleccionar la clase y escribir el codigo manualmente.
+                    Selecciona la clase y escribe el codigo del alumno para registrar la asistencia. Contacta al instructor si necesitas ayuda.
                   </Text>
-                </View>
-
-                <View nativeID="screens-public-attendance-qr-primary-wrap" style={styles.qrPrimaryWrap} testID="screens-public-attendance-qr-primary-wrap">
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={registerMutation.isPending || !qrScannerEnabled}
-                    nativeID="screens-public-attendance-scan-qr-button"
-                    onPress={() => {
-                      setFormError(null);
-                      setScannerVisible(true);
-                    }}
-                    style={(state) => {
-                      const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                      const hoverState = Boolean(hovered) || Boolean(state.pressed);
-                      return [
-                        styles.qrPrimaryButton,
-                        (registerMutation.isPending || !qrScannerEnabled) ? styles.qrPrimaryButtonDisabled : null,
-                        hoverState && qrScannerEnabled && !registerMutation.isPending ? styles.qrPrimaryButtonHover : null,
-                      ];
-                    }}
-                    testID="screens-public-attendance-scan-qr-button"
-                  >
-                    <View style={styles.qrPrimaryIconFrame}>
-                      <Feather name="maximize-2" size={20} color={colors.surface} />
-                    </View>
-                    <View style={styles.qrPrimaryCopy}>
-                      <Text style={styles.qrPrimaryLabel}>Escanear QR del alumno</Text>
-                      <Text style={styles.qrPrimaryHint}>
-                        {!qrScannerEnabled
-                          ? cameraStatus === "checking"
-                            ? "Verificando camara…"
-                            : "Dispositivo sin camara · Usa ingreso manual"
-                          : "Deteccion automatica · 1 paso"}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={20} color={colors.surface} />
-                  </Pressable>
                 </View>
 
                 <View nativeID="screens-public-attendance-select-wrap" style={styles.fieldWrap} testID="screens-public-attendance-select-wrap">
@@ -750,12 +713,6 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           )}
         </View>
       </View>
-      <QrScanner
-        onCodeScanned={handleQrCodeScanned}
-        onClose={() => setScannerVisible(false)}
-        testID="screens-public-attendance-qr-scanner"
-        visible={scannerVisible}
-      />
     </PublicPageChrome>
   );
 }

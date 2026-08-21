@@ -24,11 +24,27 @@ import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboar
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { QrScanner } from "@/components/QrScanner";
 import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import {
+  colors,
+  indigoBlue as indigo,
+  indigoBlueSoft as indigoSoft,
+  judogiRed,
+  judogiRedSoft as judogiRedSoft,
+  radius,
+  shadows,
+  spacing,
+  tatamiGreen as matchaGreen,
+  tatamiGreenSoft as matchaGreenSoft,
+  transitions,
+  typography,
+} from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import { useCameraAvailability } from "@/hooks/useCameraAvailability";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
 import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
@@ -667,6 +683,258 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [editingAttendance, setEditingAttendance] = useState<Attendance | null>(null);
   const [attendanceForm, setAttendanceForm] = useState<AttendanceFormState>(createEmptyAttendanceForm());
   const [attendanceErrors, setAttendanceErrors] = useState<AttendanceFormErrors>({});
+  const [quickScannerVisible, setQuickScannerVisible] = useState(false);
+  const [quickAttendanceFeedback, setQuickAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const [quickStudentIdentifier, setQuickStudentIdentifier] = useState("");
+  const debouncedQuickIdentifier = useDebouncedValue(quickStudentIdentifier, 350);
+  const { status: quickCameraStatus, isEnabled: quickQrEnabled } = useCameraAvailability();
+
+  useEffect(() => {
+    if (!quickAttendanceFeedback) return;
+    const id = setTimeout(() => setQuickAttendanceFeedback(null), 3500);
+    return () => clearTimeout(id);
+  }, [quickAttendanceFeedback]);
+
+  const invalidateAttendanceQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["dashboard-attendance"] }),
+      queryClient.invalidateQueries({ queryKey: ["students"] }),
+    ]);
+  }, [queryClient]);
+
+  const quickRegisterSubmit = useCallback(
+    async (rawIdentifier: string, forcedClassId?: number | null) => {
+      const identifier = rawIdentifier.trim().toUpperCase();
+      if (!identifier) {
+        setQuickAttendanceFeedback({ tone: "danger", message: "Escribe el código o ID del alumno." });
+        return;
+      }
+
+      const selectedBranchId =
+        (attendanceForm.branchId ? Number(attendanceForm.branchId) : undefined) ??
+        scopedBranchId ??
+        visibleBranches[0]?.id;
+      if (!selectedBranchId) {
+        setQuickAttendanceFeedback({ tone: "danger", message: "No se pudo determinar la sucursal." });
+        return;
+      }
+
+      let matchedStudent: Student | null = null;
+      try {
+        const numericId = Number(identifier);
+        if (!Number.isNaN(numericId) && numericId > 0) {
+          const foundById = visibleStudents.find((s) => s.id === numericId) ?? null;
+          if (foundById) matchedStudent = foundById;
+        }
+        if (!matchedStudent) {
+          const results = await studentsApi.list({ search: identifier });
+          matchedStudent = results.find((s) => s.unique_code.toUpperCase() === identifier) ?? results[0] ?? null;
+        }
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+        return;
+      }
+
+      if (!matchedStudent) {
+        setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con identificador ${identifier}.` });
+        return;
+      }
+
+      let classId: number | null = null;
+      if (forcedClassId) {
+        classId = forcedClassId;
+      } else if (attendanceForm.classId && attendanceForm.classId !== "none") {
+        classId = Number(attendanceForm.classId);
+      } else if (matchedStudent.primary_class_id) {
+        classId = matchedStudent.primary_class_id;
+      } else {
+        const classCandidate = visibleClasses.find(
+          (c) => c.branch_id === (matchedStudent.branch_id || selectedBranchId) && c.is_active
+        );
+        classId = classCandidate?.id ?? visibleClasses[0]?.id ?? null;
+      }
+
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const isoDate = now.toISOString().slice(0, 10);
+
+      try {
+        await attendanceApi.create({
+          student_id: matchedStudent.id,
+          branch_id: matchedStudent.branch_id || selectedBranchId,
+          class_id: classId,
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          method: "manual",
+          registered_by: user?.id ?? null,
+        });
+        await invalidateAttendanceQueries();
+        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+        setQuickStudentIdentifier("");
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+      }
+    },
+    [attendanceForm.branchId, attendanceForm.classId, invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
+  );
+
+  const handleQuickQrCodeScanned = useCallback(
+    async (code: string) => {
+      const normalized = code.trim().toUpperCase();
+      if (!normalized) return;
+      setQuickScannerVisible(false);
+      setQuickAttendanceFeedback(null);
+      try {
+        const students = await studentsApi.list({ search: normalized });
+        const matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
+        if (!matchedStudent) {
+          setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalized}.` });
+          return;
+        }
+        const selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id;
+        const classId = matchedStudent.primary_class_id ||
+          visibleClasses.find((c) => c.branch_id === selectedBranchId && c.is_active)?.id ||
+          visibleClasses[0]?.id || null;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const isoDate = now.toISOString().slice(0, 10);
+        await attendanceApi.create({
+          student_id: matchedStudent.id,
+          branch_id: selectedBranchId,
+          class_id: classId,
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          method: "qr",
+          registered_by: user?.id ?? null,
+        });
+        await invalidateAttendanceQueries();
+        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia QR registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+      }
+    },
+    [invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses]
+  );
+
+  const renderQuickAttendanceForm = (variant: "hero" | "operations") => {
+    const wrapStyle =
+      variant === "hero"
+        ? [styles.quickAttendancePanel, isDesktop ? desktopStyles.quickAttendancePanel : mobileStyles.quickAttendancePanel]
+        : [styles.quickAttendancePanelInline, isDesktop ? desktopStyles.quickAttendancePanelInline : mobileStyles.quickAttendancePanelInline];
+    const quickClassValue = attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null;
+    return (
+      <View
+        collapsable={false}
+        nativeID={`screens-admin-dashboard-quick-attendance-${variant}`}
+        style={wrapStyle}
+        testID={`screens-admin-dashboard-quick-attendance-${variant}`}
+      >
+        {quickAttendanceFeedback ? (
+          <View
+            nativeID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
+            style={[
+              styles.quickFeedbackBanner,
+              quickAttendanceFeedback.tone === "success"
+                ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
+                : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
+            ]}
+            testID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
+          >
+            <Feather
+              name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
+              size={15}
+              color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
+            />
+            <Text
+              style={[
+                styles.quickFeedbackText,
+                { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
+              ]}
+            >
+              {quickAttendanceFeedback.message}
+            </Text>
+          </View>
+        ) : null}
+        <View
+          nativeID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
+          style={[styles.quickFormRow, isDesktop ? desktopStyles.quickFormRow : mobileStyles.quickFormRow]}
+          testID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
+        >
+          {!isDesktop ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={!quickQrEnabled || createAttendanceMutation.isPending}
+              nativeID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
+              onPress={() => {
+                setQuickAttendanceFeedback(null);
+                setQuickScannerVisible(true);
+              }}
+              style={({ pressed }) => [
+                styles.quickQrButton,
+                !quickQrEnabled ? styles.quickQrButtonDisabled : null,
+                pressed ? styles.quickQrButtonPressed : null,
+              ]}
+              testID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
+            >
+              <Feather name="maximize-2" size={18} color={quickQrEnabled ? colors.surface : colors.textMuted} />
+            </Pressable>
+          ) : (
+            <View nativeID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`} style={styles.quickQrDesktopLegend} testID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`}>
+              <View style={[styles.quickQrButton, styles.quickQrButtonDisabled]}>
+                <Feather name="maximize-2" size={18} color={colors.textMuted} />
+              </View>
+              <Text style={styles.quickQrLegendText}>Solo disponible en celular-tablet</Text>
+            </View>
+          )}
+          <View style={[styles.quickFieldWrap, styles.quickClassField]}>
+            <AppSelect
+              enabled={!createAttendanceMutation.isPending}
+              items={classOptions.filter((opt) => opt.value !== "none")}
+              label="Clase"
+              nativeID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
+              onValueChange={(value) => {
+                setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
+                setQuickAttendanceFeedback(null);
+              }}
+              placeholder="Clase"
+              testID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
+              value={quickClassValue}
+            />
+          </View>
+          <View style={[styles.quickFieldWrap, styles.quickStudentField]}>
+            <AppInput
+              autoCorrect={false}
+              enabled={!createAttendanceMutation.isPending}
+              label="Código alumno"
+              nativeID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
+              onChangeText={(value) => {
+                setQuickStudentIdentifier(value);
+                setQuickAttendanceFeedback(null);
+              }}
+              onSubmitEditing={() => {
+                void quickRegisterSubmit(quickStudentIdentifier);
+              }}
+              placeholder="Ej: ABC123"
+              returnKeyType="done"
+              testID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
+              value={quickStudentIdentifier}
+            />
+          </View>
+          <AppButton
+            loading={createAttendanceMutation.isPending}
+            onPress={() => {
+              void quickRegisterSubmit(quickStudentIdentifier);
+            }}
+            style={styles.quickSubmitButton}
+            label="Registrar"
+            nativeID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
+            testID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
+            variant="primary"
+          />
+        </View>
+      </View>
+    );
+  };
   const [branchModalVisible, setBranchModalVisible] = useState(false);
   const [branchDialogMode, setBranchDialogMode] = useState<BranchDialogMode>("create");
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -2353,23 +2621,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             <Text nativeID="screens-admin-dashboard-hero-subtitle" style={styles.subtitle} testID="screens-admin-dashboard-hero-subtitle">
               Vista general del dojo con indicadores visuales y foco rápido en la estructura activa.
             </Text>
-            <View nativeID="screens-admin-dashboard-operations-central-dashboard-meta" style={styles.operationsQuickLinkWrap} testID="screens-admin-dashboard-operations-central-dashboard-meta">
-              <Pressable
-                accessibilityRole="link"
-                nativeID="screens-admin-dashboard-operations-quick-attendance-link"
-                onPress={() => {
-                  if (organization && currentBranch) {
-                    void openPublicAttendancePage(organization.slug, currentBranch.name);
-                  }
-                }}
-                style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
-                testID="screens-admin-dashboard-operations-quick-attendance-link"
-              >
-                <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
-                 Registro de asistencia 
-                </Text>
-              </Pressable>
-            </View>
+            {renderQuickAttendanceForm("hero")}
           </View>
         </View>
       </View>
@@ -2638,25 +2890,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       title={currentBranch ? `Operación · ${currentBranch.name}` : "Centro operativo"}
       description="Elige entre asistencias o clases para cargar la información principal dentro del dashboard central."
       actions={null}
-      summary={
-        <View nativeID="screens-admin-dashboard-operations-central-dashboard-meta" style={styles.operationsQuickLinkWrap} testID="screens-admin-dashboard-operations-central-dashboard-meta">
-          <Pressable
-            accessibilityRole="link"
-            nativeID="screens-admin-dashboard-operations-quick-attendance-link"
-            onPress={() => {
-              if (organization && currentBranch) {
-                void openPublicAttendancePage(organization.slug, currentBranch.name);
-              }
-            }}
-            style={({ pressed }) => [styles.operationsInlineLink, pressed ? styles.operationsInlineLinkPressed : null]}
-            testID="screens-admin-dashboard-operations-quick-attendance-link"
-          >
-            <Text nativeID="screens-admin-dashboard-operations-quick-attendance-link-label" style={styles.operationsInlineLinkLabel} testID="screens-admin-dashboard-operations-quick-attendance-link-label">
-             Registro de Asistencia 
-            </Text>
-          </Pressable>
-        </View>
-      }
+      summary={renderQuickAttendanceForm("operations")}
     />
   ) : null;
   const operationsHeaderMainContent = isOperationsSection ? (
@@ -4678,6 +4912,16 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           </View>
         </View>
       </AppModal>
+
+      <QrScanner
+        visible={quickScannerVisible}
+        onClose={() => setQuickScannerVisible(false)}
+        onCodeScanned={handleQuickQrCodeScanned}
+        title="Escanear credencial"
+        description="Apunta la cámara al código QR del alumno para registrar su asistencia."
+        nativeID="screens-admin-dashboard-quick-qr-scanner"
+        testID="screens-admin-dashboard-quick-qr-scanner"
+      />
     </Screen>
   );
 }
@@ -6389,6 +6633,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  quickAttendancePanel: {
+    alignItems: "flex-start",
+    alignSelf: "flex-start",
+    flexDirection: "column",
+    gap: spacing.sm,
+    justifyContent: "flex-start",
+    marginTop: spacing.md,
+    width: "100%",
+  },
+  quickAttendancePanelInline: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: spacing.xs,
+    justifyContent: "flex-start",
+    width: "100%",
+  },
+  quickFeedbackBanner: {
+    alignItems: "center",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    width: "100%",
+  },
+  quickFeedbackText: {
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  quickFormRow: {
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  quickQrButton: {
+    alignItems: "center",
+    backgroundColor: indigo,
+    borderRadius: radius.md,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  quickQrButtonDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.85,
+  },
+  quickQrButtonPressed: {
+    opacity: 0.9,
+    transform: [{ translateY: 1 }],
+  },
+  quickQrDesktopLegend: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    height: 44,
+    justifyContent: "flex-start",
+  },
+  quickQrLegendText: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  quickFieldWrap: {
+    minWidth: 0,
+  },
+  quickClassField: {
+    flex: 3,
+  },
+  quickStudentField: {
+    flex: 3,
+  },
+  quickSubmitButton: {
+    flex: 2,
+    height: 44,
+    minWidth: 110,
+  },
 });
 
 const mobileStyles = StyleSheet.create({
@@ -6426,6 +6752,17 @@ const mobileStyles = StyleSheet.create({
   modalActions: {
     flexDirection: "column",
   },
+  quickFormRow: {
+    alignItems: "stretch",
+    flexDirection: "column",
+  },
+  quickSubmitButton: {
+    width: "100%",
+  },
+  quickAttendancePanel: {
+    marginTop: spacing.sm,
+  },
+  quickAttendancePanelInline: {},
 });
 
 const desktopStyles = StyleSheet.create({
@@ -6467,4 +6804,12 @@ const desktopStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  quickFormRow: {
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  quickAttendancePanel: {
+    marginTop: spacing.md,
+  },
+  quickAttendancePanelInline: {},
 });

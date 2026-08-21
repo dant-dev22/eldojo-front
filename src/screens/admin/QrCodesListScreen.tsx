@@ -1,10 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
+import { classesApi } from "@/api/classesApi";
 import { studentsApi } from "@/api/studentsApi";
 import { getErrorMessage } from "@/api/http";
 import { AppBadge } from "@/components/AppBadge";
@@ -15,11 +17,26 @@ import { AdminShell } from "@/components/AdminShell";
 import { BeltIndicator } from "@/components/BeltIndicator";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { CredencialQRModal } from "@/components/CredencialQRModal";
+import { QrScanner } from "@/components/QrScanner";
 import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import {
+  colors,
+  indigoBlue as indigo,
+  indigoBlueSoft as indigoSoft,
+  judogiRed,
+  judogiRedSoft as judogiRedSoft,
+  radius,
+  shadows,
+  spacing,
+  tatamiGreen as matchaGreen,
+  tatamiGreenSoft as matchaGreenSoft,
+  transitions,
+  typography,
+} from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import { useCameraAvailability } from "@/hooks/useCameraAvailability";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatDate, formatPaymentStatus } from "@/utils/format";
@@ -49,7 +66,9 @@ function getPaymentTone(status: string): "success" | "warning" | "danger" | "neu
 
 export function QrCodesListScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isDesktop, isMobile } = useResponsiveLayout();
+  const { status: cameraStatus, isEnabled: qrScannerEnabled } = useCameraAvailability();
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -65,6 +84,89 @@ export function QrCodesListScreen({ navigation }: Props) {
 
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
+
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [attendanceFeedback, setAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!attendanceFeedback) return;
+    const timeoutId = setTimeout(() => setAttendanceFeedback(null), 3500);
+    return () => clearTimeout(timeoutId);
+  }, [attendanceFeedback]);
+
+  const classesQuery = useQuery({
+    queryKey: ["dashboard-classes", organizationId, fixedBranchId],
+    queryFn: () =>
+      classesApi.list({
+        organizationId: organizationId as number,
+        branchId: fixedBranchId ?? undefined,
+      }),
+    enabled: Boolean(organizationId),
+  });
+
+  const invalidateQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["dashboard-attendance"] }),
+      queryClient.invalidateQueries({ queryKey: ["students"] }),
+    ]);
+  }, [queryClient]);
+
+  const createAttendanceMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof attendanceApi.create>[0]) => attendanceApi.create(payload),
+    onSuccess: async () => {
+      await invalidateQueries();
+      setAttendanceFeedback({ tone: "success", message: "Asistencia registrada correctamente." });
+    },
+    onError: (error) => {
+      setAttendanceFeedback({ tone: "danger", message: getErrorMessage(error) });
+    },
+  });
+
+  const handleQrCodeScanned = useCallback(
+    async (code: string) => {
+      const normalizedCode = code.trim().toUpperCase();
+      if (!normalizedCode) return;
+      setScannerVisible(false);
+
+      try {
+        const students = await studentsApi.list({ search: normalizedCode });
+        const matchedStudent = students.find(
+          (s) => s.unique_code.toUpperCase() === normalizedCode
+        );
+        if (!matchedStudent) {
+          setAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalizedCode}.` });
+          return;
+        }
+
+        const now = new Date();
+        const branchId = matchedStudent.branch_id || fixedBranchId || (branchesQuery.data?.[0]?.id as number | undefined);
+        if (!branchId) {
+          setAttendanceFeedback({ tone: "danger", message: "No se pudo determinar la sucursal para registrar la asistencia." });
+          return;
+        }
+
+        const classId = matchedStudent.primary_class_id ||
+          classesQuery.data?.find((c) => c.branch_id === branchId && c.is_active)?.id ||
+          null;
+
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const isoDate = now.toISOString().slice(0, 10);
+
+        createAttendanceMutation.mutate({
+          student_id: matchedStudent.id,
+          branch_id: branchId,
+          class_id: classId,
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          method: "qr",
+          registered_by: user?.id ?? null,
+        });
+      } catch (err) {
+        setAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+      }
+    },
+    [branchesQuery.data, classesQuery.data, createAttendanceMutation, fixedBranchId, user?.id]
+  );
 
   const branchesQuery = useQuery({
     queryKey: ["branches", organizationId],
@@ -298,6 +400,76 @@ export function QrCodesListScreen({ navigation }: Props) {
 
   const qrHeaderMainContent = !studentsQuery.isLoading && !studentsQuery.isError ? (
     <View nativeID="screens-admin-qr-codes-list-header-main-content" style={styles.headerMainContent} testID="screens-admin-qr-codes-list-header-main-content">
+      {attendanceFeedback ? (
+        <View
+          nativeID="screens-admin-qr-codes-list-attendance-feedback"
+          style={[
+            styles.feedbackBanner,
+            attendanceFeedback.tone === "success"
+              ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.25)" }
+              : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.25)" },
+          ]}
+          testID="screens-admin-qr-codes-list-attendance-feedback"
+        >
+          <Feather
+            name={attendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
+            size={16}
+            color={attendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
+          />
+          <Text
+            style={[
+              styles.feedbackText,
+              { color: attendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
+            ]}
+          >
+            {attendanceFeedback.message}
+          </Text>
+        </View>
+      ) : null}
+      <View
+        nativeID="screens-admin-qr-codes-list-scan-action-row"
+        style={[styles.qrScanActionRow, isDesktop ? desktopStyles.qrScanActionRow : mobileStyles.qrScanActionRow]}
+        testID="screens-admin-qr-codes-list-scan-action-row"
+      >
+        <Pressable
+          accessibilityRole="button"
+          disabled={isDesktop || !qrScannerEnabled || createAttendanceMutation.isPending}
+          nativeID="screens-admin-qr-codes-list-scan-attendance-button"
+          onPress={() => {
+            setAttendanceFeedback(null);
+            setScannerVisible(true);
+          }}
+          style={(state) => {
+            const hovered = (state as unknown as { hovered?: boolean }).hovered;
+            const disabled = isDesktop || !qrScannerEnabled || createAttendanceMutation.isPending;
+            const hoverState = Boolean(hovered) || Boolean(state.pressed);
+            return [
+              styles.qrScanButton,
+              disabled ? styles.qrScanButtonDisabled : null,
+              hoverState && !disabled ? styles.qrScanButtonHover : null,
+            ];
+          }}
+          testID="screens-admin-qr-codes-list-scan-attendance-button"
+        >
+          <View style={styles.qrScanIconFrame}>
+            <Feather name="maximize-2" size={20} color={isDesktop ? colors.textMuted : colors.surface} />
+          </View>
+          <View style={styles.qrScanCopy}>
+            <Text style={[styles.qrScanLabel, isDesktop ? { color: colors.textMuted } : null]}>
+              Escanear asistencia
+            </Text>
+            <Text style={styles.qrScanHint}>
+              {isDesktop
+                ? "Solo disponible en celular-tablet"
+                : cameraStatus === "checking"
+                  ? "Verificando cámara…"
+                  : !qrScannerEnabled
+                    ? "Dispositivo sin cámara"
+                    : "Registro rápido por QR · 1 paso"}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
       <View nativeID="screens-admin-qr-codes-list-search-row" style={[styles.searchRowCompact, isDesktop ? desktopStyles.searchRowCompact : mobileStyles.searchRowCompact]} testID="screens-admin-qr-codes-list-search-row">
         <View nativeID="screens-admin-qr-codes-list-search-input-wrap" style={styles.searchInputWrap} testID="screens-admin-qr-codes-list-search-input-wrap">
           <AppInput
@@ -453,6 +625,16 @@ export function QrCodesListScreen({ navigation }: Props) {
           testID="screens-admin-qr-codes-list-credential-modal"
         />
       ) : null}
+
+      <QrScanner
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onCodeScanned={handleQrCodeScanned}
+        title="Escanear credencial"
+        description="Apunta la cámara al código QR del alumno para registrar su asistencia."
+        nativeID="screens-admin-qr-codes-list-qr-scanner"
+        testID="screens-admin-qr-codes-list-qr-scanner"
+      />
     </Screen>
   );
 }
@@ -725,6 +907,71 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     justifyContent: "flex-end",
   },
+  feedbackBanner: {
+    alignItems: "center",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    width: "100%",
+  },
+  feedbackText: {
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  qrScanActionRow: {
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  qrScanButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: indigo,
+    borderRadius: radius.lg,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  qrScanButtonDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    opacity: 0.9,
+  },
+  qrScanButtonHover: {
+    backgroundColor: "#232D87",
+    transform: [{ translateY: -1 }],
+  },
+  qrScanIconFrame: {
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: radius.md,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  qrScanCopy: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  qrScanLabel: {
+    color: colors.surface,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  qrScanHint: {
+    color: "rgba(255,255,255,0.72)",
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+  },
 });
 
 const desktopStyles = StyleSheet.create({
@@ -744,6 +991,11 @@ const desktopStyles = StyleSheet.create({
   mobileRowMeta: {
     alignItems: "center",
   },
+  qrScanActionRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
 });
 
 const mobileStyles = StyleSheet.create({
@@ -761,5 +1013,10 @@ const mobileStyles = StyleSheet.create({
   },
   mobileRowMeta: {
     alignItems: "flex-start",
+  },
+  qrScanActionRow: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    justifyContent: "flex-start",
   },
 });
