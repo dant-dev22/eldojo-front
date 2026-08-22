@@ -689,252 +689,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const debouncedQuickIdentifier = useDebouncedValue(quickStudentIdentifier, 350);
   const { status: quickCameraStatus, isEnabled: quickQrEnabled } = useCameraAvailability();
 
-  useEffect(() => {
-    if (!quickAttendanceFeedback) return;
-    const id = setTimeout(() => setQuickAttendanceFeedback(null), 3500);
-    return () => clearTimeout(id);
-  }, [quickAttendanceFeedback]);
 
-  const invalidateAttendanceQueries = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["dashboard-attendance"] }),
-      queryClient.invalidateQueries({ queryKey: ["students"] }),
-    ]);
-  }, [queryClient]);
-
-  const quickRegisterSubmit = useCallback(
-    async (rawIdentifier: string, forcedClassId?: number | null) => {
-      const identifier = rawIdentifier.trim().toUpperCase();
-      if (!identifier) {
-        setQuickAttendanceFeedback({ tone: "danger", message: "Escribe el código o ID del alumno." });
-        return;
-      }
-
-      const selectedBranchId =
-        (attendanceForm.branchId ? Number(attendanceForm.branchId) : undefined) ??
-        scopedBranchId ??
-        visibleBranches[0]?.id;
-      if (!selectedBranchId) {
-        setQuickAttendanceFeedback({ tone: "danger", message: "No se pudo determinar la sucursal." });
-        return;
-      }
-
-      let matchedStudent: Student | null = null;
-      try {
-        const numericId = Number(identifier);
-        if (!Number.isNaN(numericId) && numericId > 0) {
-          const foundById = visibleStudents.find((s) => s.id === numericId) ?? null;
-          if (foundById) matchedStudent = foundById;
-        }
-        if (!matchedStudent) {
-          const results = await studentsApi.list({ search: identifier });
-          matchedStudent = results.find((s) => s.unique_code.toUpperCase() === identifier) ?? results[0] ?? null;
-        }
-      } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
-        return;
-      }
-
-      if (!matchedStudent) {
-        setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con identificador ${identifier}.` });
-        return;
-      }
-
-      let classId: number | null = null;
-      if (forcedClassId) {
-        classId = forcedClassId;
-      } else if (attendanceForm.classId && attendanceForm.classId !== "none") {
-        classId = Number(attendanceForm.classId);
-      } else if (matchedStudent.primary_class_id) {
-        classId = matchedStudent.primary_class_id;
-      } else {
-        const classCandidate = visibleClasses.find(
-          (c) => c.branch_id === (matchedStudent.branch_id || selectedBranchId) && c.is_active
-        );
-        classId = classCandidate?.id ?? visibleClasses[0]?.id ?? null;
-      }
-
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      const isoDate = now.toISOString().slice(0, 10);
-
-      try {
-        await attendanceApi.create({
-          student_id: matchedStudent.id,
-          branch_id: matchedStudent.branch_id || selectedBranchId,
-          class_id: classId,
-          check_in_at: `${isoDate}T${hh}:${mm}:00`,
-          method: "manual",
-          registered_by: user?.id ?? null,
-        });
-        await invalidateAttendanceQueries();
-        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
-        setQuickStudentIdentifier("");
-      } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
-      }
-    },
-    [attendanceForm.branchId, attendanceForm.classId, invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
-  );
-
-  const handleQuickQrCodeScanned = useCallback(
-    async (code: string) => {
-      const normalized = code.trim().toUpperCase();
-      if (!normalized) return;
-      setQuickScannerVisible(false);
-      setQuickAttendanceFeedback(null);
-      try {
-        const students = await studentsApi.list({ search: normalized });
-        const matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
-        if (!matchedStudent) {
-          setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalized}.` });
-          return;
-        }
-        const selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id;
-        const classId = matchedStudent.primary_class_id ||
-          visibleClasses.find((c) => c.branch_id === selectedBranchId && c.is_active)?.id ||
-          visibleClasses[0]?.id || null;
-        const now = new Date();
-        const hh = String(now.getHours()).padStart(2, "0");
-        const mm = String(now.getMinutes()).padStart(2, "0");
-        const isoDate = now.toISOString().slice(0, 10);
-        await attendanceApi.create({
-          student_id: matchedStudent.id,
-          branch_id: selectedBranchId,
-          class_id: classId,
-          check_in_at: `${isoDate}T${hh}:${mm}:00`,
-          method: "qr",
-          registered_by: user?.id ?? null,
-        });
-        await invalidateAttendanceQueries();
-        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia QR registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
-      } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
-      }
-    },
-    [invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses]
-  );
-
-  const renderQuickAttendanceForm = (variant: "hero" | "operations") => {
-    const wrapStyle =
-      variant === "hero"
-        ? [styles.quickAttendancePanel, isDesktop ? desktopStyles.quickAttendancePanel : mobileStyles.quickAttendancePanel]
-        : [styles.quickAttendancePanelInline, isDesktop ? desktopStyles.quickAttendancePanelInline : mobileStyles.quickAttendancePanelInline];
-    const quickClassValue = attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null;
-    return (
-      <View
-        collapsable={false}
-        nativeID={`screens-admin-dashboard-quick-attendance-${variant}`}
-        style={wrapStyle}
-        testID={`screens-admin-dashboard-quick-attendance-${variant}`}
-      >
-        {quickAttendanceFeedback ? (
-          <View
-            nativeID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
-            style={[
-              styles.quickFeedbackBanner,
-              quickAttendanceFeedback.tone === "success"
-                ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
-                : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
-            ]}
-            testID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
-          >
-            <Feather
-              name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
-              size={15}
-              color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
-            />
-            <Text
-              style={[
-                styles.quickFeedbackText,
-                { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
-              ]}
-            >
-              {quickAttendanceFeedback.message}
-            </Text>
-          </View>
-        ) : null}
-        <View
-          nativeID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
-          style={[styles.quickFormRow, isDesktop ? desktopStyles.quickFormRow : mobileStyles.quickFormRow]}
-          testID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
-        >
-          {!isDesktop ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={!quickQrEnabled || createAttendanceMutation.isPending}
-              nativeID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
-              onPress={() => {
-                setQuickAttendanceFeedback(null);
-                setQuickScannerVisible(true);
-              }}
-              style={({ pressed }) => [
-                styles.quickQrButton,
-                !quickQrEnabled ? styles.quickQrButtonDisabled : null,
-                pressed ? styles.quickQrButtonPressed : null,
-              ]}
-              testID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
-            >
-              <Feather name="maximize-2" size={18} color={quickQrEnabled ? colors.surface : colors.textMuted} />
-            </Pressable>
-          ) : (
-            <View nativeID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`} style={styles.quickQrDesktopLegend} testID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`}>
-              <View style={[styles.quickQrButton, styles.quickQrButtonDisabled]}>
-                <Feather name="maximize-2" size={18} color={colors.textMuted} />
-              </View>
-              <Text style={styles.quickQrLegendText}>Solo disponible en celular-tablet</Text>
-            </View>
-          )}
-          <View style={[styles.quickFieldWrap, styles.quickClassField]}>
-            <AppSelect
-              enabled={!createAttendanceMutation.isPending}
-              items={classOptions.filter((opt) => opt.value !== "none")}
-              label="Clase"
-              nativeID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
-              onValueChange={(value) => {
-                setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
-                setQuickAttendanceFeedback(null);
-              }}
-              placeholder="Clase"
-              testID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
-              value={quickClassValue}
-            />
-          </View>
-          <View style={[styles.quickFieldWrap, styles.quickStudentField]}>
-            <AppInput
-              autoCorrect={false}
-              enabled={!createAttendanceMutation.isPending}
-              label="Código alumno"
-              nativeID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
-              onChangeText={(value) => {
-                setQuickStudentIdentifier(value);
-                setQuickAttendanceFeedback(null);
-              }}
-              onSubmitEditing={() => {
-                void quickRegisterSubmit(quickStudentIdentifier);
-              }}
-              placeholder="Ej: ABC123"
-              returnKeyType="done"
-              testID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
-              value={quickStudentIdentifier}
-            />
-          </View>
-          <AppButton
-            loading={createAttendanceMutation.isPending}
-            onPress={() => {
-              void quickRegisterSubmit(quickStudentIdentifier);
-            }}
-            style={styles.quickSubmitButton}
-            label="Registrar"
-            nativeID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
-            testID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
-            variant="primary"
-          />
-        </View>
-      </View>
-    );
-  };
   const [branchModalVisible, setBranchModalVisible] = useState(false);
   const [branchDialogMode, setBranchDialogMode] = useState<BranchDialogMode>("create");
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -1748,6 +1503,263 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const inactiveStudents = Math.max(visibleStudents.length - activeStudents, 0);
   const inactiveBranches = Math.max(visibleBranches.length - activeBranches, 0);
 
+  const copyPublicAttendanceUrl = async (url: string) => {
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      setFeedback({ tone: "success", message: "La liga publica se copio al portapapeles." });
+      return;
+    }
+
+    setFeedback({ tone: "danger", message: "No fue posible copiar la liga desde este dispositivo." });
+  };
+
+  useEffect(() => {
+    if (!quickAttendanceFeedback) return;
+    const id = setTimeout(() => setQuickAttendanceFeedback(null), 3500);
+    return () => clearTimeout(id);
+  }, [quickAttendanceFeedback]);
+
+  const invalidateAttendanceQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["dashboard-attendance"] }),
+      queryClient.invalidateQueries({ queryKey: ["students"] }),
+    ]);
+  }, [queryClient]);
+
+  const quickRegisterSubmit = useCallback(
+    async (rawIdentifier: string, forcedClassId?: number | null) => {
+      const identifier = rawIdentifier.trim().toUpperCase();
+      if (!identifier) {
+        setQuickAttendanceFeedback({ tone: "danger", message: "Escribe el código o ID del alumno." });
+        return;
+      }
+
+      const selectedBranchId =
+        (attendanceForm.branchId ? Number(attendanceForm.branchId) : undefined) ??
+        scopedBranchId ??
+        visibleBranches[0]?.id;
+      if (!selectedBranchId) {
+        setQuickAttendanceFeedback({ tone: "danger", message: "No se pudo determinar la sucursal." });
+        return;
+      }
+
+      let matchedStudent: Student | null = null;
+      try {
+        const numericId = Number(identifier);
+        if (!Number.isNaN(numericId) && numericId > 0) {
+          const foundById = visibleStudents.find((s) => s.id === numericId) ?? null;
+          if (foundById) matchedStudent = foundById;
+        }
+        if (!matchedStudent) {
+          const results = await studentsApi.list({ search: identifier });
+          matchedStudent = results.find((s) => s.unique_code.toUpperCase() === identifier) ?? results[0] ?? null;
+        }
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+        return;
+      }
+
+      if (!matchedStudent) {
+        setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con identificador ${identifier}.` });
+        return;
+      }
+
+      let classId: number | null = null;
+      if (forcedClassId) {
+        classId = forcedClassId;
+      } else if (attendanceForm.classId && attendanceForm.classId !== "none") {
+        classId = Number(attendanceForm.classId);
+      } else if (matchedStudent.primary_class_id) {
+        classId = matchedStudent.primary_class_id;
+      } else {
+        const classCandidate = visibleClasses.find(
+          (c) => c.branch_id === (matchedStudent.branch_id || selectedBranchId) && c.is_active
+        );
+        classId = classCandidate?.id ?? visibleClasses[0]?.id ?? null;
+      }
+
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      const isoDate = now.toISOString().slice(0, 10);
+
+      try {
+        await attendanceApi.create({
+          student_id: matchedStudent.id,
+          branch_id: matchedStudent.branch_id || selectedBranchId,
+          class_id: classId,
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          method: "manual",
+          registered_by: user?.id ?? null,
+        });
+        await invalidateAttendanceQueries();
+        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+        setQuickStudentIdentifier("");
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+      }
+    },
+    [attendanceForm.branchId, attendanceForm.classId, invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
+  );
+
+  const handleQuickQrCodeScanned = useCallback(
+    async (code: string) => {
+      const normalized = code.trim().toUpperCase();
+      if (!normalized) return;
+      setQuickScannerVisible(false);
+      setQuickAttendanceFeedback(null);
+      try {
+        const students = await studentsApi.list({ search: normalized });
+        const matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
+        if (!matchedStudent) {
+          setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalized}.` });
+          return;
+        }
+        const selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id;
+        const classId = matchedStudent.primary_class_id ||
+          visibleClasses.find((c) => c.branch_id === selectedBranchId && c.is_active)?.id ||
+          visibleClasses[0]?.id || null;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const isoDate = now.toISOString().slice(0, 10);
+        await attendanceApi.create({
+          student_id: matchedStudent.id,
+          branch_id: selectedBranchId,
+          class_id: classId,
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          method: "qr",
+          registered_by: user?.id ?? null,
+        });
+        await invalidateAttendanceQueries();
+        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia QR registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+      } catch (err) {
+        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+      }
+    },
+    [invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses]
+  );
+
+  const renderQuickAttendanceForm = (variant: "hero" | "operations") => {
+    const wrapStyle =
+      variant === "hero"
+        ? [styles.quickAttendancePanel, isDesktop ? desktopStyles.quickAttendancePanel : mobileStyles.quickAttendancePanel]
+        : [styles.quickAttendancePanelInline, isDesktop ? desktopStyles.quickAttendancePanelInline : mobileStyles.quickAttendancePanelInline];
+    const quickClassValue = attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null;
+    return (
+      <View
+        collapsable={false}
+        nativeID={`screens-admin-dashboard-quick-attendance-${variant}`}
+        style={wrapStyle}
+        testID={`screens-admin-dashboard-quick-attendance-${variant}`}
+      >
+        {quickAttendanceFeedback ? (
+          <View
+            nativeID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
+            style={[
+              styles.quickFeedbackBanner,
+              quickAttendanceFeedback.tone === "success"
+                ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
+                : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
+            ]}
+            testID={`screens-admin-dashboard-quick-attendance-feedback-${variant}`}
+          >
+            <Feather
+              name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
+              size={15}
+              color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
+            />
+            <Text
+              style={[
+                styles.quickFeedbackText,
+                { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
+              ]}
+            >
+              {quickAttendanceFeedback.message}
+            </Text>
+          </View>
+        ) : null}
+        <View
+          nativeID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
+          style={[styles.quickFormRow, isDesktop ? desktopStyles.quickFormRow : mobileStyles.quickFormRow]}
+          testID={`screens-admin-dashboard-quick-attendance-form-${variant}`}
+        >
+          {!isDesktop ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={!quickQrEnabled || createAttendanceMutation.isPending}
+              nativeID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
+              onPress={() => {
+                setQuickAttendanceFeedback(null);
+                setQuickScannerVisible(true);
+              }}
+              style={({ pressed }) => [
+                styles.quickQrButton,
+                !quickQrEnabled ? styles.quickQrButtonDisabled : null,
+                pressed ? styles.quickQrButtonPressed : null,
+              ]}
+              testID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
+            >
+              <Feather name="maximize-2" size={18} color={quickQrEnabled ? colors.surface : colors.textMuted} />
+            </Pressable>
+          ) : (
+            <View nativeID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`} style={styles.quickQrDesktopLegend} testID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`}>
+              <View style={[styles.quickQrButton, styles.quickQrButtonDisabled]}>
+                <Feather name="maximize-2" size={18} color={colors.textMuted} />
+              </View>
+              <Text style={styles.quickQrLegendText}>Solo disponible en celular-tablet</Text>
+            </View>
+          )}
+          <View style={[styles.quickFieldWrap, styles.quickClassField]}>
+            <AppSelect
+              enabled={!createAttendanceMutation.isPending}
+              items={attendanceClassOptions.filter((opt) => opt.value !== "none")}
+              label="Clase"
+              nativeID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
+              onValueChange={(value) => {
+                setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
+                setQuickAttendanceFeedback(null);
+              }}
+              placeholder="Clase"
+              testID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
+              value={quickClassValue}
+            />
+          </View>
+          <View style={[styles.quickFieldWrap, styles.quickStudentField]}>
+            <AppInput
+              autoCorrect={false}
+              enabled={!createAttendanceMutation.isPending}
+              label="Código alumno"
+              nativeID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
+              onChangeText={(value) => {
+                setQuickStudentIdentifier(value);
+                setQuickAttendanceFeedback(null);
+              }}
+              onSubmitEditing={() => {
+                void quickRegisterSubmit(quickStudentIdentifier);
+              }}
+              placeholder="Ej: ABC123"
+              returnKeyType="done"
+              testID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
+              value={quickStudentIdentifier}
+            />
+          </View>
+          <AppButton
+            loading={createAttendanceMutation.isPending}
+            onPress={() => {
+              void quickRegisterSubmit(quickStudentIdentifier);
+            }}
+            style={styles.quickSubmitButton}
+            label="Registrar"
+            nativeID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
+            testID={`screens-admin-dashboard-quick-attendance-submit-${variant}`}
+            variant="primary"
+          />
+        </View>
+      </View>
+    );
+  };
+
   const dashboardQuickActions = useMemo<BottomSheetAction[]>(
     () => [
       {
@@ -1961,15 +1973,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     { key: "classes-inactive", label: "Clases inactivas", value: inactiveClasses, tone: colors.danger },
   ];
 
-  const copyPublicAttendanceUrl = async (url: string) => {
-    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(url);
-      setFeedback({ tone: "success", message: "La liga publica se copio al portapapeles." });
-      return;
-    }
-
-    setFeedback({ tone: "danger", message: "No fue posible copiar la liga desde este dispositivo." });
-  };
   const isLoading =
     studentsQuery.isLoading ||
     classesQuery.isLoading ||
