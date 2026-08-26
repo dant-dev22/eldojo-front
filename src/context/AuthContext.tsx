@@ -36,6 +36,7 @@ interface AuthContextValue {
   status: AuthStatus;
   user: User | null;
   signIn: (payload: LoginPayload) => Promise<CrossDomainAuthResult>;
+  devSignInByEmail: (email: string) => Promise<void>;
   registerAcademy: (payload: AcademyRegisterPayload) => Promise<AcademyRegisterResponse>;
   confirmAcademyAccount: (token: string) => Promise<CrossDomainAuthResult>;
   redeemPendingAcademySession: (
@@ -124,6 +125,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const [token, storedUser] = await Promise.all([getAccessToken(), getStoredUser()]);
 
       if (!token || !storedUser) {
+        const devAutologinEmail = process.env.EXPO_PUBLIC_DEV_AUTOLOGIN_EMAIL;
+        if (devAutologinEmail) {
+          try {
+            const response = await authApi.devLoginByEmail(devAutologinEmail);
+            if (isGymAdminUser(response.user)) {
+              await saveSession(mapTokens(response), response.user);
+              updateHintForUser(response.user);
+              setUser(response.user);
+              setStatus("authenticated");
+              setJustLoggedIn(true);
+              return;
+            }
+          } catch (err) {
+            console.warn(
+              "[dev-autologin] No fue posible autenticar automáticamente con",
+              devAutologinEmail,
+              err instanceof Error ? err.message : err
+            );
+          }
+        }
         setStatus("unauthenticated");
         setUser(null);
         return;
@@ -226,6 +247,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
           window.location.assign(appRedirectUrl);
         }
         return { redirectedToApp: true, appRedirectUrl };
+      },
+      devSignInByEmail: async (email: string) => {
+        const response = await authApi.devLoginByEmail(email);
+        if (!isGymAdminUser(response.user)) {
+          await clearSession();
+          throw new Error(getGymAdminAccessMessage());
+        }
+        await clearPendingAcademyRegistration();
+        await saveSession(mapTokens(response), response.user);
+        setUser(response.user);
+        setShowPostConfirmation(false);
+        setStatus("authenticated");
+        setJustLoggedIn(true);
+        updateHintForUser(response.user);
       },
       registerAcademy: async (payload) => {
         return authApi.registerAcademy(payload);

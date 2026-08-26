@@ -264,4 +264,20 @@ export const authApi = {
     const { data } = await http.post<LoginResponse>("/auth/session-ticket/redeem", payload);
     return data;
   },
+
+  async devLoginByEmail(email: string): Promise<LoginResponse> {
+    const payload = { email };
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/dev-login-by-email", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/dev-login-by-email", payload);
+    return data;
+  },
 };

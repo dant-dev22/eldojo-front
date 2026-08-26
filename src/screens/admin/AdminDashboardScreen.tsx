@@ -684,6 +684,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [attendanceForm, setAttendanceForm] = useState<AttendanceFormState>(createEmptyAttendanceForm());
   const [attendanceErrors, setAttendanceErrors] = useState<AttendanceFormErrors>({});
   const [quickScannerVisible, setQuickScannerVisible] = useState(false);
+  const [quickAttendanceModalVisible, setQuickAttendanceModalVisible] = useState(false);
   const [quickAttendanceFeedback, setQuickAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [quickStudentIdentifier, setQuickStudentIdentifier] = useState("");
   const debouncedQuickIdentifier = useDebouncedValue(quickStudentIdentifier, 350);
@@ -1641,10 +1642,42 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   );
 
   const renderQuickAttendanceForm = (variant: "hero" | "operations") => {
-    const wrapStyle =
-      variant === "hero"
-        ? [styles.quickAttendancePanel, isDesktop ? desktopStyles.quickAttendancePanel : mobileStyles.quickAttendancePanel]
-        : [styles.quickAttendancePanelInline, isDesktop ? desktopStyles.quickAttendancePanelInline : mobileStyles.quickAttendancePanelInline];
+    if (variant === "hero") {
+      return (
+        <View
+          collapsable={false}
+          nativeID="screens-admin-dashboard-quick-attendance-hero"
+          style={[styles.quickAttendancePanel, isDesktop ? desktopStyles.quickAttendancePanel : mobileStyles.quickAttendancePanel]}
+          testID="screens-admin-dashboard-quick-attendance-hero"
+        >
+          <View
+            nativeID="screens-admin-dashboard-quick-attendance-form-hero"
+            style={styles.quickHeroLinkRow}
+            testID="screens-admin-dashboard-quick-attendance-form-hero"
+          >
+            <Pressable
+              accessibilityRole="link"
+              nativeID="screens-admin-dashboard-quick-attendance-link-hero"
+              onPress={() => {
+                setQuickAttendanceFeedback(null);
+                setQuickAttendanceModalVisible(true);
+              }}
+              style={({ pressed, hovered }) => [
+                styles.quickHeroLink,
+                pressed || hovered ? styles.quickHeroLinkPressed : null,
+              ]}
+              testID="screens-admin-dashboard-quick-attendance-link-hero"
+            >
+              <Feather name="check-square" size={16} color={indigo} />
+              <Text style={styles.quickHeroLinkLabel}>Registrar asistencia</Text>
+              <Feather name="chevron-right" size={16} color={indigo} />
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    const wrapStyle = [styles.quickAttendancePanelInline, isDesktop ? desktopStyles.quickAttendancePanelInline : mobileStyles.quickAttendancePanelInline];
     const quickClassValue = attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null;
     return (
       <View
@@ -4916,6 +4949,144 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         </View>
       </AppModal>
 
+      <AppModal
+        visible={quickAttendanceModalVisible}
+        title="Registrar asistencia"
+        description="Elige el metodo preferido para registrar la asistencia de un alumno."
+        onClose={() => setQuickAttendanceModalVisible(false)}
+        nativeID="screens-admin-dashboard-quick-attendance-modal"
+        testID="screens-admin-dashboard-quick-attendance-modal"
+      >
+        {quickAttendanceFeedback ? (
+          <View
+            nativeID="screens-admin-dashboard-quick-attendance-modal-feedback"
+            style={[
+              styles.quickFeedbackBanner,
+              quickAttendanceFeedback.tone === "success"
+                ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
+                : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
+            ]}
+            testID="screens-admin-dashboard-quick-attendance-modal-feedback"
+          >
+            <Feather
+              name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
+              size={15}
+              color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
+            />
+            <Text
+              style={[
+                styles.quickFeedbackText,
+                { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
+              ]}
+            >
+              {quickAttendanceFeedback.message}
+            </Text>
+          </View>
+        ) : null}
+
+        <View
+          nativeID="screens-admin-dashboard-quick-attendance-modal-manual-section"
+          style={styles.quickModalSection}
+          testID="screens-admin-dashboard-quick-attendance-modal-manual-section"
+        >
+          <View style={styles.quickModalSectionHeader}>
+            <View style={[styles.quickModalSectionIconWrap, { backgroundColor: indigoSoft }]}>
+              <Feather name="edit-3" size={16} color={indigo} />
+            </View>
+            <Text style={styles.quickModalSectionTitle}>Registro manual</Text>
+          </View>
+          <View style={styles.quickModalManualFields}>
+            <AppSelect
+              enabled={!createAttendanceMutation.isPending}
+              items={attendanceClassOptions.filter((opt) => opt.value !== "none")}
+              label="Clase"
+              nativeID="screens-admin-dashboard-quick-attendance-modal-class"
+              onValueChange={(value) => {
+                setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
+                setQuickAttendanceFeedback(null);
+              }}
+              placeholder="Selecciona una clase"
+              testID="screens-admin-dashboard-quick-attendance-modal-class"
+              value={attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null}
+            />
+            <AppInput
+              autoCorrect={false}
+              enabled={!createAttendanceMutation.isPending}
+              label="Código del alumno"
+              nativeID="screens-admin-dashboard-quick-attendance-modal-student"
+              onChangeText={(value) => {
+                setQuickStudentIdentifier(value);
+                setQuickAttendanceFeedback(null);
+              }}
+              onSubmitEditing={() => {
+                void quickRegisterSubmit(quickStudentIdentifier);
+              }}
+              placeholder="Ej: ABC123 · ELD-XXXX"
+              returnKeyType="done"
+              testID="screens-admin-dashboard-quick-attendance-modal-student"
+              value={quickStudentIdentifier}
+            />
+          </View>
+          <View style={styles.quickModalManualActions}>
+            <AppButton
+              loading={createAttendanceMutation.isPending}
+              onPress={() => {
+                void quickRegisterSubmit(quickStudentIdentifier);
+              }}
+              label="Registrar asistencia"
+              nativeID="screens-admin-dashboard-quick-attendance-modal-submit"
+              testID="screens-admin-dashboard-quick-attendance-modal-submit"
+              variant="primary"
+              style={{ minHeight: 52 }}
+            />
+          </View>
+        </View>
+
+        <View
+          nativeID="screens-admin-dashboard-quick-attendance-modal-divider"
+          style={styles.quickModalDivider}
+          testID="screens-admin-dashboard-quick-attendance-modal-divider"
+        />
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={!quickQrEnabled}
+          nativeID="screens-admin-dashboard-quick-attendance-modal-qr-row"
+          onPress={() => {
+            setQuickAttendanceFeedback(null);
+            setQuickAttendanceModalVisible(false);
+            setQuickScannerVisible(true);
+          }}
+          style={({ pressed, hovered }) => [
+            styles.quickModalQrRow,
+            !quickQrEnabled ? styles.quickModalQrRowDisabled : null,
+            pressed || hovered ? styles.quickModalQrRowPressed : null,
+          ]}
+          testID="screens-admin-dashboard-quick-attendance-modal-qr-row"
+        >
+          <View style={styles.quickModalQrRowContent}>
+            <View style={[styles.quickModalSectionIconWrap, { backgroundColor: "rgba(85,139,47,0.14)" }]}>
+              <Feather name="maximize-2" size={16} color={matchaGreen} />
+            </View>
+            <View style={styles.quickModalQrRowCopy}>
+              <Text style={styles.quickModalQrRowTitle}>Registro con código QR</Text>
+              <Text style={styles.quickModalQrRowSubtitle}>
+                {quickQrEnabled
+                  ? "Abre la camara y apunta al codigo QR de la credencial del alumno."
+                  : isDesktop
+                    ? "El escaneo QR solo esta disponible en dispositivos moviles."
+                    : "Camara no disponible. Verifica los permisos del dispositivo."}
+              </Text>
+            </View>
+          </View>
+          <Feather
+            name="chevron-right"
+            size={18}
+            color={quickQrEnabled ? matchaGreen : colors.textMuted}
+          />
+        </Pressable>
+      </AppModal>
+
       <QrScanner
         visible={quickScannerVisible}
         onClose={() => setQuickScannerVisible(false)}
@@ -6717,6 +6888,119 @@ const styles = StyleSheet.create({
     flex: 2,
     height: 44,
     minWidth: 110,
+  },
+  quickHeroLinkRow: {
+    width: "100%",
+  },
+  quickHeroLink: {
+    alignSelf: "flex-start",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  quickHeroLinkPressed: {
+    opacity: 0.8,
+  },
+  quickHeroLinkLabel: {
+    color: indigo,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.15,
+  },
+  quickModalSection: {
+    gap: spacing.md,
+    width: "100%",
+  },
+  quickModalSectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  quickModalSectionIconWrap: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  quickModalSectionTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+  quickModalManualFields: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  quickModalManualActions: {
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  quickModalDivider: {
+    backgroundColor: "rgba(141, 110, 99, 0.14)",
+    height: 0.5,
+    marginVertical: spacing.md,
+    width: "100%",
+  },
+  quickModalQrRow: {
+    alignItems: "center",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: "rgba(85, 139, 47, 0.18)",
+    backgroundColor: "rgba(85, 139, 47, 0.06)",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 72,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    width: "100%",
+    ...Platform.select({
+      web: {
+        transition: `background-color ${transitions.base}ms ease, border-color ${transitions.base}ms ease, transform ${transitions.fast}ms ease`,
+      } as any,
+    }),
+  },
+  quickModalQrRowPressed: {
+    backgroundColor: "rgba(85, 139, 47, 0.12)",
+    borderColor: "rgba(85, 139, 47, 0.28)",
+    transform: [{ translateY: -1 }],
+  },
+  quickModalQrRowDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    opacity: 0.7,
+  },
+  quickModalQrRowContent: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    minWidth: 0,
+  },
+  quickModalQrRowCopy: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  quickModalQrRowTitle: {
+    color: matchaGreen,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+  quickModalQrRowSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
 
