@@ -456,7 +456,7 @@ export function QrCodesListScreen({ navigation }: Props) {
           </View>
           <View style={styles.qrScanCopy}>
             <Text style={[styles.qrScanLabel, isDesktop ? { color: colors.textMuted } : null]}>
-              Escanear asistencia
+              Escanear QR
             </Text>
             <Text style={styles.qrScanHint}>
               {isDesktop

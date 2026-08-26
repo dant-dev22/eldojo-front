@@ -1733,12 +1733,23 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               ]}
               testID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
             >
-              <Feather name="maximize-2" size={18} color={quickQrEnabled ? colors.surface : colors.textMuted} />
+              <Feather name="maximize-2" size={16} color={quickQrEnabled ? colors.surface : colors.textMuted} />
+              <Text
+                style={[
+                  styles.quickQrButtonLabel,
+                  !quickQrEnabled ? { color: colors.textMuted } : null,
+                ]}
+              >
+                Escanear QR
+              </Text>
             </Pressable>
           ) : (
             <View nativeID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`} style={styles.quickQrDesktopLegend} testID={`screens-admin-dashboard-quick-attendance-qr-legend-${variant}`}>
               <View style={[styles.quickQrButton, styles.quickQrButtonDisabled]}>
-                <Feather name="maximize-2" size={18} color={colors.textMuted} />
+                <Feather name="maximize-2" size={16} color={colors.textMuted} />
+                <Text style={[styles.quickQrButtonLabel, { color: colors.textMuted }]}>
+                  Escanear QR
+                </Text>
               </View>
               <Text style={styles.quickQrLegendText}>Solo disponible en celular-tablet</Text>
             </View>
@@ -5069,7 +5080,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               <Feather name="maximize-2" size={16} color={matchaGreen} />
             </View>
             <View style={styles.quickModalQrRowCopy}>
-              <Text style={styles.quickModalQrRowTitle}>Registro con código QR</Text>
+              <Text style={styles.quickModalQrRowTitle}>Escanear QR</Text>
               <Text style={styles.quickModalQrRowSubtitle}>
                 {quickQrEnabled
                   ? "Abre la camara y apunta al codigo QR de la credencial del alumno."
@@ -6850,9 +6861,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: indigo,
     borderRadius: radius.md,
+    flexDirection: "row",
+    gap: spacing.xs,
     height: 44,
     justifyContent: "center",
-    width: 44,
+    paddingHorizontal: spacing.md,
+    minWidth: 130,
   },
   quickQrButtonDisabled: {
     backgroundColor: colors.surfaceAlt,
@@ -6861,6 +6875,13 @@ const styles = StyleSheet.create({
   quickQrButtonPressed: {
     opacity: 0.9,
     transform: [{ translateY: 1 }],
+  },
+  quickQrButtonLabel: {
+    color: colors.surface,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   quickQrDesktopLegend: {
     alignItems: "center",
