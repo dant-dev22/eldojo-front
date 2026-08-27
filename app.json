@@ -9,19 +9,35 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite acceder a la cámara para escanear el código QR de los alumnos y registrar asistencia.",
+        "NSMicrophoneUsageDescription": "Esta app no usa el micrófono."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#D4E0C8"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
         "expo-image-picker",
         {
           "photosPermission": "Permite seleccionar una foto de perfil para tu cuenta en ElDojo."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite acceder a la cámara para escanear el código QR de los alumnos y registrar asistencia.",
+          "microphonePermission": "Esta app no usa el micrófono.",
+          "recordAudioAndroid": false
         }
       ],
       "expo-secure-store",
