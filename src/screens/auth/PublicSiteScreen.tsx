@@ -349,13 +349,7 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
   ref
 ) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const {
-    redeemPendingAcademySession,
-    redirectToAppDashboard,
-    resendAcademyConfirmation,
-    signIn,
-    registerAcademy,
-  } = useAuth();
+  const { redeemPendingAcademySession, resendAcademyConfirmation, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
   const scrollRef = useRef<ScrollView>(null);
   const pendingScrollTargetRef = useRef<SectionKey | null>(null);
@@ -393,11 +387,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
     onError: (error) => {
       setFormFeedback(null);
       setFormError(formatAuthError(error));
-    },
-    onSuccess: (result) => {
-      if (!result.redirectedToApp) {
-        setTimeout(() => redirectToAppDashboard(), 0);
-      }
     },
   });
 
@@ -447,11 +436,6 @@ export const PublicSiteScreen = forwardRef<PublicSiteScreenRef, PublicSiteScreen
       setPendingRegistration(null);
       setFormFeedback(null);
       setFormError(formatAuthError(error));
-    },
-    onSuccess: (result) => {
-      if (!result.redirectedToApp) {
-        setTimeout(() => redirectToAppDashboard(), 0);
-      }
     },
   });
 

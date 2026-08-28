@@ -229,9 +229,7 @@ export function AppNavigator() {
 
     const adminPath = "/admin";
     if (window.location.pathname !== adminPath) {
-      window.location.assign(adminPath);
-      consumeJustLoggedIn();
-      return;
+      window.history.replaceState(window.history.state, "", adminPath);
     }
 
     consumeJustLoggedIn();

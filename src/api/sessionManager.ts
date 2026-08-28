@@ -5,31 +5,9 @@ type UnauthorizedHandler = () => Promise<void> | void;
 
 let onUnauthorized: UnauthorizedHandler | null = null;
 let refreshPromise: Promise<AuthTokens | null> | null = null;
-let authOperationInFlight = 0;
 
 export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void {
   onUnauthorized = handler;
-}
-
-export function isAuthOperationInFlight(): boolean {
-  return authOperationInFlight > 0;
-}
-
-export function markAuthOperationStart(): void {
-  authOperationInFlight += 1;
-}
-
-export function markAuthOperationEnd(): void {
-  authOperationInFlight = Math.max(0, authOperationInFlight - 1);
-}
-
-export async function withAuthOperationInFlight<T>(fn: () => Promise<T>): Promise<T> {
-  markAuthOperationStart();
-  try {
-    return await fn();
-  } finally {
-    markAuthOperationEnd();
-  }
 }
 
 export async function refreshSessionTokens(): Promise<AuthTokens | null> {
@@ -66,9 +44,6 @@ export async function refreshSessionTokens(): Promise<AuthTokens | null> {
 }
 
 export async function handleUnauthorized(): Promise<void> {
-  if (isAuthOperationInFlight()) {
-    return;
-  }
   await clearSession();
   await onUnauthorized?.();
 }
