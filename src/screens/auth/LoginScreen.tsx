@@ -144,7 +144,7 @@ function formatAuthError(error: unknown): string {
 }
 
 export function LoginScreen() {
-  const { signIn, registerAcademy } = useAuth();
+  const { redirectToAppDashboard, signIn, registerAcademy } = useAuth();
   const { contentMaxWidth, isDesktop, isMobile, isTablet, width } = useResponsiveLayout();
   const scrollRef = useRef<ScrollView>(null);
   const [mode, setMode] = useState<AuthMode>("login");
@@ -168,6 +168,11 @@ export function LoginScreen() {
   const loginMutation = useMutation({
     mutationFn: signIn,
     onError: (error) => setFormError(formatAuthError(error)),
+    onSuccess: (result) => {
+      if (!result.redirectedToApp) {
+        setTimeout(() => redirectToAppDashboard(), 0);
+      }
+    },
   });
 
   const registerMutation = useMutation({

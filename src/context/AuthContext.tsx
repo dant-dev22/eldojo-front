@@ -1,7 +1,12 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 import { authApi } from "@/api/authApi";
-import { handleUnauthorized, registerUnauthorizedHandler } from "@/api/sessionManager";
+import {
+  handleUnauthorized,
+  isAuthOperationInFlight,
+  registerUnauthorizedHandler,
+  withAuthOperationInFlight,
+} from "@/api/sessionManager";
 import type {
   AcademyRegisterPayload,
   AcademyRegisterResponse,
@@ -53,6 +58,7 @@ interface AuthContextValue {
   redeemSessionTicket: (ticket: string) => Promise<User>;
   redirectToPublicLogin: (redirectAfterLogin?: string) => void;
   redirectToAppDashboard: () => void;
+  authLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -90,22 +96,36 @@ function updateHintForUser(user: User | null): void {
   }
 }
 
+function readSessionTicketFromUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const url = new URL(window.location.href);
+    return url.searchParams.get("session_ticket") ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<User | null>(null);
   const [showPostConfirmation, setShowPostConfirmation] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
   const persistAuthenticatedUser = async (nextUser: User) => {
     const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
 
     if (accessToken && refreshToken) {
+      const expiresIn = Number(process.env.EXPO_PUBLIC_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES ?? 120) * 60;
+      const refreshExpiresIn =
+        Number(process.env.EXPO_PUBLIC_AUTH_REFRESH_TOKEN_EXPIRE_DAYS ?? 30) * 24 * 60 * 60;
       await saveSession(
         {
           accessToken,
           refreshToken,
-          expiresIn: 0,
-          refreshExpiresIn: 0,
+          expiresIn,
+          refreshExpiresIn,
         },
         nextUser
       );
@@ -114,6 +134,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     registerUnauthorizedHandler(async () => {
+      if (isAuthOperationInFlight()) {
+        return;
+      }
       setUser(null);
       setStatus("unauthenticated");
       updateHintForUser(null);
@@ -122,6 +145,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const restoreSession = async () => {
+      const sessionTicket = readSessionTicketFromUrl();
+      if (sessionTicket && getDomainConfig().isAppHostname) {
+        setStatus("unauthenticated");
+        setUser(null);
+        return;
+      }
+
       const [token, storedUser] = await Promise.all([getAccessToken(), getStoredUser()]);
 
       if (!token || !storedUser) {
@@ -162,8 +192,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           updateHintForUser(null);
           return;
         }
-        const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
-        if (accessToken && refreshToken) {
+        const [accessToken, storedRefreshToken] = await Promise.all([
+          getAccessToken(),
+          getRefreshToken(),
+        ]);
+        if (accessToken && storedRefreshToken) {
           await persistAuthenticatedUser(freshUser);
         }
         updateHintForUser(freshUser);
@@ -171,6 +204,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
       } catch {
         updateHintForUser(null);
+        if (isAuthOperationInFlight()) {
+          return;
+        }
         await handleUnauthorized();
       }
     };
@@ -220,110 +256,134 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       status,
       user,
-      signIn: async (payload) => {
-        const cfg = getDomainConfig();
-        const response = await authApi.login(payload);
-        if (!isGymAdminUser(response.user)) {
-          await clearSession();
-          throw new Error(getGymAdminAccessMessage());
-        }
-        await clearPendingAcademyRegistration();
-        await saveSession(mapTokens(response), response.user);
-        setUser(response.user);
-        setShowPostConfirmation(false);
-        setStatus("authenticated");
-        setJustLoggedIn(true);
-        updateHintForUser(response.user);
+      signIn: async (payload) =>
+        withAuthOperationInFlight(async () => {
+          setAuthLoading(true);
+          try {
+            const cfg = getDomainConfig();
+            const response = await authApi.login(payload);
+            if (!isGymAdminUser(response.user)) {
+              await clearSession();
+              throw new Error(getGymAdminAccessMessage());
+            }
+            await clearPendingAcademyRegistration();
+            await saveSession(mapTokens(response), response.user);
+            setUser(response.user);
+            setShowPostConfirmation(false);
+            setStatus("authenticated");
+            setJustLoggedIn(true);
+            updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
-          return { redirectedToApp: false };
-        }
+            if (cfg.isAppHostname) {
+              return { redirectedToApp: false };
+            }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("", {
-          session_ticket: ticketResponse.ticket,
-        });
-        if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
-      },
-      devSignInByEmail: async (email: string) => {
-        const response = await authApi.devLoginByEmail(email);
-        if (!isGymAdminUser(response.user)) {
-          await clearSession();
-          throw new Error(getGymAdminAccessMessage());
-        }
-        await clearPendingAcademyRegistration();
-        await saveSession(mapTokens(response), response.user);
-        setUser(response.user);
-        setShowPostConfirmation(false);
-        setStatus("authenticated");
-        setJustLoggedIn(true);
-        updateHintForUser(response.user);
-      },
+            const ticketResponse = await authApi.createSessionSyncTicket();
+            const appRedirectUrl = buildAppUrl("", {
+              session_ticket: ticketResponse.ticket,
+            });
+            if (typeof window !== "undefined") {
+              window.location.assign(appRedirectUrl);
+            }
+            return { redirectedToApp: true, appRedirectUrl };
+          } finally {
+            setAuthLoading(false);
+          }
+        }),
+      devSignInByEmail: async (email: string) =>
+        withAuthOperationInFlight(async () => {
+          setAuthLoading(true);
+          try {
+            const response = await authApi.devLoginByEmail(email);
+            if (!isGymAdminUser(response.user)) {
+              await clearSession();
+              throw new Error(getGymAdminAccessMessage());
+            }
+            await clearPendingAcademyRegistration();
+            await saveSession(mapTokens(response), response.user);
+            setUser(response.user);
+            setShowPostConfirmation(false);
+            setStatus("authenticated");
+            setJustLoggedIn(true);
+            updateHintForUser(response.user);
+          } finally {
+            setAuthLoading(false);
+          }
+        }),
       registerAcademy: async (payload) => {
         return authApi.registerAcademy(payload);
       },
-      confirmAcademyAccount: async (token) => {
-        const cfg = getDomainConfig();
-        const response = await authApi.confirmAcademy({ token });
-        if (!isGymAdminUser(response.user)) {
-          await clearSession();
-          throw new Error(getGymAdminAccessMessage());
-        }
-        await clearPendingAcademyRegistration();
-        await saveSession(mapTokens(response), response.user);
-        setUser(response.user);
-        setShowPostConfirmation(true);
-        setStatus("authenticated");
-        setJustLoggedIn(true);
-        updateHintForUser(response.user);
+      confirmAcademyAccount: async (token) =>
+        withAuthOperationInFlight(async () => {
+          setAuthLoading(true);
+          try {
+            const cfg = getDomainConfig();
+            const response = await authApi.confirmAcademy({ token });
+            if (!isGymAdminUser(response.user)) {
+              await clearSession();
+              throw new Error(getGymAdminAccessMessage());
+            }
+            await clearPendingAcademyRegistration();
+            await saveSession(mapTokens(response), response.user);
+            setUser(response.user);
+            setShowPostConfirmation(true);
+            setStatus("authenticated");
+            setJustLoggedIn(true);
+            updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
-          return { redirectedToApp: false };
-        }
+            if (cfg.isAppHostname) {
+              return { redirectedToApp: false };
+            }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", {
-          session_ticket: ticketResponse.ticket,
-          welcome: "1",
-        });
-        if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
-      },
-      redeemPendingAcademySession: async (pendingRegistration) => {
-        const cfg = getDomainConfig();
-        const response = await authApi.redeemAcademyPendingSession({
-          ticket: pendingRegistration.pendingSessionTicket,
-        });
-        if (!isGymAdminUser(response.user)) {
-          await clearSession();
-          throw new Error(getGymAdminAccessMessage());
-        }
-        await clearPendingAcademyRegistration();
-        await saveSession(mapTokens(response), response.user);
-        setUser(response.user);
-        setShowPostConfirmation(false);
-        setStatus("authenticated");
-        setJustLoggedIn(true);
-        updateHintForUser(response.user);
+            const ticketResponse = await authApi.createSessionSyncTicket();
+            const appRedirectUrl = buildAppUrl("admin", {
+              session_ticket: ticketResponse.ticket,
+              welcome: "1",
+            });
+            if (typeof window !== "undefined") {
+              window.location.assign(appRedirectUrl);
+            }
+            return { redirectedToApp: true, appRedirectUrl };
+          } finally {
+            setAuthLoading(false);
+          }
+        }),
+      redeemPendingAcademySession: async (pendingRegistration) =>
+        withAuthOperationInFlight(async () => {
+          setAuthLoading(true);
+          try {
+            const cfg = getDomainConfig();
+            const response = await authApi.redeemAcademyPendingSession({
+              ticket: pendingRegistration.pendingSessionTicket,
+            });
+            if (!isGymAdminUser(response.user)) {
+              await clearSession();
+              throw new Error(getGymAdminAccessMessage());
+            }
+            await clearPendingAcademyRegistration();
+            await saveSession(mapTokens(response), response.user);
+            setUser(response.user);
+            setShowPostConfirmation(false);
+            setStatus("authenticated");
+            setJustLoggedIn(true);
+            updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
-          return { redirectedToApp: false };
-        }
+            if (cfg.isAppHostname) {
+              return { redirectedToApp: false };
+            }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", {
-          session_ticket: ticketResponse.ticket,
-        });
-        if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
-      },
+            const ticketResponse = await authApi.createSessionSyncTicket();
+            const appRedirectUrl = buildAppUrl("admin", {
+              session_ticket: ticketResponse.ticket,
+            });
+            if (typeof window !== "undefined") {
+              window.location.assign(appRedirectUrl);
+            }
+            return { redirectedToApp: true, appRedirectUrl };
+          } finally {
+            setAuthLoading(false);
+          }
+        }),
       resendAcademyConfirmation: async (email) =>
         authApi.resendAcademyConfirmation({ email: email.trim().toLowerCase() }),
       signOut: async (redirectToPublic = true) => {
@@ -379,25 +439,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
       dismissPostConfirmation: () => setShowPostConfirmation(false),
       justLoggedIn,
       consumeJustLoggedIn: () => setJustLoggedIn(false),
-      redeemSessionTicket: async (ticket) => {
-        const response = await authApi.redeemSessionSyncTicket(ticket);
-        if (!isGymAdminUser(response.user)) {
-          await clearSession();
-          throw new Error(getGymAdminAccessMessage());
-        }
-        await clearPendingAcademyRegistration();
-        await saveSession(mapTokens(response), response.user);
-        updateHintForUser(response.user);
-        setUser(response.user);
-        setShowPostConfirmation(false);
-        setStatus("authenticated");
-        setJustLoggedIn(true);
-        return response.user;
-      },
+      redeemSessionTicket: async (ticket) =>
+        withAuthOperationInFlight(async () => {
+          setAuthLoading(true);
+          try {
+            const response = await authApi.redeemSessionSyncTicket(ticket);
+            if (!isGymAdminUser(response.user)) {
+              await clearSession();
+              throw new Error(getGymAdminAccessMessage());
+            }
+            await clearPendingAcademyRegistration();
+            await saveSession(mapTokens(response), response.user);
+            updateHintForUser(response.user);
+            setUser(response.user);
+            setShowPostConfirmation(false);
+            setStatus("authenticated");
+            setJustLoggedIn(true);
+            return response.user;
+          } finally {
+            setAuthLoading(false);
+          }
+        }),
       redirectToPublicLogin,
       redirectToAppDashboard,
+      authLoading,
     }),
-    [justLoggedIn, showPostConfirmation, status, user]
+    [authLoading, justLoggedIn, showPostConfirmation, status, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

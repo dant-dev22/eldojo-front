@@ -1,4 +1,5 @@
 import { http } from "@/api/http";
+import { refreshSessionTokens } from "@/api/sessionManager";
 import type {
   AcademyConfirmPayload,
   AcademyPendingSessionPayload,
@@ -11,7 +12,7 @@ import type {
   StudentRegisterPayload,
   User,
 } from "@/types/api";
-import { getAccessToken } from "@/utils/storage";
+import { getAccessToken, saveSession } from "@/utils/storage";
 
 function resolveApiUrl(): string {
   const configuredUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -197,15 +198,32 @@ export const authApi = {
   async getCurrentUser(): Promise<User> {
     if (shouldUseWebFetch()) {
       const accessToken = await getAccessToken();
-
-      return requestJson<User>("/auth/me", {
-        headers: accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : undefined,
-        method: "GET",
-      });
+      try {
+        return await requestJson<User>("/auth/me", {
+          headers: accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : undefined,
+          method: "GET",
+        });
+      } catch (err) {
+        const isUnauthorized =
+          err instanceof Error && /Token inválido|Token expirado|Unauthorized|401/gi.test(err.message);
+        if (!isUnauthorized) {
+          throw err;
+        }
+        const refreshedTokens = await refreshSessionTokens();
+        if (!refreshedTokens) {
+          throw err;
+        }
+        return requestJson<User>("/auth/me", {
+          headers: {
+            Authorization: `Bearer ${refreshedTokens.accessToken}`,
+          },
+          method: "GET",
+        });
+      }
     }
 
     const { data } = await http.get<User>("/auth/me");
@@ -215,15 +233,34 @@ export const authApi = {
   async updateTutorialState(payload: { first_time: boolean }): Promise<User> {
     if (shouldUseWebFetch()) {
       const accessToken = await getAccessToken();
-
-      return requestJson<User>("/auth/me/tutorial-state", {
-        body: JSON.stringify(payload),
-        headers: {
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          "Content-Type": "application/json",
-        },
-        method: "PATCH",
-      });
+      try {
+        return await requestJson<User>("/auth/me/tutorial-state", {
+          body: JSON.stringify(payload),
+          headers: {
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            "Content-Type": "application/json",
+          },
+          method: "PATCH",
+        });
+      } catch (err) {
+        const isUnauthorized =
+          err instanceof Error && /Token inválido|Token expirado|Unauthorized|401/gi.test(err.message);
+        if (!isUnauthorized) {
+          throw err;
+        }
+        const refreshedTokens = await refreshSessionTokens();
+        if (!refreshedTokens) {
+          throw err;
+        }
+        return requestJson<User>("/auth/me/tutorial-state", {
+          body: JSON.stringify(payload),
+          headers: {
+            Authorization: `Bearer ${refreshedTokens.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          method: "PATCH",
+        });
+      }
     }
 
     const { data } = await http.patch<User>("/auth/me/tutorial-state", payload);
@@ -233,14 +270,38 @@ export const authApi = {
   async createSessionSyncTicket(): Promise<{ ticket: string; ttl_seconds: number }> {
     if (shouldUseWebFetch()) {
       const accessToken = await getAccessToken();
-      return requestJson<{ ticket: string; ttl_seconds: number }>("/auth/session-ticket/create", {
-        headers: accessToken
-          ? {
-              Authorization: `Bearer ${accessToken}`,
-            }
-          : undefined,
-        method: "POST",
-      });
+      try {
+        return await requestJson<{ ticket: string; ttl_seconds: number }>(
+          "/auth/session-ticket/create",
+          {
+            headers: accessToken
+              ? {
+                  Authorization: `Bearer ${accessToken}`,
+                }
+              : undefined,
+            method: "POST",
+          }
+        );
+      } catch (err) {
+        const isUnauthorized =
+          err instanceof Error && /Token inválido|Token expirado|Unauthorized|401/gi.test(err.message);
+        if (!isUnauthorized) {
+          throw err;
+        }
+        const refreshedTokens = await refreshSessionTokens();
+        if (!refreshedTokens) {
+          throw err;
+        }
+        return requestJson<{ ticket: string; ttl_seconds: number }>(
+          "/auth/session-ticket/create",
+          {
+            headers: {
+              Authorization: `Bearer ${refreshedTokens.accessToken}`,
+            },
+            method: "POST",
+          }
+        );
+      }
     }
 
     const { data } = await http.post<{ ticket: string; ttl_seconds: number }>(
