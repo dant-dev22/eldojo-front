@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import jsQR, { QRCode } from "jsqr";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppModal } from "@/components/AppModal";
@@ -37,6 +38,15 @@ interface QrScannerProps {
 
 const SCAN_COOLDOWN_MS = 1500;
 const AGED_WOOD_SOFT_FALLBACK = "rgba(141, 110, 99, 0.08)";
+const WEB_MOBILE_SCAN_INTERVAL_MS = 120;
+
+function isMobileWebUserAgent(): boolean {
+  if (Platform.OS !== "web" || typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk|Fennec|Windows Phone/i.test(
+    ua
+  );
+}
 
 export function QrScanner({
   visible,
@@ -48,6 +58,7 @@ export function QrScanner({
   testID,
 }: QrScannerProps) {
   const baseId = nativeID ?? testID ?? "components-qr-scanner";
+  const isMobileWeb = useMemo(() => isMobileWebUserAgent(), []);
 
   const [permission, setPermission] = useState<CameraPermissionStatus>("unknown");
   const [facing, setFacing] = useState<"back" | "front">("back");
@@ -71,10 +82,141 @@ export function QrScanner({
   const [DynamicCameraView, setDynamicCameraView] = useState<null | CameraComponentType>(null);
   const [qrBarcodeType, setQrBarcodeType] = useState<unknown>("qr");
 
+  const webVideoContainerRef = useRef<HTMLElement | null>(null);
+  const webVideoRef = useRef<HTMLVideoElement | null>(null);
+  const webCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const webMediaStreamRef = useRef<MediaStream | null>(null);
+  const webScanIntervalRef = useRef<number | null>(null);
+
+  const disposeWebCamera = () => {
+    try {
+      if (webScanIntervalRef.current !== null) {
+        window.clearInterval(webScanIntervalRef.current);
+        webScanIntervalRef.current = null;
+      }
+    } catch {
+      /* noop */
+    }
+    try {
+      if (webMediaStreamRef.current) {
+        webMediaStreamRef.current.getTracks().forEach((t) => t.stop());
+        webMediaStreamRef.current = null;
+      }
+    } catch {
+      /* noop */
+    }
+    try {
+      if (webVideoRef.current) {
+        webVideoRef.current.pause();
+        webVideoRef.current.srcObject = null;
+        webVideoRef.current.removeAttribute("src");
+        webVideoRef.current.load();
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  const requestWebMobileCamera = async (): Promise<{ status: string }> => {
+    disposeWebCamera();
+    if (typeof window === "undefined" || typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return { status: "UNAVAILABLE" };
+    }
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: facing === "front" ? ("user" as const) : ("environment" as const),
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      webMediaStreamRef.current = stream;
+
+      if (webVideoRef.current) {
+        webVideoRef.current.srcObject = stream;
+        webVideoRef.current.setAttribute("playsinline", "true");
+        webVideoRef.current.setAttribute("muted", "true");
+        await webVideoRef.current.play().catch(() => {});
+      }
+
+      startWebMobileScanLoop();
+      return { status: "GRANTED" };
+    } catch (err) {
+      const name = err instanceof Error ? err.name : String(err);
+      if (/NotAllowed|Permission|Security/i.test(name)) return { status: "DENIED" };
+      if (/NotFound|Overconstrained|NotReadable|Devices|Unavailable/i.test(name)) return { status: "UNAVAILABLE" };
+      return { status: "DENIED" };
+    }
+  };
+
+  const startWebMobileScanLoop = () => {
+    try {
+      if (webScanIntervalRef.current !== null) window.clearInterval(webScanIntervalRef.current);
+    } catch {
+      /* noop */
+    }
+    webScanIntervalRef.current = window.setInterval(() => {
+      const video = webVideoRef.current;
+      const canvas = webCanvasRef.current;
+      if (!video || !canvas) return;
+      if (video.readyState < 2) return;
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!w || !h) return;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+      canvas.width = w;
+      canvas.height = h;
+      try {
+        ctx.drawImage(video, 0, 0, w, h);
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+        if (code && code.data) {
+          handleBarcodeScanned({ data: code.data });
+        }
+      } catch {
+        /* noop */
+      }
+    }, WEB_MOBILE_SCAN_INTERVAL_MS);
+  };
+
   useEffect(() => {
     if (!visible) return;
 
     let mounted = true;
+
+    if (Platform.OS === "web" && isMobileWeb) {
+      setPermission("unknown");
+      permissionStatusMapRef.current = {
+        GRANTED: "granted",
+        DENIED: "denied",
+        UNAVAILABLE: "unavailable",
+        UNDETERMINED: "unknown",
+      };
+      requestPermissionFnRef.current = requestWebMobileCamera;
+      setQrBarcodeType("qr");
+      const requestFn = requestPermissionFnRef.current;
+      if (requestFn) {
+        Promise.resolve()
+          .then(() => requestFn())
+          .then((permissionResult) => {
+            if (!mounted) return;
+            const mappedStatus =
+              permissionStatusMapRef.current[String(permissionResult.status ?? "UNDETERMINED").toUpperCase()] ??
+              "unknown";
+            setPermission(mappedStatus);
+          });
+      }
+      return () => {
+        mounted = false;
+        disposeWebCamera();
+      };
+    }
+
     let loadedCameraModule: null | typeof import("expo-camera") = null;
 
     Promise.resolve()
@@ -138,7 +280,90 @@ export function QrScanner({
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !isMobileWeb) return;
+    if (!visible || permission !== "granted") return;
+    const fn = requestPermissionFnRef.current;
+    if (!fn) return;
+    let cancelled = false;
+    fn().then((res) => {
+      if (cancelled) return;
+      const mapped =
+        permissionStatusMapRef.current[String(res.status ?? "UNDETERMINED").toUpperCase()] ?? "unknown";
+      setPermission(mapped);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facing]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !isMobileWeb) return;
+    if (!visible || permission !== "granted") {
+      disposeWebCamera();
+      return;
+    }
+    const container = webVideoContainerRef.current;
+    if (!container) return;
+
+    let video = webVideoRef.current;
+    if (!video) {
+      video = document.createElement("video");
+      video.setAttribute("autoplay", "true");
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("muted", "true");
+      video.setAttribute("webkit-playsinline", "true");
+      (video.style as unknown as Record<string, string>).position = "absolute";
+      (video.style as unknown as Record<string, string>).top = "0";
+      (video.style as unknown as Record<string, string>).left = "0";
+      (video.style as unknown as Record<string, string>).width = "100%";
+      (video.style as unknown as Record<string, string>).height = "100%";
+      (video.style as unknown as Record<string, string>).objectFit = "cover";
+      (video.style as unknown as Record<string, string>).display = "block";
+      container.appendChild(video);
+      webVideoRef.current = video;
+    }
+
+    let canvas = webCanvasRef.current;
+    if (!canvas) {
+      canvas = document.createElement("canvas");
+      (canvas.style as unknown as Record<string, string>).display = "none";
+      container.appendChild(canvas);
+      webCanvasRef.current = canvas;
+    }
+
+    if (webMediaStreamRef.current && webVideoRef.current && !webVideoRef.current.srcObject) {
+      webVideoRef.current.srcObject = webMediaStreamRef.current;
+      webVideoRef.current.play().catch(() => {});
+    }
+
+    if (webMediaStreamRef.current) {
+      startWebMobileScanLoop();
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, permission, isMobileWeb]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !isMobileWeb) return;
+    if (visible) return;
+    disposeWebCamera();
+    try {
+      const video = webVideoRef.current;
+      if (video && video.parentNode) video.parentNode.removeChild(video);
+      const canvas = webCanvasRef.current;
+      if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    } catch {
+      /* noop */
+    }
+    webVideoRef.current = null;
+    webCanvasRef.current = null;
+    webVideoContainerRef.current = null;
+  }, [visible, isMobileWeb]);
 
   useEffect(() => {
     if (!visible || !flashMessage) return;
@@ -219,7 +444,7 @@ export function QrScanner({
   };
 
   const renderPermissionState = () => {
-    if (Platform.OS === "web") {
+    if (Platform.OS === "web" && !isMobileWeb) {
       return (
         <View style={styles.permissionCard}>
           <View style={[styles.permissionIconWrap, { backgroundColor: amberSoft }]}>
@@ -227,7 +452,7 @@ export function QrScanner({
           </View>
           <Text style={styles.permissionTitle}>Escribe el codigo manualmente</Text>
           <Text style={styles.permissionDescription}>
-            El escaneo QR con camara en web requiere HTTPS y permisos de navegador. Como alternativa, escribe el codigo ELD-XXXX del alumno en el formulario de asistencia.
+            El escaneo QR con camara en escritorio no esta disponible. Desde tu celu podras escanear directamente, o escribe el codigo ELD-XXXX del alumno en el formulario.
           </Text>
           <Pressable
             onPress={onClose}
@@ -301,6 +526,9 @@ export function QrScanner({
 
   const permissionView = renderPermissionState();
 
+  const showNativeCameraPreview = permission === "granted" && !!DynamicCameraView && !(Platform.OS === "web");
+  const showWebMobileCameraPreview = Platform.OS === "web" && isMobileWeb && permission === "granted";
+
   return (
     <AppModal
       description={description}
@@ -311,7 +539,7 @@ export function QrScanner({
     >
       <View style={styles.container}>
         <View style={styles.cameraFrame}>
-          {permission === "granted" && DynamicCameraView ? (
+          {showNativeCameraPreview ? (
             <>
               <DynamicCameraView
                 barcodeScannerSettings={{
@@ -321,6 +549,61 @@ export function QrScanner({
                 facing={facing}
                 onBarcodeScanned={handleBarcodeScanned}
                 style={styles.cameraPreview}
+              />
+              <View pointerEvents="none" style={styles.viewfinderOverlay}>
+                <View style={[styles.dimLayer, styles.dimTop]} />
+                <View style={[styles.dimLayer, styles.dimBottom]} />
+                <View style={[styles.dimLayer, styles.dimLeft]} />
+                <View style={[styles.dimLayer, styles.dimRight]} />
+
+                <View style={styles.viewfinderFrame}>
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      {
+                        transform: [
+                          {
+                            translateY: scanLineAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [2, 230],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                  <View style={[styles.viewfinderCorner, styles.viewfinderCornerTopLeft]} />
+                  <View style={[styles.viewfinderCorner, styles.viewfinderCornerTopRight]} />
+                  <View style={[styles.viewfinderCorner, styles.viewfinderCornerBottomLeft]} />
+                  <View style={[styles.viewfinderCorner, styles.viewfinderCornerBottomRight]} />
+                </View>
+                <View style={styles.viewfinderHintWrap}>
+                  <Feather name="maximize-2" size={14} color={amber} />
+                  <Text style={styles.viewfinderHint}>Ajusta el QR dentro del marco · Deteccion automatica</Text>
+                </View>
+              </View>
+            </>
+          ) : null}
+
+          {showWebMobileCameraPreview ? (
+            <>
+              <View
+                collapsable={false}
+                style={styles.cameraPreview}
+                ref={(node) => {
+                  if (Platform.OS !== "web") return;
+                  if (!node) return;
+                  const anyNode = node as unknown as { _nativeTag?: unknown };
+                  try {
+                    const domEl = (node as unknown) as HTMLElement | null;
+                    if (domEl && typeof domEl.appendChild === "function") {
+                      webVideoContainerRef.current = domEl;
+                    }
+                  } catch {
+                    /* noop */
+                    void anyNode;
+                  }
+                }}
               />
               <View pointerEvents="none" style={styles.viewfinderOverlay}>
                 <View style={[styles.dimLayer, styles.dimTop]} />
@@ -456,6 +739,7 @@ const styles = StyleSheet.create({
   },
   cameraPreview: {
     ...StyleSheet.absoluteFill,
+    backgroundColor: "#000",
   },
   viewfinderOverlay: {
     ...StyleSheet.absoluteFill,
