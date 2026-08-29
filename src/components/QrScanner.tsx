@@ -31,7 +31,7 @@ import {
 
 type CameraPermissionStatus = "unknown" | "granted" | "denied" | "unavailable";
 
-interface QrScannerAttendanceProcessState {
+export interface QrScannerAttendanceProcessState {
   lookupStatus: AttendanceStepStatus;
   registerStatus: AttendanceStepStatus;
   overallStatus: "processing" | "success" | "error";

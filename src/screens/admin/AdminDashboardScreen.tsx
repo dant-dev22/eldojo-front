@@ -24,7 +24,8 @@ import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboar
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
-import { QrScanner } from "@/components/QrScanner";
+import { AttendanceProgressView, type AttendanceSuccessPayload, type AttendanceStepStatus } from "@/components/AttendanceProgressView";
+import { QrScanner, type QrScannerAttendanceProcessState } from "@/components/QrScanner";
 import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
@@ -684,11 +685,51 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [attendanceForm, setAttendanceForm] = useState<AttendanceFormState>(createEmptyAttendanceForm());
   const [attendanceErrors, setAttendanceErrors] = useState<AttendanceFormErrors>({});
   const [quickScannerVisible, setQuickScannerVisible] = useState(false);
+  const [quickScannerProcess, setQuickScannerProcess] = useState<QrScannerAttendanceProcessState | null>(null);
   const [quickAttendanceModalVisible, setQuickAttendanceModalVisible] = useState(false);
   const [quickAttendanceFeedback, setQuickAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [quickStudentIdentifier, setQuickStudentIdentifier] = useState("");
   const debouncedQuickIdentifier = useDebouncedValue(quickStudentIdentifier, 350);
   const { status: quickCameraStatus, isEnabled: quickQrEnabled } = useCameraAvailability();
+
+  const openQuickScannerProcess = useCallback(() => {
+    setQuickScannerProcess({
+      lookupStatus: "pending",
+      registerStatus: "pending",
+      overallStatus: "processing",
+      errorMessage: null,
+      successPayload: null,
+      successCountdown: null,
+    });
+  }, []);
+
+  const closeQuickScannerProcess = useCallback(() => {
+    setQuickScannerProcess(null);
+  }, []);
+
+  const resetQuickScannerAndOpenCamera = useCallback(() => {
+    closeQuickScannerProcess();
+    setQuickScannerVisible(true);
+  }, [closeQuickScannerProcess]);
+
+  useEffect(() => {
+    if (!quickScannerProcess) return;
+    if (quickScannerProcess.overallStatus !== "success") return;
+    if (quickScannerProcess.successCountdown === null) return;
+    if (quickScannerProcess.successCountdown <= 0) {
+      closeQuickScannerProcess();
+      setQuickScannerVisible(false);
+      return;
+    }
+    const id = setTimeout(() => {
+      setQuickScannerProcess((current: QrScannerAttendanceProcessState | null) => {
+        if (!current || current.overallStatus !== "success" || current.successCountdown === null) return current;
+        const next = current.successCountdown - 1;
+        return { ...current, successCountdown: next };
+      });
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [closeQuickScannerProcess, quickScannerProcess]);
 
 
   const [branchModalVisible, setBranchModalVisible] = useState(false);
@@ -1607,38 +1648,89 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     async (code: string) => {
       const normalized = code.trim().toUpperCase();
       if (!normalized) return;
-      setQuickScannerVisible(false);
       setQuickAttendanceFeedback(null);
+      setQuickStudentIdentifier(normalized);
+      openQuickScannerProcess();
+      let matchedStudent: (typeof visibleStudents)[number] | null = null;
+      let classId: number | null = null;
+      let selectedBranchId: number | null = null;
+      let createdAttendanceId: number | null = null;
       try {
+        setQuickScannerProcess((current: QrScannerAttendanceProcessState | null) =>
+          current ? { ...current, lookupStatus: "active" } : current
+        );
         const students = await studentsApi.list({ search: normalized });
-        const matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
+        matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
         if (!matchedStudent) {
+          setQuickScannerProcess({
+            lookupStatus: "error",
+            registerStatus: "pending",
+            overallStatus: "error",
+            errorMessage: `No se encontró alumno con código ${normalized}.`,
+            successPayload: null,
+            successCountdown: null,
+          });
           setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalized}.` });
           return;
         }
-        const selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id;
-        const classId = matchedStudent.primary_class_id ||
+        setQuickScannerProcess((current: QrScannerAttendanceProcessState | null) =>
+          current
+            ? { ...current, lookupStatus: "done", registerStatus: "active" }
+            : current
+        );
+        selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id ?? null;
+        classId = matchedStudent.primary_class_id ||
           visibleClasses.find((c) => c.branch_id === selectedBranchId && c.is_active)?.id ||
-          visibleClasses[0]?.id || null;
+          visibleClasses[0]?.id ?? null;
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, "0");
         const mm = String(now.getMinutes()).padStart(2, "0");
         const isoDate = now.toISOString().slice(0, 10);
-        await attendanceApi.create({
+        const created = await attendanceApi.create({
           student_id: matchedStudent.id,
-          branch_id: selectedBranchId,
-          class_id: classId,
+          branch_id: selectedBranchId ?? undefined,
+          class_id: classId ?? undefined,
           check_in_at: `${isoDate}T${hh}:${mm}:00`,
           method: "qr",
           registered_by: user?.id ?? null,
         });
+        createdAttendanceId = created?.id ?? null;
         await invalidateAttendanceQueries();
-        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia QR registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+        const successPayload: AttendanceSuccessPayload = {
+          attendance_id: createdAttendanceId ?? `QR-${matchedStudent!.id}-${Date.now()}`,
+          student_name: `${matchedStudent!.first_name} ${matchedStudent!.last_name}`,
+          class_name: visibleClasses.find((c) => c.id === classId)?.name ?? matchedStudent!.primary_class_id
+            ? visibleClasses.find((c) => c.id === matchedStudent!.primary_class_id)?.name ?? "Clase general"
+            : "Clase general",
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          selected_class_name: visibleClasses.find((c) => c.id === classId)?.name ?? undefined,
+        };
+        setQuickScannerProcess({
+          lookupStatus: "done",
+          registerStatus: "done",
+          overallStatus: "success",
+          errorMessage: null,
+          successPayload,
+          successCountdown: 3,
+        });
+        setQuickAttendanceFeedback({
+          tone: "success",
+          message: `Asistencia QR registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.`,
+        });
       } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+        const message = getErrorMessage(err);
+        setQuickScannerProcess({
+          lookupStatus: matchedStudent ? "done" : "active",
+          registerStatus: "error",
+          overallStatus: "error",
+          errorMessage: message,
+          successPayload: null,
+          successCountdown: null,
+        });
+        setQuickAttendanceFeedback({ tone: "danger", message });
       }
     },
-    [invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses]
+    [invalidateAttendanceQueries, openQuickScannerProcess, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
   );
 
   const renderQuickAttendanceForm = (variant: "hero" | "operations") => {
@@ -1662,10 +1754,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 setQuickAttendanceFeedback(null);
                 setQuickAttendanceModalVisible(true);
               }}
-              style={({ pressed, hovered }) => [
-                styles.quickHeroLink,
-                pressed || hovered ? styles.quickHeroLinkPressed : null,
-              ]}
+              style={({ pressed }) => {
+                const hovered = (pressed as unknown as { hovered?: boolean }).hovered;
+                return [
+                  styles.quickHeroLink,
+                  pressed || hovered ? styles.quickHeroLinkPressed : null,
+                ];
+              }}
               testID="screens-admin-dashboard-quick-attendance-link-hero"
             >
               <Feather name="check-square" size={16} color={indigo} />
@@ -1766,13 +1861,12 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               }}
               placeholder="Clase"
               testID={`screens-admin-dashboard-quick-attendance-class-${variant}`}
-              value={quickClassValue}
+              value={attendanceForm.classId}
             />
           </View>
           <View style={[styles.quickFieldWrap, styles.quickStudentField]}>
             <AppInput
               autoCorrect={false}
-              enabled={!createAttendanceMutation.isPending}
               label="Código alumno"
               nativeID={`screens-admin-dashboard-quick-attendance-student-${variant}`}
               onChangeText={(value) => {
@@ -5151,12 +5245,17 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
 
       <QrScanner
         visible={quickScannerVisible}
-        onClose={() => setQuickScannerVisible(false)}
+        onClose={() => {
+          closeQuickScannerProcess();
+          setQuickScannerVisible(false);
+        }}
         onCodeScanned={handleQuickQrCodeScanned}
         title="Escanear credencial"
         description="Apunta la cámara al código QR del alumno para registrar su asistencia."
         nativeID="screens-admin-dashboard-quick-qr-scanner"
         testID="screens-admin-dashboard-quick-qr-scanner"
+        attendanceProcess={quickScannerProcess}
+        onAttendanceProcessRetry={resetQuickScannerAndOpenCamera}
       />
     </Screen>
   );
