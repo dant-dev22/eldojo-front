@@ -694,7 +694,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
 
   const openQuickScannerProcess = useCallback(() => {
     setQuickScannerProcess({
-      lookupStatus: "pending",
+      lookupStatus: "active",
       registerStatus: "pending",
       overallStatus: "processing",
       errorMessage: null,
@@ -707,9 +707,28 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     setQuickScannerProcess(null);
   }, []);
 
+  const openQuickAttendanceHero = useCallback(() => {
+    closeQuickScannerProcess();
+    setQuickScannerVisible(false);
+    setQuickAttendanceFeedback(null);
+    setQuickStudentIdentifier("");
+    setQuickAttendanceModalVisible(true);
+  }, [closeQuickScannerProcess]);
+
+  const openQuickScannerFromHero = useCallback(() => {
+    closeQuickScannerProcess();
+    setQuickAttendanceFeedback(null);
+    setQuickScannerVisible(true);
+  }, [closeQuickScannerProcess]);
+
   const resetQuickScannerAndOpenCamera = useCallback(() => {
     closeQuickScannerProcess();
-    setQuickScannerVisible(true);
+    setQuickScannerVisible(false);
+    setTimeout(() => setQuickScannerVisible(true), 30);
+  }, [closeQuickScannerProcess]);
+
+  const retryQuickProcess = useCallback(() => {
+    closeQuickScannerProcess();
   }, [closeQuickScannerProcess]);
 
   useEffect(() => {
@@ -1585,63 +1604,139 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         return;
       }
 
+      openQuickScannerProcess();
       let matchedStudent: Student | null = null;
+      let classId: number | null = null;
+      let createdAttendanceId: number | null = null;
       try {
+        setQuickScannerProcess((current) =>
+          current ? { ...current, lookupStatus: "active" } : current
+        );
+        const params: { search: string; branch_id?: number; organization_id?: number; status: string } = {
+          search: identifier,
+          status: "active",
+        };
+        if (typeof organizationId === "number" && organizationId > 0) {
+          params.organization_id = organizationId;
+        }
+        if (typeof scopedBranchId === "number" && scopedBranchId > 0) {
+          params.branch_id = scopedBranchId;
+        }
         const numericId = Number(identifier);
         if (!Number.isNaN(numericId) && numericId > 0) {
-          const foundById = visibleStudents.find((s) => s.id === numericId) ?? null;
-          if (foundById) matchedStudent = foundById;
+          matchedStudent = visibleStudents.find((s) => s.id === numericId) ?? null;
         }
         if (!matchedStudent) {
-          const results = await studentsApi.list({ search: identifier });
-          matchedStudent = results.find((s) => s.unique_code.toUpperCase() === identifier) ?? results[0] ?? null;
+          const results = await studentsApi.list(params);
+          matchedStudent =
+            results.find((s) => (s.unique_code ?? "").toUpperCase() === identifier) ??
+            results.find((s) => String(s.id) === identifier) ??
+            results[0] ??
+            null;
         }
-      } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
-        return;
-      }
-
-      if (!matchedStudent) {
-        setQuickAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con identificador ${identifier}.` });
-        return;
-      }
-
-      let classId: number | null = null;
-      if (forcedClassId) {
-        classId = forcedClassId;
-      } else if (attendanceForm.classId && attendanceForm.classId !== "none") {
-        classId = Number(attendanceForm.classId);
-      } else if (matchedStudent.primary_class_id) {
-        classId = matchedStudent.primary_class_id;
-      } else {
-        const classCandidate = visibleClasses.find(
-          (c) => c.branch_id === (matchedStudent.branch_id || selectedBranchId) && c.is_active
+        if (!matchedStudent) {
+          matchedStudent =
+            visibleStudents.find((s) => (s.unique_code ?? "").toUpperCase() === identifier) ??
+            visibleStudents.find((s) => String(s.id) === identifier) ??
+            null;
+        }
+        if (!matchedStudent) {
+          setQuickScannerProcess({
+            lookupStatus: "error",
+            registerStatus: "pending",
+            overallStatus: "error",
+            errorMessage: `No se encontró alumno con identificador ${identifier}.`,
+            successPayload: null,
+            successCountdown: null,
+          });
+          setQuickAttendanceFeedback({
+            tone: "danger",
+            message: `No se encontró alumno con identificador ${identifier}.`,
+          });
+          return;
+        }
+        const confirmedStudent = matchedStudent;
+        setQuickScannerProcess((current) =>
+          current
+            ? { ...current, lookupStatus: "done", registerStatus: "active" }
+            : current
         );
-        classId = classCandidate?.id ?? visibleClasses[0]?.id ?? null;
-      }
+        if (forcedClassId) {
+          classId = forcedClassId;
+        } else if (attendanceForm.classId && attendanceForm.classId !== "none") {
+          classId = Number(attendanceForm.classId);
+        } else if (confirmedStudent.primary_class_id) {
+          classId = confirmedStudent.primary_class_id;
+        } else {
+          const classCandidate = visibleClasses.find(
+            (c) => c.branch_id === (confirmedStudent.branch_id || selectedBranchId) && c.is_active
+          );
+          classId = classCandidate?.id ?? visibleClasses[0]?.id ?? null;
+        }
 
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      const isoDate = now.toISOString().slice(0, 10);
-
-      try {
-        await attendanceApi.create({
-          student_id: matchedStudent.id,
-          branch_id: matchedStudent.branch_id || selectedBranchId,
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const isoDate = now.toISOString().slice(0, 10);
+        const created = await attendanceApi.create({
+          student_id: confirmedStudent.id,
+          branch_id: confirmedStudent.branch_id || selectedBranchId,
           class_id: classId,
           check_in_at: `${isoDate}T${hh}:${mm}:00`,
           method: "manual",
           registered_by: user?.id ?? null,
         });
+        createdAttendanceId = created?.id ?? null;
         await invalidateAttendanceQueries();
-        setQuickAttendanceFeedback({ tone: "success", message: `Asistencia registrada para ${matchedStudent.first_name} ${matchedStudent.last_name}.` });
+        const successPayload: AttendanceSuccessPayload = {
+          attendance_id: createdAttendanceId ?? `M-${confirmedStudent.id}-${Date.now()}`,
+          student_name: `${confirmedStudent.first_name} ${confirmedStudent.last_name}`,
+          class_name:
+            visibleClasses.find((c) => c.id === classId)?.name ??
+            visibleClasses.find((c) => c.id === confirmedStudent.primary_class_id)?.name ??
+            "Clase general",
+          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          selected_class_name: visibleClasses.find((c) => c.id === classId)?.name ?? undefined,
+        };
+        setQuickScannerProcess({
+          lookupStatus: "done",
+          registerStatus: "done",
+          overallStatus: "success",
+          errorMessage: null,
+          successPayload,
+          successCountdown: 3,
+        });
+        setQuickAttendanceFeedback({
+          tone: "success",
+          message: `Asistencia registrada para ${confirmedStudent.first_name} ${confirmedStudent.last_name}.`,
+        });
         setQuickStudentIdentifier("");
       } catch (err) {
-        setQuickAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+        const message = getErrorMessage(err);
+        const lookupState = matchedStudent ? "done" : "error";
+        setQuickScannerProcess({
+          lookupStatus: lookupState,
+          registerStatus: matchedStudent ? "error" : "pending",
+          overallStatus: "error",
+          errorMessage: message,
+          successPayload: null,
+          successCountdown: null,
+        });
+        setQuickAttendanceFeedback({ tone: "danger", message });
       }
     },
-    [attendanceForm.branchId, attendanceForm.classId, invalidateAttendanceQueries, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
+    [
+      attendanceForm.branchId,
+      attendanceForm.classId,
+      invalidateAttendanceQueries,
+      openQuickScannerProcess,
+      organizationId,
+      scopedBranchId,
+      user?.id,
+      visibleBranches,
+      visibleClasses,
+      visibleStudents,
+    ]
   );
 
   const handleQuickQrCodeScanned = useCallback(
@@ -1783,8 +1878,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               accessibilityRole="link"
               nativeID="screens-admin-dashboard-quick-attendance-link-hero"
               onPress={() => {
-                setQuickAttendanceFeedback(null);
-                setQuickAttendanceModalVisible(true);
+                openQuickAttendanceHero();
               }}
               style={({ pressed }) => {
                 const hovered = (pressed as unknown as { hovered?: boolean }).hovered;
@@ -1850,8 +1944,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               disabled={!quickQrEnabled || createAttendanceMutation.isPending}
               nativeID={`screens-admin-dashboard-quick-attendance-qr-button-${variant}`}
               onPress={() => {
-                setQuickAttendanceFeedback(null);
-                setQuickScannerVisible(true);
+                openQuickScannerFromHero();
               }}
               style={({ pressed }) => [
                 styles.quickQrButton,
@@ -5137,142 +5230,164 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AppModal
         visible={quickAttendanceModalVisible}
         title="Registrar asistencia"
-        description="Escanea el codigo QR de la credencial del alumno para registrar la asistencia."
-        onClose={() => setQuickAttendanceModalVisible(false)}
+        description={
+          quickScannerProcess
+            ? "Sigue el estado del registro. Al finalizar, puedes volver a escanear más credenciales."
+            : "Escanea el codigo QR de la credencial del alumno para registrar la asistencia."
+        }
+        onClose={() => {
+          retryQuickProcess();
+          setQuickAttendanceModalVisible(false);
+        }}
         nativeID="screens-admin-dashboard-quick-attendance-modal"
         testID="screens-admin-dashboard-quick-attendance-modal"
       >
-        {quickAttendanceFeedback ? (
-          <View
-            nativeID="screens-admin-dashboard-quick-attendance-modal-feedback"
-            style={[
-              styles.quickFeedbackBanner,
-              quickAttendanceFeedback.tone === "success"
-                ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
-                : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
-            ]}
-            testID="screens-admin-dashboard-quick-attendance-modal-feedback"
-          >
-            <Feather
-              name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
-              size={15}
-              color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
-            />
-            <Text
-              style={[
-                styles.quickFeedbackText,
-                { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
-              ]}
-            >
-              {quickAttendanceFeedback.message}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* TEMPORAL COMENTADO PARA DEBUG: flujo de registro manual */}
-        {/*
-        <View
-          nativeID="screens-admin-dashboard-quick-attendance-modal-manual-section"
-          style={styles.quickModalSection}
-          testID="screens-admin-dashboard-quick-attendance-modal-manual-section"
-        >
-          <View style={styles.quickModalSectionHeader}>
-            <View style={[styles.quickModalSectionIconWrap, { backgroundColor: indigoSoft }]}>
-              <Feather name="edit-3" size={16} color={indigo} />
-            </View>
-            <Text style={styles.quickModalSectionTitle}>Registro manual</Text>
-          </View>
-          <View style={styles.quickModalManualFields}>
-            <AppSelect
-              enabled={!createAttendanceMutation.isPending}
-              items={attendanceClassOptions.filter((opt) => opt.value !== "none")}
-              label="Clase"
-              nativeID="screens-admin-dashboard-quick-attendance-modal-class"
-              onValueChange={(value) => {
-                setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
-                setQuickAttendanceFeedback(null);
-              }}
-              placeholder="Selecciona una clase"
-              testID="screens-admin-dashboard-quick-attendance-modal-class"
-              value={attendanceForm.classId && attendanceForm.classId !== "none" ? Number(attendanceForm.classId) : null}
-            />
-            <AppInput
-              autoCorrect={false}
-              enabled={!createAttendanceMutation.isPending}
-              label="Código del alumno"
-              nativeID="screens-admin-dashboard-quick-attendance-modal-student"
-              onChangeText={(value) => {
-                setQuickStudentIdentifier(value);
-                setQuickAttendanceFeedback(null);
-              }}
-              onSubmitEditing={() => {
-                void quickRegisterSubmit(quickStudentIdentifier);
-              }}
-              placeholder="Ej: ABC123 · ELD-XXXX"
-              returnKeyType="done"
-              testID="screens-admin-dashboard-quick-attendance-modal-student"
-              value={quickStudentIdentifier}
-            />
-          </View>
-          <View style={styles.quickModalManualActions}>
-            <AppButton
-              loading={createAttendanceMutation.isPending}
-              onPress={() => {
-                void quickRegisterSubmit(quickStudentIdentifier);
-              }}
-              label="Registrar asistencia"
-              nativeID="screens-admin-dashboard-quick-attendance-modal-submit"
-              testID="screens-admin-dashboard-quick-attendance-modal-submit"
-              variant="primary"
-              style={{ minHeight: 52 }}
-            />
-          </View>
-        </View>
-
-        <View
-          nativeID="screens-admin-dashboard-quick-attendance-modal-divider"
-          style={styles.quickModalDivider}
-          testID="screens-admin-dashboard-quick-attendance-modal-divider"
-        />
-        */}
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={!quickQrEnabled}
-          nativeID="screens-admin-dashboard-quick-attendance-modal-qr-row"
-          onPress={() => {
-            setQuickAttendanceFeedback(null);
-            setQuickAttendanceModalVisible(false);
-            setQuickScannerVisible(true);
-          }}
-          style={({ pressed, hovered }) => [
-            styles.quickModalQrRow,
-            !quickQrEnabled ? styles.quickModalQrRowDisabled : null,
-            pressed || hovered ? styles.quickModalQrRowPressed : null,
-          ]}
-          testID="screens-admin-dashboard-quick-attendance-modal-qr-row"
-        >
-          <View style={styles.quickModalQrRowContent}>
-            <View style={[styles.quickModalSectionIconWrap, { backgroundColor: "rgba(85,139,47,0.14)" }]}>
-              <Feather name="maximize-2" size={16} color={matchaGreen} />
-            </View>
-            <View style={styles.quickModalQrRowCopy}>
-              <Text style={styles.quickModalQrRowTitle}>Escanear QR</Text>
-              <Text style={styles.quickModalQrRowSubtitle}>
-                {quickQrEnabled
-                  ? "Abre la camara y apunta al codigo QR de la credencial del alumno."
-                  : isDesktop
-                    ? "El escaneo QR solo esta disponible en dispositivos moviles."
-                    : "Camara no disponible. Verifica los permisos del dispositivo."}
-              </Text>
-            </View>
-          </View>
-          <Feather
-            name="chevron-right"
-            size={18}
-            color={quickQrEnabled ? matchaGreen : colors.textMuted}
+        {quickScannerProcess ? (
+          <AttendanceProgressView
+            mode="manual"
+            lookupStatus={quickScannerProcess.lookupStatus}
+            registerStatus={quickScannerProcess.registerStatus}
+            overallStatus={quickScannerProcess.overallStatus}
+            errorMessage={quickScannerProcess.errorMessage ?? null}
+            successPayload={quickScannerProcess.successPayload ?? null}
+            successCountdown={quickScannerProcess.successCountdown ?? null}
+            onRetry={retryQuickProcess}
           />
-        </Pressable>
+        ) : (
+          <View style={styles.quickModalBody}>
+            {quickAttendanceFeedback ? (
+              <View
+                nativeID="screens-admin-dashboard-quick-attendance-modal-feedback"
+                style={[
+                  styles.quickFeedbackBanner,
+                  quickAttendanceFeedback.tone === "success"
+                    ? { backgroundColor: matchaGreenSoft, borderColor: "rgba(85,139,47,0.22)" }
+                    : { backgroundColor: judogiRedSoft, borderColor: "rgba(198,40,40,0.22)" },
+                ]}
+                testID="screens-admin-dashboard-quick-attendance-modal-feedback"
+              >
+                <Feather
+                  name={quickAttendanceFeedback.tone === "success" ? "check-circle" : "alert-triangle"}
+                  size={15}
+                  color={quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed}
+                />
+                <Text
+                  style={[
+                    styles.quickFeedbackText,
+                    { color: quickAttendanceFeedback.tone === "success" ? matchaGreen : judogiRed },
+                  ]}
+                >
+                  {quickAttendanceFeedback.message}
+                </Text>
+              </View>
+            ) : null}
+
+            <View
+              nativeID="screens-admin-dashboard-quick-attendance-modal-manual-section"
+              style={styles.quickModalSection}
+              testID="screens-admin-dashboard-quick-attendance-modal-manual-section"
+            >
+              <View style={styles.quickModalSectionHeader}>
+                <View style={[styles.quickModalSectionIconWrap, { backgroundColor: indigoSoft }]}>
+                  <Feather name="edit-3" size={16} color={indigo} />
+                </View>
+                <Text style={styles.quickModalSectionTitle}>Registro manual</Text>
+              </View>
+              <View style={styles.quickModalManualFields}>
+                <AppSelect
+                  enabled={!createAttendanceMutation.isPending}
+                  items={attendanceClassOptions.filter((opt) => opt.value !== "none")}
+                  label="Clase"
+                  nativeID="screens-admin-dashboard-quick-attendance-modal-class"
+                  onValueChange={(value) => {
+                    setAttendanceForm((form) => ({ ...form, classId: value ?? "none" }));
+                    setQuickAttendanceFeedback(null);
+                  }}
+                  placeholder="Selecciona una clase"
+                  testID="screens-admin-dashboard-quick-attendance-modal-class"
+                  value={attendanceForm.classId ?? "none"}
+                />
+                <AppInput
+                  autoCorrect={false}
+                  editable={!createAttendanceMutation.isPending}
+                  label="Código del alumno"
+                  nativeID="screens-admin-dashboard-quick-attendance-modal-student"
+                  onChangeText={(value) => {
+                    setQuickStudentIdentifier(value);
+                    setQuickAttendanceFeedback(null);
+                  }}
+                  onSubmitEditing={() => {
+                    void quickRegisterSubmit(quickStudentIdentifier);
+                  }}
+                  placeholder="Ej: ABC123 · ELD-XXXX"
+                  returnKeyType="done"
+                  testID="screens-admin-dashboard-quick-attendance-modal-student"
+                  value={quickStudentIdentifier}
+                />
+              </View>
+              <View style={styles.quickModalManualActions}>
+                <AppButton
+                  loading={createAttendanceMutation.isPending}
+                  onPress={() => {
+                    void quickRegisterSubmit(quickStudentIdentifier);
+                  }}
+                  label="Registrar asistencia"
+                  nativeID="screens-admin-dashboard-quick-attendance-modal-submit"
+                  testID="screens-admin-dashboard-quick-attendance-modal-submit"
+                  variant="primary"
+                  style={{ minHeight: 52 }}
+                />
+              </View>
+            </View>
+
+            <View
+              nativeID="screens-admin-dashboard-quick-attendance-modal-divider"
+              style={styles.quickModalDivider}
+              testID="screens-admin-dashboard-quick-attendance-modal-divider"
+            />
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={!quickQrEnabled}
+              nativeID="screens-admin-dashboard-quick-attendance-modal-qr-row"
+              onPress={() => {
+                setQuickAttendanceFeedback(null);
+                setQuickAttendanceModalVisible(false);
+                openQuickScannerFromHero();
+              }}
+              style={({ pressed }) => {
+                const hovered = (pressed as unknown as { hovered?: boolean }).hovered;
+                return [
+                  styles.quickModalQrRow,
+                  !quickQrEnabled ? styles.quickModalQrRowDisabled : null,
+                  pressed || hovered ? styles.quickModalQrRowPressed : null,
+                ];
+              }}
+              testID="screens-admin-dashboard-quick-attendance-modal-qr-row"
+            >
+              <View style={styles.quickModalQrRowContent}>
+                <View style={[styles.quickModalSectionIconWrap, { backgroundColor: "rgba(85,139,47,0.14)" }]}>
+                  <Feather name="maximize-2" size={16} color={matchaGreen} />
+                </View>
+                <View style={styles.quickModalQrRowCopy}>
+                  <Text style={styles.quickModalQrRowTitle}>Escanear QR</Text>
+                  <Text style={styles.quickModalQrRowSubtitle}>
+                    {quickQrEnabled
+                      ? "Abre la camara y apunta al codigo QR de la credencial del alumno."
+                      : isDesktop
+                        ? "El escaneo QR solo esta disponible en dispositivos moviles."
+                        : "Camara no disponible. Verifica los permisos del dispositivo."}
+                  </Text>
+                </View>
+              </View>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={quickQrEnabled ? matchaGreen : colors.textMuted}
+              />
+            </Pressable>
+          </View>
+        )}
       </AppModal>
 
       <QrScanner
@@ -7014,6 +7129,10 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: spacing.xs,
     justifyContent: "flex-start",
+    width: "100%",
+  },
+  quickModalBody: {
+    gap: spacing.lg,
     width: "100%",
   },
   quickFeedbackBanner: {

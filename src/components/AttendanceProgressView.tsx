@@ -46,17 +46,13 @@ export interface AttendanceProgressViewProps {
 }
 
 const STEP_LABELS_QR = [
-  "Código QR detectado",
   "Buscando alumno",
   "Registrando asistencia",
-  "Asistencia confirmada",
 ];
 
 const STEP_LABELS_MANUAL = [
-  "Registro iniciado",
-  "Alumno confirmado",
+  "Buscando alumno",
   "Registrando asistencia",
-  "Asistencia confirmada",
 ];
 
 export function AttendanceProgressView({
@@ -75,22 +71,21 @@ export function AttendanceProgressView({
   const labels = mode === "qr" ? STEP_LABELS_QR : STEP_LABELS_MANUAL;
 
   const stepStatuses = useMemo<AttendanceStepStatus[]>(() => {
+    if (overallStatus === "success") {
+      return labels.map(() => "done" as AttendanceStepStatus);
+    }
     if (overallStatus === "error") {
-      const erroredIndex = lookupStatus === "error" ? 1 : registerStatus === "error" ? 2 : 3;
+      const erroredIndex = lookupStatus === "error" ? 0 : 1;
       return labels.map((_, idx) => {
         if (idx < erroredIndex) return "done";
         if (idx === erroredIndex) return "error";
         return "pending";
       });
     }
-    if (overallStatus === "success") {
-      return labels.map(() => "done" as AttendanceStepStatus);
-    }
-    const firstPending = lookupStatus === "active" ? 1 : registerStatus === "active" ? 2 : 1;
+    const activeIndex = lookupStatus === "pending" || lookupStatus === "active" ? 0 : 1;
     return labels.map((_, idx) => {
-      if (idx === 0) return "done";
-      if (idx < firstPending) return "done";
-      if (idx === firstPending) return "active";
+      if (idx < activeIndex) return "done";
+      if (idx === activeIndex) return "active";
       return "pending";
     });
   }, [labels, lookupStatus, registerStatus, overallStatus]);
@@ -219,7 +214,7 @@ export function AttendanceProgressView({
           </View>
           {successCountdown !== null && successCountdown > 0 ? (
             <Text style={styles.countdownText}>
-              Listo para el siguiente en {successCountdown} segundo
+              Reiniciando en {successCountdown} segundo
               {successCountdown === 1 ? "" : "s"}…
             </Text>
           ) : null}
