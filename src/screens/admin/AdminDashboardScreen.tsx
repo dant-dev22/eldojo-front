@@ -1646,21 +1646,43 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
 
   const handleQuickQrCodeScanned = useCallback(
     async (code: string) => {
-      const normalized = code.trim().toUpperCase();
-      if (!normalized) return;
+      const raw = code.trim();
+      if (!raw) return;
+      const normalized = raw.toUpperCase();
       setQuickAttendanceFeedback(null);
       setQuickStudentIdentifier(normalized);
       openQuickScannerProcess();
-      let matchedStudent: (typeof visibleStudents)[number] | null = null;
+      let matchedStudent: Student | null = null;
       let classId: number | null = null;
       let selectedBranchId: number | null = null;
       let createdAttendanceId: number | null = null;
+      let foundAfterLookup: Student | null = null;
       try {
         setQuickScannerProcess((current: QrScannerAttendanceProcessState | null) =>
           current ? { ...current, lookupStatus: "active" } : current
         );
-        const students = await studentsApi.list({ search: normalized });
-        matchedStudent = students.find((s) => s.unique_code.toUpperCase() === normalized) ?? null;
+        const params: { search: string; branch_id?: number; organization_id?: number; status: string } = {
+          search: normalized,
+          status: "ACTIVE",
+        };
+        if (typeof organizationId === "number" && organizationId > 0) {
+          params.organization_id = organizationId;
+        }
+        if (typeof scopedBranchId === "number" && scopedBranchId > 0) {
+          params.branch_id = scopedBranchId;
+        }
+        const fetchedStudents = await studentsApi.list(params);
+        foundAfterLookup =
+          fetchedStudents.find((s) => (s.unique_code ?? "").toUpperCase() === normalized) ??
+          fetchedStudents.find((s) => String(s.id) === normalized) ??
+          null;
+        if (!foundAfterLookup) {
+          foundAfterLookup =
+            visibleStudents.find((s) => (s.unique_code ?? "").toUpperCase() === normalized) ??
+            visibleStudents.find((s) => String(s.id) === normalized) ??
+            null;
+        }
+        matchedStudent = foundAfterLookup;
         if (!matchedStudent) {
           setQuickScannerProcess({
             lookupStatus: "error",
@@ -1719,9 +1741,10 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         });
       } catch (err) {
         const message = getErrorMessage(err);
+        const lookupState = matchedStudent ? "done" : "error";
         setQuickScannerProcess({
-          lookupStatus: matchedStudent ? "done" : "active",
-          registerStatus: "error",
+          lookupStatus: lookupState,
+          registerStatus: matchedStudent ? "error" : "pending",
           overallStatus: "error",
           errorMessage: message,
           successPayload: null,
@@ -1730,7 +1753,16 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         setQuickAttendanceFeedback({ tone: "danger", message });
       }
     },
-    [invalidateAttendanceQueries, openQuickScannerProcess, scopedBranchId, user?.id, visibleBranches, visibleClasses, visibleStudents]
+    [
+      invalidateAttendanceQueries,
+      openQuickScannerProcess,
+      organizationId,
+      scopedBranchId,
+      user?.id,
+      visibleBranches,
+      visibleClasses,
+      visibleStudents,
+    ]
   );
 
   const renderQuickAttendanceForm = (variant: "hero" | "operations") => {

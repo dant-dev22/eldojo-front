@@ -16,11 +16,26 @@ import type {
 } from "@/types/api";
 
 export const studentsApi = {
-  async list(params?: { search?: string; incompleteOnly?: boolean }): Promise<Student[]> {
+  async list(params?: {
+    search?: string;
+    incompleteOnly?: boolean;
+    organization_id?: number;
+    branch_id?: number;
+    status?: string;
+  }): Promise<Student[]> {
     const { data } = await http.get<Student[]>("/students", {
       params: {
         search: params?.search || undefined,
         incomplete_only: params?.incompleteOnly ? true : undefined,
+        organization_id:
+          typeof params?.organization_id === "number" && params.organization_id > 0
+            ? params.organization_id
+            : undefined,
+        branch_id:
+          typeof params?.branch_id === "number" && params.branch_id > 0
+            ? params.branch_id
+            : undefined,
+        status: params?.status || undefined,
       },
     });
     return data;
