@@ -1663,7 +1663,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         );
         const params: { search: string; branch_id?: number; organization_id?: number; status: string } = {
           search: normalized,
-          status: "ACTIVE",
+          status: "active",
         };
         if (typeof organizationId === "number" && organizationId > 0) {
           params.organization_id = organizationId;
