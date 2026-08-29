@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -14,6 +14,12 @@ import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { AppSelect } from "@/components/AppSelect";
 import { QrScanner } from "@/components/QrScanner";
 import { StatusView } from "@/components/StatusView";
+import { AppModal } from "@/components/AppModal";
+import {
+  AttendanceProgressView,
+  type AttendanceStepStatus,
+  type AttendanceSuccessPayload,
+} from "@/components/AttendanceProgressView";
 import {
   agedWood as woodAged,
   agedWoodHover as woodAgedHover,
@@ -198,6 +204,7 @@ function getRecommendedClassId(classes: PublicAttendanceClassOption[], branchTim
 
 export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenProps) {
   const resolvedRoute = routeParams ?? getPublicAttendanceRoute();
+  const queryClient = useQueryClient();
   const { contentMaxWidth } = useResponsiveLayout();
   const { status: cameraStatus, isEnabled: qrScannerEnabled } = useCameraAvailability();
   const [studentIdentifier, setStudentIdentifier] = useState("");
@@ -208,6 +215,25 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
   const [formError, setFormError] = useState<string | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [attendanceSource, setAttendanceSource] = useState<AttendanceSource>("manual");
+
+  const [scannerProcessState, setScannerProcessState] = useState<null | {
+    lookupStatus: AttendanceStepStatus;
+    registerStatus: AttendanceStepStatus;
+    overallStatus: "processing" | "success" | "error";
+    errorMessage: string | null;
+    successPayload: AttendanceSuccessPayload | null;
+    successCountdown: number | null;
+  }>(null);
+
+  const [manualProcessVisible, setManualProcessVisible] = useState(false);
+  const [manualProcessState, setManualProcessState] = useState<{
+    lookupStatus: AttendanceStepStatus;
+    registerStatus: AttendanceStepStatus;
+    overallStatus: "processing" | "success" | "error";
+    errorMessage: string | null;
+    successPayload: AttendanceSuccessPayload | null;
+    successCountdown: number | null;
+  } | null>(null);
 
   const contextQuery = useQuery({
     enabled: Boolean(resolvedRoute),
@@ -250,6 +276,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     retry: false,
   });
 
+  const normalizeProcessState = (
+    status: "processing" | "success" | "error"
+  ): {
+    lookupStatus: AttendanceStepStatus;
+    registerStatus: AttendanceStepStatus;
+    overallStatus: "processing" | "success" | "error";
+  } => {
+    if (status === "success") {
+      return { lookupStatus: "done", registerStatus: "done", overallStatus: "success" };
+    }
+    return { lookupStatus: "active", registerStatus: "pending", overallStatus: status };
+  };
+
   const registerMutation = useMutation({
     mutationFn: async () =>
       publicAttendanceApi.register(
@@ -268,13 +307,126 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       setDebouncedStudentIdentifier("");
       setSelectedClassId(recommendedClassId);
       setFormError(null);
+
+      const successPayload: AttendanceSuccessPayload = {
+        attendance_id: response.attendance_id,
+        student_name: response.student_name,
+        class_name: response.class_name,
+        selected_class_name: selectedClassName,
+        check_in_at: response.check_in_at ?? null,
+      };
+
+      if (attendanceSource === "qr" && scannerProcessState) {
+        setScannerProcessState({
+          lookupStatus: "done",
+          registerStatus: "done",
+          overallStatus: "success",
+          errorMessage: null,
+          successPayload,
+          successCountdown: 3,
+        });
+      }
+      if (attendanceSource === "manual" && manualProcessVisible && manualProcessState) {
+        setManualProcessState({
+          lookupStatus: "done",
+          registerStatus: "done",
+          overallStatus: "success",
+          errorMessage: null,
+          successPayload,
+          successCountdown: 3,
+        });
+      }
+
       setAttendanceSource("manual");
     },
     onError: (error) => {
-      setFormError(getErrorMessage(error));
+      const errorMsg = getErrorMessage(error);
+      setFormError(errorMsg);
+
+      if (attendanceSource === "qr" && scannerProcessState) {
+        setScannerProcessState((current) =>
+          current
+            ? {
+                ...current,
+                overallStatus: "error",
+                errorMessage: errorMsg,
+                registerStatus: current.lookupStatus === "error" ? current.registerStatus : "error",
+                lookupStatus: current.lookupStatus,
+              }
+            : current
+        );
+      }
+      if (attendanceSource === "manual" && manualProcessVisible && manualProcessState) {
+        setManualProcessState((current) =>
+          current
+            ? {
+                ...current,
+                overallStatus: "error",
+                errorMessage: errorMsg,
+                registerStatus: "error",
+              }
+            : current
+        );
+      }
       setAttendanceSource("manual");
     },
   });
+
+  const openScannerProcess = useCallback(() => {
+    setScannerProcessState({
+      ...normalizeProcessState("processing"),
+      errorMessage: null,
+      successPayload: null,
+      successCountdown: null,
+    });
+  }, []);
+
+  const closeScannerProcess = useCallback(() => {
+    setScannerProcessState(null);
+    setAttendanceSource("manual");
+  }, []);
+
+  const resetScannerAndOpenCamera = useCallback(() => {
+    if (registerMutation.isPending) {
+      registerMutation.reset();
+    }
+    queryClient.removeQueries({
+      queryKey: [
+        "public-attendance-student",
+        resolvedRoute?.organizationSlug,
+        resolvedRoute?.branchSlug,
+      ],
+    });
+    setStudentIdentifier("");
+    setDebouncedStudentIdentifier("");
+    setFormError(null);
+    closeScannerProcess();
+    setScannerVisible(true);
+  }, [closeScannerProcess, queryClient, registerMutation, resolvedRoute]);
+
+  const openManualProcessModal = useCallback(() => {
+    setManualProcessVisible(true);
+    setManualProcessState({
+      lookupStatus: "done",
+      registerStatus: "active",
+      overallStatus: "processing",
+      errorMessage: null,
+      successPayload: null,
+      successCountdown: null,
+    });
+  }, []);
+
+  const closeManualProcessModal = useCallback(() => {
+    if (registerMutation.isPending) {
+      registerMutation.reset();
+    }
+    setManualProcessVisible(false);
+    setManualProcessState(null);
+  }, [registerMutation]);
+
+  const retryManualProcess = useCallback(() => {
+    closeManualProcessModal();
+  }, [closeManualProcessModal]);
 
   const handleQrCodeScanned = useCallback(
     (code: string) => {
@@ -283,10 +435,10 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
       setStudentIdentifier(normalizedCode);
       setDebouncedStudentIdentifier(normalizedCode);
-      setScannerVisible(false);
       setAttendanceSource("qr");
+      openScannerProcess();
     },
-    []
+    [openScannerProcess]
   );
 
   const recommendedClassId = useMemo(() => {
@@ -339,6 +491,48 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
   }, [result]);
 
   useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.successCountdown === null) return;
+    if (scannerProcessState.successCountdown <= 0) return;
+
+    const intervalId = setInterval(() => {
+      setScannerProcessState((current) => {
+        if (!current || current.successCountdown === null) return current;
+        const nextValue = current.successCountdown - 1;
+        if (nextValue <= 0) {
+          window.setTimeout(() => {
+            resetScannerAndOpenCamera();
+          }, 0);
+        }
+        return { ...current, successCountdown: nextValue };
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [scannerProcessState, resetScannerAndOpenCamera]);
+
+  useEffect(() => {
+    if (!manualProcessState) return;
+    if (manualProcessState.successCountdown === null) return;
+    if (manualProcessState.successCountdown <= 0) return;
+
+    const intervalId = setInterval(() => {
+      setManualProcessState((current) => {
+        if (!current || current.successCountdown === null) return current;
+        const nextValue = current.successCountdown - 1;
+        if (nextValue <= 0) {
+          window.setTimeout(() => {
+            closeManualProcessModal();
+          }, 0);
+        }
+        return { ...current, successCountdown: nextValue };
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [manualProcessState, closeManualProcessModal]);
+
+  useEffect(() => {
     if (!result || successCountdown === null || successCountdown > 0) {
       return;
     }
@@ -366,8 +560,16 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     }
 
     setFormError(null);
+    setAttendanceSource("manual");
+    openManualProcessModal();
     registerMutation.mutate();
-  }, [normalizedStudentIdentifier, registerMutation, selectedClassId, studentLookupQuery.data]);
+  }, [
+    normalizedStudentIdentifier,
+    openManualProcessModal,
+    registerMutation,
+    selectedClassId,
+    studentLookupQuery.data,
+  ]);
 
   const studentLookupError =
     normalizedStudentIdentifier &&
@@ -385,13 +587,77 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
   useEffect(() => {
     if (attendanceSource !== "qr") return;
+    if (!scannerProcessState) return;
+
+    if (scannerProcessState.overallStatus !== "processing") return;
+
+    const isLookupError =
+      Boolean(studentLookupError) &&
+      debouncedStudentIdentifier === normalizedStudentIdentifier;
+
+    const isLookupSuccess =
+      Boolean(resolvedStudent) &&
+      debouncedStudentIdentifier === normalizedStudentIdentifier;
+
+    if (isLookupError) {
+      setScannerProcessState({
+        lookupStatus: "error",
+        registerStatus: "pending",
+        overallStatus: "error",
+        errorMessage: studentLookupError,
+        successPayload: null,
+        successCountdown: null,
+      });
+      return;
+    }
+
+    if (isLookupSuccess) {
+      setScannerProcessState((current) =>
+        current && current.lookupStatus !== "done"
+          ? {
+              ...current,
+              lookupStatus: "done",
+              registerStatus: "active",
+            }
+          : current
+      );
+    }
+  }, [
+    attendanceSource,
+    scannerProcessState,
+    studentLookupError,
+    resolvedStudent,
+    debouncedStudentIdentifier,
+    normalizedStudentIdentifier,
+  ]);
+
+  useEffect(() => {
+    if (attendanceSource !== "qr") return;
+    if (!scannerProcessState) return;
     if (registerMutation.isPending || registerMutation.isSuccess) return;
     if (!resolvedStudent) return;
     if (!selectedClassId) return;
+    if (scannerProcessState.lookupStatus !== "done") return;
+    if (scannerProcessState.registerStatus === "active") return;
+    if (scannerProcessState.overallStatus !== "processing") return;
 
+    setScannerProcessState((current) =>
+      current
+        ? {
+            ...current,
+            registerStatus: "active",
+          }
+        : current
+    );
     setFormError(null);
     registerMutation.mutate();
-  }, [attendanceSource, registerMutation, resolvedStudent, selectedClassId]);
+  }, [
+    attendanceSource,
+    scannerProcessState,
+    registerMutation,
+    resolvedStudent,
+    selectedClassId,
+  ]);
 
   const lookupHelperText = studentLookupQuery.isFetching
     ? "Buscando alumno..."
@@ -770,13 +1036,43 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       </View>
       <QrScanner
         visible={scannerVisible}
-        onClose={() => setScannerVisible(false)}
+        onClose={() => {
+          if (registerMutation.isPending) {
+            registerMutation.reset();
+          }
+          closeScannerProcess();
+          setScannerVisible(false);
+        }}
         onCodeScanned={handleQrCodeScanned}
         title="Escanear credencial"
         description="Apunta la cámara al código QR del alumno para registrar su asistencia."
         nativeID="screens-public-attendance-qr-scanner"
         testID="screens-public-attendance-qr-scanner"
+        attendanceProcess={scannerProcessState}
+        onAttendanceProcessRetry={resetScannerAndOpenCamera}
       />
+      <AppModal
+        visible={manualProcessVisible}
+        title="Registro de asistencia"
+        onClose={closeManualProcessModal}
+        nativeID="screens-public-attendance-manual-process-modal"
+        testID="screens-public-attendance-manual-process-modal"
+      >
+        {manualProcessState ? (
+          <AttendanceProgressView
+            mode="manual"
+            lookupStatus={manualProcessState.lookupStatus}
+            registerStatus={manualProcessState.registerStatus}
+            overallStatus={manualProcessState.overallStatus}
+            errorMessage={manualProcessState.errorMessage}
+            successPayload={manualProcessState.successPayload}
+            successCountdown={manualProcessState.successCountdown}
+            onRetry={retryManualProcess}
+            nativeID="screens-public-attendance-manual-progress"
+            testID="screens-public-attendance-manual-progress"
+          />
+        ) : null}
+      </AppModal>
     </PublicPageChrome>
   );
 }

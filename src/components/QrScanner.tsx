@@ -5,6 +5,11 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from "r
 
 import { AppModal } from "@/components/AppModal";
 import {
+  AttendanceProgressView,
+  type AttendanceStepStatus,
+  type AttendanceSuccessPayload,
+} from "@/components/AttendanceProgressView";
+import {
   agedWood as woodAged,
   agedWoodHover as woodAgedHover,
   agedWoodSoft as woodSoftAccent,
@@ -26,6 +31,15 @@ import {
 
 type CameraPermissionStatus = "unknown" | "granted" | "denied" | "unavailable";
 
+interface QrScannerAttendanceProcessState {
+  lookupStatus: AttendanceStepStatus;
+  registerStatus: AttendanceStepStatus;
+  overallStatus: "processing" | "success" | "error";
+  errorMessage: string | null;
+  successPayload: AttendanceSuccessPayload | null;
+  successCountdown: number | null;
+}
+
 interface QrScannerProps {
   visible: boolean;
   onClose: () => void;
@@ -34,6 +48,8 @@ interface QrScannerProps {
   description?: string;
   nativeID?: string;
   testID?: string;
+  attendanceProcess?: QrScannerAttendanceProcessState | null;
+  onAttendanceProcessRetry?: () => void;
 }
 
 const SCAN_COOLDOWN_MS = 1500;
@@ -56,6 +72,8 @@ export function QrScanner({
   description = "Apunta la camara al codigo QR. La deteccion es automatica y sin contacto.",
   nativeID,
   testID,
+  attendanceProcess = null,
+  onAttendanceProcessRetry,
 }: QrScannerProps) {
   const baseId = nativeID ?? testID ?? "components-qr-scanner";
   const isMobileWeb = useMemo(() => isMobileWebUserAgent(), []);
@@ -528,17 +546,33 @@ export function QrScanner({
 
   const showNativeCameraPreview = permission === "granted" && !!DynamicCameraView && !(Platform.OS === "web");
   const showWebMobileCameraPreview = Platform.OS === "web" && isMobileWeb && permission === "granted";
+  const showAttendanceProgressView = attendanceProcess !== null;
 
   return (
     <AppModal
-      description={description}
+      description={showAttendanceProgressView ? undefined : description}
       onClose={onClose}
       testID={baseId}
-      title={title}
+      title={showAttendanceProgressView ? "Registro de asistencia" : title}
       visible={visible}
     >
       <View style={styles.container}>
-        <View style={styles.cameraFrame}>
+        {showAttendanceProgressView ? (
+          <AttendanceProgressView
+            mode="qr"
+            lookupStatus={attendanceProcess.lookupStatus}
+            registerStatus={attendanceProcess.registerStatus}
+            overallStatus={attendanceProcess.overallStatus}
+            errorMessage={attendanceProcess.errorMessage}
+            successPayload={attendanceProcess.successPayload}
+            successCountdown={attendanceProcess.successCountdown}
+            onRetry={() => onAttendanceProcessRetry?.()}
+            nativeID={`${baseId}-attendance-progress`}
+            testID={`${baseId}-attendance-progress`}
+          />
+        ) : (
+          <>
+            <View style={styles.cameraFrame}>
           {showNativeCameraPreview ? (
             <>
               <DynamicCameraView
@@ -713,6 +747,8 @@ export function QrScanner({
             <Text style={styles.lastCodeValue}>{lastScannedCode}</Text>
           </View>
         ) : null}
+          </>
+        )}
       </View>
     </AppModal>
   );

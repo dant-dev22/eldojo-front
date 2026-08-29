@@ -52,6 +52,7 @@ interface AuthContextValue {
   consumeJustLoggedIn: () => void;
   redeemSessionTicket: (ticket: string) => Promise<User>;
   redirectToPublicLogin: (redirectAfterLogin?: string) => void;
+  redirectToPublicHome: () => void;
   redirectToAppDashboard: () => void;
 }
 
@@ -200,6 +201,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const resolvedDest = destination.startsWith("http")
       ? new URL(destination).pathname + new URL(destination).search
       : destination;
+    if (resolvedDest === current) {
+      return;
+    }
+    window.location.assign(destination);
+  };
+
+  const redirectToPublicHome: AuthContextValue["redirectToPublicHome"] = () => {
+    if (typeof window === "undefined") return;
+    const cfg = getDomainConfig();
+    let destination: string;
+    if (cfg.isPublicHostname) {
+      destination = "/";
+    } else {
+      destination = buildPublicUrl("");
+    }
+    const current = window.location.pathname.replace(/\/+$/, "") || "/";
+    const resolvedDest = destination.startsWith("http")
+      ? new URL(destination).pathname
+      : destination.replace(/\/+$/, "") || "/";
     if (resolvedDest === current) {
       return;
     }
@@ -395,6 +415,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return response.user;
       },
       redirectToPublicLogin,
+      redirectToPublicHome,
       redirectToAppDashboard,
     }),
     [justLoggedIn, showPostConfirmation, status, user]

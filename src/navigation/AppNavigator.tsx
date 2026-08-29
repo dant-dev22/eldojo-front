@@ -162,6 +162,17 @@ function AdminFlow() {
   );
 }
 
+function isPublicAllowedWithoutAuth(rawPath: string): boolean {
+  const normalized = rawPath.replace(/\/+$/, "") || "/";
+  return (
+    normalized === "/" ||
+    normalized === `/${PUBLIC_SCREEN_PATHS.Home}` ||
+    normalized === `/${PUBLIC_SCREEN_PATHS.SignIn}` ||
+    normalized === `/${PUBLIC_SCREEN_PATHS.CreateAccount}` ||
+    normalized === `/${PUBLIC_SCREEN_PATHS.ConfirmAccount}`
+  );
+}
+
 export function AppNavigator() {
   const {
     showPostConfirmation,
@@ -171,6 +182,7 @@ export function AppNavigator() {
     consumeJustLoggedIn,
     redeemSessionTicket,
     redirectToPublicLogin,
+    redirectToPublicHome,
     signOut,
   } = useAuth();
   const publicAttendanceRoute = getPublicAttendanceRoute();
@@ -292,31 +304,22 @@ export function AppNavigator() {
         if (showTicketError) {
           if (typeof window !== "undefined") {
             setTimeout(() => {
-              redirectToPublicLogin(redirectTo);
+              redirectToPublicHome();
             }, 1400);
           }
           return (
             <NavigationContainer linking={linking} theme={navigationTheme}>
               <StatusView
                 title="No fue posible iniciar sesión"
-                description={`${ticketRedeemError} Redirigiendo a inicio de sesión en unos segundos...`}
+                description={`${ticketRedeemError} Redirigiendo a la página principal en unos segundos...`}
               />
             </NavigationContainer>
           );
         }
 
         const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
-        const alreadyOnPublicAuthPage =
-          currentPath === `/${PUBLIC_SCREEN_PATHS.SignIn}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.Home}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.CreateAccount}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.ConfirmAccount}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.About}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.Events}` ||
-          currentPath === `/${PUBLIC_SCREEN_PATHS.Stores}` ||
-          currentPath === "/";
 
-        if (alreadyOnPublicAuthPage) {
+        if (isPublicAllowedWithoutAuth(currentPath)) {
           return (
             <NavigationContainer linking={linking} theme={navigationTheme}>
               <AuthFlow />
@@ -324,14 +327,12 @@ export function AppNavigator() {
           );
         }
 
-        redirectToPublicLogin(
-          redirectTo || `${window.location.pathname}${window.location.search}`
-        );
+        redirectToPublicHome();
         return (
           <NavigationContainer linking={linking} theme={navigationTheme}>
             <StatusView
-              title="Redirigiendo a inicio de sesión"
-              description="Para entrar al panel administrativo primero debes validar tu cuenta."
+              title="Redirigiendo a la página principal"
+              description="Para entrar al panel administrativo primero debes iniciar sesión desde el sitio público."
               loading
             />
           </NavigationContainer>
@@ -402,6 +403,22 @@ export function AppNavigator() {
             />
           </NavigationContainer>
         );
+      }
+
+      if (status === "unauthenticated" || !user) {
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (!isPublicAllowedWithoutAuth(currentPath)) {
+          redirectToPublicHome();
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StatusView
+                title="Redirigiendo a la página principal"
+                description="Esta sección requiere una cuenta activa. Redirigiendo al inicio..."
+                loading
+              />
+            </NavigationContainer>
+          );
+        }
       }
 
       return (
