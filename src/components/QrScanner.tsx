@@ -481,11 +481,15 @@ export function QrScanner({
     pauseAllScanning();
     cooldownRef.current = true;
     setLastScannedCode(rawCode);
-    setFlashMessage({ type: "success", text: "Codigo detectado" });
+    setFlashMessage({ type: "success", text: "Codigo detectado · Procesando…" });
 
     window.setTimeout(() => {
       onCodeScanned(rawCode);
     }, 0);
+
+    window.setTimeout(() => {
+      cooldownRef.current = false;
+    }, SCAN_COOLDOWN_MS);
   };
 
   const toggleFacing = () => {
@@ -583,10 +587,16 @@ export function QrScanner({
   const showWebMobileCameraPreview = Platform.OS === "web" && isMobileWeb && permission === "granted";
   const showAttendanceProgressView = attendanceProcess !== null;
 
+  const inProcess = showAttendanceProgressView && attendanceProcess?.overallStatus === "processing";
+  const allowClose = !inProcess;
+
   return (
     <AppModal
+      backdropClosable={allowClose}
+      closeButtonEnabled={allowClose}
       description={showAttendanceProgressView ? undefined : description}
       onClose={() => {
+        if (!allowClose) return;
         onClose?.();
       }}
       testID={baseId}

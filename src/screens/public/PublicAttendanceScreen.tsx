@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getErrorMessage } from "@/api/http";
@@ -202,6 +202,8 @@ function getRecommendedClassId(classes: PublicAttendanceClassOption[], branchTim
   return String(sortedSchedules[nextIndex].classId);
 }
 
+const PROCESS_TIMEOUT_MS = 15000;
+
 export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenProps) {
   const resolvedRoute = routeParams ?? getPublicAttendanceRoute();
   const queryClient = useQueryClient();
@@ -224,6 +226,9 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     successPayload: AttendanceSuccessPayload | null;
     successCountdown: number | null;
   }>(null);
+
+  const scannerProcessStartedAtRef = useRef<number | null>(null);
+  const scannerProcessTimeoutRef = useRef<number | null>(null);
 
   const [manualProcessVisible, setManualProcessVisible] = useState(false);
   const [manualProcessState, setManualProcessState] = useState<{
@@ -375,21 +380,64 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     },
   });
 
+  const clearScannerProcessTimeout = useCallback(() => {
+    try {
+      if (scannerProcessTimeoutRef.current !== null) {
+        window.clearTimeout(scannerProcessTimeoutRef.current);
+        scannerProcessTimeoutRef.current = null;
+      }
+    } catch {
+      /* noop */
+    }
+    scannerProcessStartedAtRef.current = null;
+  }, []);
+
   const openScannerProcess = useCallback(() => {
+    clearScannerProcessTimeout();
     setScannerProcessState({
       ...normalizeProcessState("processing"),
       errorMessage: null,
       successPayload: null,
       successCountdown: null,
     });
-  }, []);
+    scannerProcessStartedAtRef.current = Date.now();
+    scannerProcessTimeoutRef.current = window.setTimeout(() => {
+      setScannerProcessState((current) => {
+        if (!current || current.overallStatus !== "processing") return current;
+        const erroredStep =
+          current.lookupStatus === "active" || current.lookupStatus === "pending"
+            ? "la búsqueda del alumno"
+            : current.registerStatus === "active" || current.registerStatus === "pending"
+              ? "el registro de la asistencia"
+              : "el proceso";
+        const errorMessage = `Tiempo de espera agotado en ${erroredStep}. La conexión puede estar lenta o el servidor no respondió. Vuelve a intentarlo o usa ingreso manual.`;
+        if (registerMutation.isPending) {
+          try { registerMutation.reset(); } catch { /* noop */ }
+        }
+        return {
+          ...current,
+          overallStatus: "error",
+          lookupStatus: current.lookupStatus === "done" ? "done" : "error",
+          registerStatus:
+            current.registerStatus === "done"
+              ? "done"
+              : current.lookupStatus === "done"
+                ? "error"
+                : current.registerStatus,
+          errorMessage,
+        };
+      });
+    }, PROCESS_TIMEOUT_MS);
+  }, [clearScannerProcessTimeout, normalizeProcessState, registerMutation]);
 
   const closeScannerProcess = useCallback(() => {
+    clearScannerProcessTimeout();
     setScannerProcessState(null);
     setAttendanceSource("manual");
-  }, []);
+  }, [clearScannerProcessTimeout]);
 
   const resetScannerAndOpenCamera = useCallback(() => {
+    clearScannerProcessTimeout();
     if (registerMutation.isPending) {
       registerMutation.reset();
     }
@@ -405,7 +453,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     setFormError(null);
     closeScannerProcess();
     setScannerVisible(true);
-  }, [closeScannerProcess, queryClient, registerMutation, resolvedRoute]);
+  }, [clearScannerProcessTimeout, closeScannerProcess, queryClient, registerMutation, resolvedRoute]);
 
   const openManualProcessModal = useCallback(() => {
     setManualProcessVisible(true);
@@ -507,6 +555,12 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
     return () => clearInterval(intervalId);
   }, [scannerProcessState]);
+
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.overallStatus === "processing") return;
+    clearScannerProcessTimeout();
+  }, [scannerProcessState, clearScannerProcessTimeout]);
 
   useEffect(() => {
     if (!scannerProcessState) return;
@@ -1044,6 +1098,9 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       <QrScanner
         visible={scannerVisible}
         onClose={() => {
+          if (scannerProcessState?.overallStatus === "processing") {
+            return;
+          }
           if (registerMutation.isPending) {
             registerMutation.reset();
           }

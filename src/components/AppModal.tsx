@@ -19,9 +19,21 @@ interface AppModalProps extends PropsWithChildren {
   onClose: () => void;
   nativeID?: string;
   testID?: string;
+  backdropClosable?: boolean;
+  closeButtonEnabled?: boolean;
 }
 
-export function AppModal({ visible, title, description, onClose, children, nativeID, testID }: AppModalProps) {
+export function AppModal({
+  visible,
+  title,
+  description,
+  onClose,
+  children,
+  nativeID,
+  testID,
+  backdropClosable = true,
+  closeButtonEnabled = true,
+}: AppModalProps) {
   const { height, width } = useWindowDimensions();
   const dialogWidth = width >= 1280 ? 900 : width >= 1024 ? 820 : width >= 768 ? 700 : width - spacing.md * 2;
   const baseId =
@@ -32,7 +44,7 @@ export function AppModal({ visible, title, description, onClose, children, nativ
       <View nativeID={`${baseId}-overlay`} style={styles.overlay} testID={`${baseId}-overlay`}>
         <Pressable
           nativeID={`${baseId}-backdrop`}
-          onPress={onClose}
+          onPress={backdropClosable ? onClose : undefined}
           style={styles.backdrop}
           testID={`${baseId}-backdrop`}
         />
@@ -59,17 +71,21 @@ export function AppModal({ visible, title, description, onClose, children, nativ
                   </Text>
                 ) : null}
               </View>
-              <Pressable
-                accessibilityLabel="Cerrar"
-                accessibilityRole="button"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                nativeID={`${baseId}-close-button`}
-                onPress={onClose}
-                style={({ pressed }) => [styles.closeButton, pressed ? styles.closeButtonPressed : null]}
-                testID={`${baseId}-close-button`}
-              >
-                <Feather color={colors.textMuted} name="x" size={20} />
-              </Pressable>
+              {closeButtonEnabled ? (
+                <Pressable
+                  accessibilityLabel="Cerrar"
+                  accessibilityRole="button"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  nativeID={`${baseId}-close-button`}
+                  onPress={onClose}
+                  style={({ pressed }) => [styles.closeButton, pressed ? styles.closeButtonPressed : null]}
+                  testID={`${baseId}-close-button`}
+                >
+                  <Feather color={colors.textMuted} name="x" size={20} />
+                </Pressable>
+              ) : (
+                <View style={[styles.closeButton, { backgroundColor: "transparent", opacity: 0 }]} />
+              )}
             </View>
             <ScrollView
               contentContainerStyle={styles.content}
