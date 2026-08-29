@@ -4520,6 +4520,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           }
         }}
       >
+        {/* TEMPORAL COMENTADO PARA DEBUG: formulario manual completo */}
+        {/*
         <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
           <AppSelect
             label="Alumno"
@@ -4620,6 +4622,52 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
               variant="success"
             />
           </View>
+        </View>
+        */}
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={!quickQrEnabled || attendanceBusy}
+          nativeID="screens-admin-dashboard-attendance-modal-qr-row"
+          onPress={() => {
+            setAttendanceModalVisible(false);
+            setQuickScannerVisible(true);
+          }}
+          style={({ pressed, hovered }) => [
+            styles.quickModalQrRow,
+            !quickQrEnabled || attendanceBusy ? styles.quickModalQrRowDisabled : null,
+            pressed || hovered ? styles.quickModalQrRowPressed : null,
+          ]}
+          testID="screens-admin-dashboard-attendance-modal-qr-row"
+        >
+          <View style={styles.quickModalQrRowContent}>
+            <View style={[styles.quickModalSectionIconWrap, { backgroundColor: "rgba(85,139,47,0.14)" }]}>
+              <Feather name="maximize-2" size={16} color={matchaGreen} />
+            </View>
+            <View style={styles.quickModalQrRowCopy}>
+              <Text style={styles.quickModalQrRowTitle}>Escanear QR</Text>
+              <Text style={styles.quickModalQrRowSubtitle}>
+                {quickQrEnabled
+                  ? "Abre la camara y apunta al codigo QR de la credencial del alumno."
+                  : isDesktop
+                    ? "El escaneo QR solo esta disponible en dispositivos moviles."
+                    : "Camara no disponible. Verifica los permisos del dispositivo."}
+              </Text>
+            </View>
+          </View>
+          <Feather
+            name="chevron-right"
+            size={18}
+            color={quickQrEnabled ? matchaGreen : colors.textMuted}
+          />
+        </Pressable>
+        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null, { marginTop: 20 }]}>
+          <AppButton
+            label="Cerrar"
+            onPress={() => setAttendanceModalVisible(false)}
+            variant="secondary"
+            disabled={attendanceBusy}
+          />
         </View>
       </AppModal>
 
@@ -4963,7 +5011,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       <AppModal
         visible={quickAttendanceModalVisible}
         title="Registrar asistencia"
-        description="Elige el metodo preferido para registrar la asistencia de un alumno."
+        description="Escanea el codigo QR de la credencial del alumno para registrar la asistencia."
         onClose={() => setQuickAttendanceModalVisible(false)}
         nativeID="screens-admin-dashboard-quick-attendance-modal"
         testID="screens-admin-dashboard-quick-attendance-modal"
@@ -4995,6 +5043,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           </View>
         ) : null}
 
+        {/* TEMPORAL COMENTADO PARA DEBUG: flujo de registro manual */}
+        {/*
         <View
           nativeID="screens-admin-dashboard-quick-attendance-modal-manual-section"
           style={styles.quickModalSection}
@@ -5058,6 +5108,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           style={styles.quickModalDivider}
           testID="screens-admin-dashboard-quick-attendance-modal-divider"
         />
+        */}
 
         <Pressable
           accessibilityRole="button"
