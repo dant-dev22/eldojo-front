@@ -8,7 +8,6 @@ import { colors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { QrCodesListScreen } from "@/screens/admin/QrCodesListScreen";
-import { StudentDetailScreen } from "@/screens/admin/StudentDetailScreen";
 import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
 import { TrajectoryDetailScreen } from "@/screens/admin/TrajectoryDetailScreen";
 import { TrajectoryListScreen } from "@/screens/admin/TrajectoryListScreen";
@@ -97,7 +96,6 @@ const linking: LinkingOptions<RootPathParamList> = {
       SignIn: PUBLIC_SCREEN_PATHS.SignIn,
       Stores: PUBLIC_SCREEN_PATHS.Stores,
       QrCodesList: `${ADMIN_ROUTE_SEGMENTS.root}/codigos-qr`,
-      StudentDetail: `${ADMIN_ROUTE_SEGMENTS.root}/alumnos/:studentId`,
       StudentsList: `${ADMIN_ROUTE_SEGMENTS.root}/alumnos`,
       TrajectoryList: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria`,
       TrajectoryDetail: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria/:studentId`,
@@ -179,10 +177,6 @@ function AdminFlow() {
       <AdminStack.Screen
         component={StudentsListScreen}
         name="StudentsList"
-      />
-      <AdminStack.Screen
-        component={StudentDetailScreen}
-        name="StudentDetail"
       />
       <AdminStack.Screen
         component={QrCodesListScreen}

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -21,6 +21,7 @@ import { BeltIndicator } from "@/components/BeltIndicator";
 import { BeltSelector, type BeltSelectorValue } from "@/components/BeltSelector";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
+import { CredencialQRModal } from "@/components/CredencialQRModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
@@ -547,6 +548,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
   const [detailStudentId, setDetailStudentId] = useState<number | null>(null);
   const [isMedicalQuickViewVisible, setIsMedicalQuickViewVisible] = useState(false);
   const [medicalQuickViewStudent, setMedicalQuickViewStudent] = useState<Student | null>(null);
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
+  const [qrStudent, setQrStudent] = useState<Student | null>(null);
 
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
@@ -781,10 +784,37 @@ export function StudentsListScreen({ navigation, route }: Props) {
     setDetailStudentId(null);
   }
 
+  function handleOpenQr(student: Student) {
+    setQrStudent(student);
+    setIsQrModalVisible(true);
+  }
+
+  function handleCloseQr() {
+    setIsQrModalVisible(false);
+    setQrStudent(null);
+  }
+
   const contextActions = useMemo<BottomSheetAction[]>(
     () => {
       if (!contextSheetStudent) return [];
       return [
+        {
+          key: "qr",
+          label: "Ver código QR",
+          icon: <Ionicons name="qr-code" size={18} color={colors.gold} />,
+          onPress: () => {
+            handleOpenQr(contextSheetStudent);
+          },
+        },
+        {
+          key: "info",
+          label: "Información general",
+          icon: "user",
+          onPress: () => {
+            setShowContextSheet(false);
+            handleOpenDetail(contextSheetStudent.id);
+          },
+        },
         {
           key: "medical",
           label: "Ver ficha médica",
@@ -795,17 +825,29 @@ export function StudentsListScreen({ navigation, route }: Props) {
           },
         },
         {
-          key: "info",
-          label: "Información general",
-          icon: "user",
+          key: "edit",
+          label: "Editar alumno",
+          icon: "edit-3",
           onPress: () => {
             setShowContextSheet(false);
-            navigation.navigate("StudentDetail", { studentId: contextSheetStudent.id });
+            handleOpenEdit(contextSheetStudent);
+          },
+        },
+        {
+          key: "delete",
+          label: "Eliminar / dar de baja",
+          icon: "trash-2",
+          tone: "danger",
+          destructive: true,
+          onPress: () => {
+            setShowContextSheet(false);
+            setFeedbackMessage(null);
+            setStudentToDelete(contextSheetStudent);
           },
         },
       ];
     },
-    [contextSheetStudent, navigation],
+    [contextSheetStudent],
   );
 
   function handleUpdateField<K extends keyof StudentFormState>(field: K, value: StudentFormState[K]) {
@@ -2181,6 +2223,26 @@ export function StudentsListScreen({ navigation, route }: Props) {
         visible={isDetailModalVisible}
         studentId={detailStudentId}
         onClose={handleCloseDetail}
+        onQrPress={(student) => {
+          handleCloseDetail();
+          setTimeout(() => handleOpenQr(student), 150);
+        }}
+        onEdit={(student) => {
+          handleCloseDetail();
+          setTimeout(() => handleOpenEdit(student), 150);
+        }}
+      />
+
+      <CredencialQRModal
+        visible={isQrModalVisible}
+        onClose={handleCloseQr}
+        uniqueCode={qrStudent?.unique_code ?? ""}
+        studentFullName={qrStudent ? `${qrStudent.first_name} ${qrStudent.last_name}` : ""}
+        studentPhotoUrl={qrStudent?.photo_url ?? null}
+        branchName={qrStudent ? (studentsByBranchId.get(qrStudent.branch_id)?.name ?? null) : null}
+        enrollmentDateText={qrStudent?.enrollment_date ? formatDate(qrStudent.enrollment_date) : null}
+        nativeID="screens-admin-students-list-credential-qr-modal"
+        testID="screens-admin-students-list-credential-qr-modal"
       />
     </Screen>
   );

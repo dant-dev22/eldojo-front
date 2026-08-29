@@ -11,6 +11,8 @@ import { AppModal } from "@/components/AppModal";
 import { StudentDetailView } from "@/components/StudentDetailView";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
+import type { Student } from "@/types/api";
+
 const MIN_TOUCH_TARGET = 44;
 const TOUCH_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
@@ -18,9 +20,11 @@ interface StudentDetailModalProps {
   visible: boolean;
   studentId: number | null;
   onClose: () => void;
+  onQrPress?: (student: Student) => void;
+  onEdit?: (student: Student) => void;
 }
 
-export function StudentDetailModal({ visible, studentId, onClose }: StudentDetailModalProps) {
+export function StudentDetailModal({ visible, studentId, onClose, onQrPress, onEdit }: StudentDetailModalProps) {
   useEffect(() => {
     // Reset is handled implicitly by react-query's enabled flag
   }, [visible, studentId]);
@@ -93,6 +97,7 @@ export function StudentDetailModal({ visible, studentId, onClose }: StudentDetai
             payments={payments}
             branch={branch}
             primaryClass={primaryClass}
+            onQrPress={onQrPress ? () => onQrPress(student) : undefined}
           />
         </View>
       )}

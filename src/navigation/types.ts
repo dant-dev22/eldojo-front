@@ -15,7 +15,6 @@ export type AuthStackParamList = {
 export type AdminStackParamList = {
   AdminHome: { section?: AdminDashboardSection } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
-  StudentDetail: { studentId: number };
   QrCodesList: undefined;
   TrajectoryList: undefined;
   TrajectoryDetail: { studentId: number };

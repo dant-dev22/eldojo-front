@@ -9,7 +9,7 @@ import { colors, radius, spacing, transitions, typography } from "@/constants/th
 export interface BottomSheetAction {
   key: string;
   label: string;
-  icon?: keyof typeof Feather.glyphMap;
+  icon?: keyof typeof Feather.glyphMap | ReactNode;
   onPress: () => void;
   tone?: "default" | "primary" | "success" | "warning" | "danger";
   destructive?: boolean;
@@ -225,11 +225,15 @@ export function BottomSheet({
                         ]}
                         testID={`${idPrefix}-action-icon-wrap-${action.key}`}
                       >
-                        <Feather
-                          color={getToneColor(action.tone, action.destructive)}
-                          name={action.icon}
-                          size={18}
-                        />
+                        {typeof action.icon === "string" ? (
+                          <Feather
+                            color={getToneColor(action.tone, action.destructive)}
+                            name={action.icon as keyof typeof Feather.glyphMap}
+                            size={18}
+                          />
+                        ) : (
+                          action.icon
+                        )}
                       </View>
                     ) : null}
                     <Text
