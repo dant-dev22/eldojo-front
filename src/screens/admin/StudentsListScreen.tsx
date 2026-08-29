@@ -791,7 +791,9 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
   function handleCloseQr() {
     setIsQrModalVisible(false);
-    setQrStudent(null);
+    setTimeout(() => {
+      setQrStudent(null);
+    }, 300);
   }
 
   const contextActions = useMemo<BottomSheetAction[]>(
@@ -2233,17 +2235,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
         }}
       />
 
-      <CredencialQRModal
-        visible={isQrModalVisible}
-        onClose={handleCloseQr}
-        uniqueCode={qrStudent?.unique_code ?? ""}
-        studentFullName={qrStudent ? `${qrStudent.first_name} ${qrStudent.last_name}` : ""}
-        studentPhotoUrl={qrStudent?.photo_url ?? null}
-        branchName={qrStudent ? (studentsByBranchId.get(qrStudent.branch_id)?.name ?? null) : null}
-        enrollmentDateText={qrStudent?.enrollment_date ? formatDate(qrStudent.enrollment_date) : null}
-        nativeID="screens-admin-students-list-credential-qr-modal"
-        testID="screens-admin-students-list-credential-qr-modal"
-      />
+      {qrStudent ? (
+        <CredencialQRModal
+          visible={isQrModalVisible}
+          onClose={handleCloseQr}
+          uniqueCode={qrStudent.unique_code}
+          studentFullName={`${qrStudent.first_name} ${qrStudent.last_name}`}
+          studentPhotoUrl={qrStudent.photo_url ?? null}
+          branchName={studentsByBranchId.get(qrStudent.branch_id)?.name ?? null}
+          enrollmentDateText={qrStudent.enrollment_date ? formatDate(qrStudent.enrollment_date) : null}
+          nativeID="screens-admin-students-list-credential-qr-modal"
+          testID="screens-admin-students-list-credential-qr-modal"
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -206,17 +206,21 @@ export function CredencialQRModal({
 
           <View style={styles.qrBlock}>
             <View style={[styles.qrBox, { width: qrSize, height: qrSize }]}>
-              <QRCode
-                value={uniqueCode}
-                size={qrSize - spacing.sm * 2}
-                color={colors.ink}
-                backgroundColor={colors.surface}
-                quietZone={0}
-                logoBorderRadius={8}
-                getRef={(svgRef) => {
-                  qrSvgRef.current = svgRef as unknown as QRCodeProps;
-                }}
-              />
+              {uniqueCode ? (
+                <QRCode
+                  value={uniqueCode}
+                  size={qrSize - spacing.sm * 2}
+                  color={colors.ink}
+                  backgroundColor={colors.surface}
+                  quietZone={0}
+                  logoBorderRadius={8}
+                  getRef={(svgRef) => {
+                    qrSvgRef.current = svgRef as unknown as QRCodeProps;
+                  }}
+                />
+              ) : (
+                <View style={styles.qrPlaceholder} />
+              )}
             </View>
             <Text style={styles.scanHint}>Acerca este código al lector del dojo al ingresar.</Text>
           </View>
@@ -402,6 +406,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     padding: spacing.sm,
+  },
+  qrPlaceholder: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    height: "100%",
+    opacity: 0.4,
+    width: "100%",
   },
   scanHint: {
     color: colors.textMuted,
