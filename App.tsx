@@ -8,6 +8,7 @@ import { Platform } from "react-native";
 
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
+import { initEruda } from "./src/utils/debug";
 
 if (Platform.OS === "web") {
   require("./src/styles/web/index.css");
@@ -35,6 +36,8 @@ if (Platform.OS === "web" && typeof window !== "undefined") {
     })();
   }
 }
+
+initEruda();
 
 const queryClient = new QueryClient({
   defaultOptions: {
