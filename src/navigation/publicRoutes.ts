@@ -21,6 +21,34 @@ export const PUBLIC_ROUTE_SEGMENTS = {
   confirmAccount: slugifyRouteSegment("confirmar cuenta"),
 } as const;
 
+export const ADMIN_ROUTE_SEGMENTS = {
+  root: slugifyRouteSegment("admin"),
+  branches: slugifyRouteSegment("sucursales"),
+  operations: slugifyRouteSegment("operaciones"),
+  payments: slugifyRouteSegment("pagos"),
+  dojo: slugifyRouteSegment("mi dojo"),
+} as const;
+
+export const ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT: Record<
+  Exclude<import("./types").AdminDashboardSection, "overview">,
+  string
+> = {
+  branches: ADMIN_ROUTE_SEGMENTS.branches,
+  operations: ADMIN_ROUTE_SEGMENTS.operations,
+  payments: ADMIN_ROUTE_SEGMENTS.payments,
+  dojo: ADMIN_ROUTE_SEGMENTS.dojo,
+} as const;
+
+export const ADMIN_PATH_SEGMENT_TO_DASHBOARD_SECTION: Record<
+  string,
+  import("./types").AdminDashboardSection
+> = Object.fromEntries(
+  Object.entries(ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT).map(([section, segment]) => [
+    segment,
+    section as import("./types").AdminDashboardSection,
+  ])
+) as Record<string, import("./types").AdminDashboardSection>;
+
 export const PUBLIC_SCREEN_PATHS = {
   Home: PUBLIC_ROUTE_SEGMENTS.home,
   About: PUBLIC_ROUTE_SEGMENTS.about,

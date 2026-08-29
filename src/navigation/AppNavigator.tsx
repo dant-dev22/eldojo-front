@@ -23,7 +23,13 @@ import {
   StoresScreen,
 } from "@/screens/auth/PublicSiteScreen";
 import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
-import { PUBLIC_HOME_ALIAS_PATHS, PUBLIC_SCREEN_PATHS } from "@/navigation/publicRoutes";
+import {
+  ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT,
+  ADMIN_PATH_SEGMENT_TO_DASHBOARD_SECTION,
+  ADMIN_ROUTE_SEGMENTS,
+  PUBLIC_HOME_ALIAS_PATHS,
+  PUBLIC_SCREEN_PATHS,
+} from "@/navigation/publicRoutes";
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser } from "@/utils/roles";
@@ -46,23 +52,55 @@ const navigationTheme = {
   },
 };
 
+function buildLinkingPrefixes(): string[] {
+  const prefixes: string[] = [];
+  try {
+    const cfg = getDomainConfig();
+    if (cfg.appWebOrigin) prefixes.push(cfg.appWebOrigin);
+    if (cfg.publicWebOrigin) prefixes.push(cfg.publicWebOrigin);
+  } catch {
+    /* noop */
+  }
+  if (Platform.OS === "web") {
+    prefixes.push("/");
+  }
+  return prefixes;
+}
+
 const linking: LinkingOptions<RootPathParamList> = {
-  prefixes: [],
+  prefixes: buildLinkingPrefixes(),
   config: {
     screens: {
       About: PUBLIC_SCREEN_PATHS.About,
-      AdminHome: "admin",
+      AdminHome: {
+        path: `${ADMIN_ROUTE_SEGMENTS.root}/:section?`,
+        parse: {
+          section: (raw: string | undefined): import("./types").AdminDashboardSection | undefined => {
+            if (!raw) return undefined;
+            const section = ADMIN_PATH_SEGMENT_TO_DASHBOARD_SECTION[raw];
+            return section ?? undefined;
+          },
+        },
+        stringify: {
+          section: (
+            value: import("./types").AdminDashboardSection | undefined
+          ): string => {
+            if (!value || value === "overview") return "";
+            return ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT[value] ?? "";
+          },
+        },
+      },
       ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
       Home: PUBLIC_SCREEN_PATHS.Home,
       SignIn: PUBLIC_SCREEN_PATHS.SignIn,
       Stores: PUBLIC_SCREEN_PATHS.Stores,
-      QrCodesList: "admin/codigos-qr",
-      StudentDetail: "admin/alumnos/:studentId",
-      StudentsList: "admin/alumnos",
-      TrajectoryList: "admin/trayectoria",
-      TrajectoryDetail: "admin/trayectoria/:studentId",
+      QrCodesList: `${ADMIN_ROUTE_SEGMENTS.root}/codigos-qr`,
+      StudentDetail: `${ADMIN_ROUTE_SEGMENTS.root}/alumnos/:studentId`,
+      StudentsList: `${ADMIN_ROUTE_SEGMENTS.root}/alumnos`,
+      TrajectoryList: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria`,
+      TrajectoryDetail: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria/:studentId`,
     },
   },
 };
