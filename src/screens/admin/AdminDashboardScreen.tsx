@@ -1678,10 +1678,10 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             ? { ...current, lookupStatus: "done", registerStatus: "active" }
             : current
         );
-        selectedBranchId = matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id ?? null;
-        classId = matchedStudent.primary_class_id ||
+        selectedBranchId = (matchedStudent.branch_id || scopedBranchId || visibleBranches[0]?.id) ?? null;
+        classId = (matchedStudent.primary_class_id ||
           visibleClasses.find((c) => c.branch_id === selectedBranchId && c.is_active)?.id ||
-          visibleClasses[0]?.id ?? null;
+          visibleClasses[0]?.id) ?? null;
         const now = new Date();
         const hh = String(now.getHours()).padStart(2, "0");
         const mm = String(now.getMinutes()).padStart(2, "0");
