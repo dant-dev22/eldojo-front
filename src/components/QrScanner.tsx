@@ -84,6 +84,7 @@ export function QrScanner({
   const [flashMessage, setFlashMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const cooldownRef = useRef(false);
+  const scanPausedRef = useRef(false);
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const scanLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -176,6 +177,8 @@ export function QrScanner({
       /* noop */
     }
     webScanIntervalRef.current = window.setInterval(() => {
+      if (scanPausedRef.current) return;
+      if (cooldownRef.current) return;
       const video = webVideoRef.current;
       const canvas = webCanvasRef.current;
       if (!video || !canvas) return;
@@ -200,6 +203,25 @@ export function QrScanner({
         /* noop */
       }
     }, WEB_MOBILE_SCAN_INTERVAL_MS);
+  };
+
+  const pauseAllScanning = () => {
+    scanPausedRef.current = true;
+    try {
+      if (webScanIntervalRef.current !== null) {
+        window.clearInterval(webScanIntervalRef.current);
+        webScanIntervalRef.current = null;
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  const resumeAllScanning = () => {
+    scanPausedRef.current = false;
+    if (Platform.OS === "web" && isMobileWeb && permission === "granted" && webMediaStreamRef.current) {
+      startWebMobileScanLoop();
+    }
   };
 
   useEffect(() => {
@@ -231,6 +253,7 @@ export function QrScanner({
       }
       return () => {
         mounted = false;
+        pauseAllScanning();
         disposeWebCamera();
       };
     }
@@ -297,6 +320,7 @@ export function QrScanner({
 
     return () => {
       mounted = false;
+      pauseAllScanning();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -398,6 +422,16 @@ export function QrScanner({
   }, [visible]);
 
   useEffect(() => {
+    if (!visible) return;
+    if (attendanceProcess !== null) {
+      pauseAllScanning();
+    } else {
+      resumeAllScanning();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, attendanceProcess]);
+
+  useEffect(() => {
     if (!visible || permission !== "granted") {
       scanLoopRef.current?.stop();
       return undefined;
@@ -440,17 +474,18 @@ export function QrScanner({
   const handleBarcodeScanned = (event: { data: string }) => {
     const rawCode = event.data?.trim();
     if (!rawCode) return;
+    if (scanPausedRef.current) return;
     if (cooldownRef.current) return;
     if (lastScannedCode === rawCode) return;
 
+    pauseAllScanning();
     cooldownRef.current = true;
     setLastScannedCode(rawCode);
     setFlashMessage({ type: "success", text: "Codigo detectado" });
-    onCodeScanned(rawCode);
 
     window.setTimeout(() => {
-      cooldownRef.current = false;
-    }, SCAN_COOLDOWN_MS);
+      onCodeScanned(rawCode);
+    }, 0);
   };
 
   const toggleFacing = () => {
@@ -551,7 +586,9 @@ export function QrScanner({
   return (
     <AppModal
       description={showAttendanceProgressView ? undefined : description}
-      onClose={onClose}
+      onClose={() => {
+        onClose?.();
+      }}
       testID={baseId}
       title={showAttendanceProgressView ? "Registro de asistencia" : title}
       visible={visible}

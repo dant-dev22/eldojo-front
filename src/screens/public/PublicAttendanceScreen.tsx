@@ -276,18 +276,21 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     retry: false,
   });
 
-  const normalizeProcessState = (
-    status: "processing" | "success" | "error"
-  ): {
-    lookupStatus: AttendanceStepStatus;
-    registerStatus: AttendanceStepStatus;
-    overallStatus: "processing" | "success" | "error";
-  } => {
-    if (status === "success") {
-      return { lookupStatus: "done", registerStatus: "done", overallStatus: "success" };
-    }
-    return { lookupStatus: "active", registerStatus: "pending", overallStatus: status };
-  };
+  const normalizeProcessState = useCallback(
+    (
+      status: "processing" | "success" | "error"
+    ): {
+      lookupStatus: AttendanceStepStatus;
+      registerStatus: AttendanceStepStatus;
+      overallStatus: "processing" | "success" | "error";
+    } => {
+      if (status === "success") {
+        return { lookupStatus: "done", registerStatus: "done", overallStatus: "success" };
+      }
+      return { lookupStatus: "active", registerStatus: "pending", overallStatus: status };
+    },
+    []
+  );
 
   const registerMutation = useMutation({
     mutationFn: async () =>
@@ -498,17 +501,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     const intervalId = setInterval(() => {
       setScannerProcessState((current) => {
         if (!current || current.successCountdown === null) return current;
-        const nextValue = current.successCountdown - 1;
-        if (nextValue <= 0) {
-          window.setTimeout(() => {
-            resetScannerAndOpenCamera();
-          }, 0);
-        }
-        return { ...current, successCountdown: nextValue };
+        return { ...current, successCountdown: current.successCountdown - 1 };
       });
     }, 1000);
 
     return () => clearInterval(intervalId);
+  }, [scannerProcessState]);
+
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.successCountdown === null) return;
+    if (scannerProcessState.successCountdown > 0) return;
+
+    resetScannerAndOpenCamera();
   }, [scannerProcessState, resetScannerAndOpenCamera]);
 
   useEffect(() => {
@@ -519,17 +524,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     const intervalId = setInterval(() => {
       setManualProcessState((current) => {
         if (!current || current.successCountdown === null) return current;
-        const nextValue = current.successCountdown - 1;
-        if (nextValue <= 0) {
-          window.setTimeout(() => {
-            closeManualProcessModal();
-          }, 0);
-        }
-        return { ...current, successCountdown: nextValue };
+        return { ...current, successCountdown: current.successCountdown - 1 };
       });
     }, 1000);
 
     return () => clearInterval(intervalId);
+  }, [manualProcessState]);
+
+  useEffect(() => {
+    if (!manualProcessState) return;
+    if (manualProcessState.successCountdown === null) return;
+    if (manualProcessState.successCountdown > 0) return;
+
+    closeManualProcessModal();
   }, [manualProcessState, closeManualProcessModal]);
 
   useEffect(() => {

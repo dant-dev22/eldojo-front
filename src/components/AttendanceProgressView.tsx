@@ -146,6 +146,7 @@ export function AttendanceProgressView({
   const isSuccess = overallStatus === "success";
   const isError = overallStatus === "error";
 
+  try {
   return (
     <View nativeID={baseId} style={styles.container} testID={baseId}>
       <View
@@ -264,6 +265,15 @@ export function AttendanceProgressView({
       ) : null}
     </View>
   );
+  } catch (e) {
+    return (
+      <View nativeID={`${baseId}-error-fallback`} testID={`${baseId}-error-fallback`} style={{ gap: 12, padding: 20, backgroundColor: judogiRedSoft, borderRadius: 12, borderWidth: 1, borderColor: "rgba(198,40,40,0.28)" }}>
+        <Text style={{ fontWeight: "800", color: judogiRed }}>No se pudo mostrar el progreso</Text>
+        <Text style={{ fontSize: 12, color: colors.textMuted, lineHeight: 16 }}>Vuelve a intentarlo o usa el ingreso manual. Si el problema persiste, contacta al administrador.</Text>
+        <Text style={{ fontFamily: "monospace", fontSize: 10, color: woodAged, lineHeight: 14, opacity: 0.8 }}>Detalle: {String(e)}</Text>
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
