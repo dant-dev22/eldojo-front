@@ -135,7 +135,7 @@ const EMPTY_CONTACT: EmptyStateConfig = {
 };
 
 const EMPTY_FIGHTS: EmptyStateConfig = {
-  icon: "swords",
+  icon: "activity",
   title: "Sin peleas registradas",
   description: "Todavía no hay eventos deportivos (victorias, empates o derrotas).",
   hint: "Registra torneos o exámenes desde la ficha del alumno.",
@@ -864,7 +864,7 @@ function FightRecordRow({
       label: "Tipo",
       value: formatFightTypeLabel(record.record_type),
       valueColor: toneColor,
-      icon: "swords",
+      icon: "activity",
     },
   ];
 
@@ -873,7 +873,7 @@ function FightRecordRow({
       <View style={styles.fightRowTop}>
         <View style={[styles.fightIconBlock, { backgroundColor: `${toneColor}18` }]}>
           <Feather
-            name={record.record_type === "victoria" ? "trophy" : record.record_type === "empate" ? "minus" : "x-circle"}
+            name={record.record_type === "victoria" ? "award" : record.record_type === "empate" ? "minus" : "x"}
             size={18}
             color={toneColor}
           />
@@ -1189,7 +1189,7 @@ export function StudentDetailView({
     rows.push({
       label: "Moneda",
       value: student.currency,
-      icon: "circle-dollar-sign",
+      icon: "dollar-sign",
     });
     return rows;
   }, [student]);
@@ -1199,7 +1199,7 @@ export function StudentDetailView({
     rows.push({
       label: "Fecha de nacimiento",
       value: `${formatDate(student.birth_date)}${student.birth_place ? ` · ${student.birth_place}` : ""}`,
-      icon: "cake",
+      icon: "calendar",
     });
     rows.push({
       label: "Fecha de inscripción",
@@ -1210,7 +1210,7 @@ export function StudentDetailView({
       rows.push({
         label: "Altura",
         value: `${student.height_cm} cm`,
-        icon: "ruler",
+        icon: "maximize-2",
       });
     }
     rows.push({
@@ -1279,7 +1279,7 @@ export function StudentDetailView({
       });
     }
     if (mr.medications) {
-      clinical.push({ label: "Medicamentos", value: mr.medications, icon: "pill" });
+      clinical.push({ label: "Medicamentos", value: mr.medications, icon: "heart" });
     }
     if (mr.previous_injuries) {
       clinical.push({ label: "Lesiones previas", value: mr.previous_injuries, icon: "zap" });
@@ -1297,7 +1297,7 @@ export function StudentDetailView({
       practitioner.push({
         label: "Vacuna de tétanos",
         value: formatDate(mr.tetanus_vaccine_date),
-        icon: "syringe",
+        icon: "activity",
       });
     }
     if (mr.additional_notes) {
@@ -1367,24 +1367,24 @@ export function StudentDetailView({
       label: "Victorias",
       value: String(wins),
       valueColor: colors.success,
-      icon: "trophy",
+      icon: "award",
     },
     {
       label: "Empates",
       value: String(draws),
       valueColor: colors.warning,
-      icon: "minus-circle",
+      icon: "minus",
     },
     {
       label: "Derrotas",
       value: String(losses),
       valueColor: colors.danger,
-      icon: "x-circle",
+      icon: "x",
     },
     {
       label: "Total peleas",
       value: String(totalFights),
-      icon: "swords",
+      icon: "activity",
     },
     {
       label: "% victorias",
@@ -1495,9 +1495,9 @@ export function StudentDetailView({
         </View>
         <View style={[styles.heroBelt, !isDesktop && { alignSelf: "center" }]}>
           <BeltIndicator
-            beltLevel={student.current_belt_level as unknown as number}
+            beltLevel={student.current_belt_level}
             size="md"
-            stripe={student.current_stripe as unknown as number}
+            stripe={student.current_stripe}
             testID={`${idPrefix}-belt`}
           />
         </View>

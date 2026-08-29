@@ -104,6 +104,17 @@ export function QrCodesListScreen({ navigation }: Props) {
     enabled: Boolean(organizationId),
   });
 
+  const branchesQuery = useQuery({
+    queryKey: ["branches", organizationId],
+    queryFn: () => branchesApi.list({ organizationId: organizationId ?? undefined, isActive: true }),
+    enabled: Boolean(organizationId),
+  });
+
+  const studentsQuery = useQuery({
+    queryKey: ["students", debouncedSearch],
+    queryFn: () => studentsApi.list({ search: debouncedSearch.trim() || undefined }),
+  });
+
   const invalidateQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["dashboard-attendance"] }),
@@ -167,17 +178,6 @@ export function QrCodesListScreen({ navigation }: Props) {
     },
     [branchesQuery.data, classesQuery.data, createAttendanceMutation, fixedBranchId, user?.id]
   );
-
-  const branchesQuery = useQuery({
-    queryKey: ["branches", organizationId],
-    queryFn: () => branchesApi.list({ organizationId: organizationId ?? undefined, isActive: true }),
-    enabled: Boolean(organizationId),
-  });
-
-  const studentsQuery = useQuery({
-    queryKey: ["students", debouncedSearch],
-    queryFn: () => studentsApi.list({ search: debouncedSearch.trim() || undefined }),
-  });
 
   const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const branches = branchesQuery.data ?? [];

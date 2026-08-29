@@ -4852,11 +4852,14 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             setAttendanceModalVisible(false);
             setQuickScannerVisible(true);
           }}
-          style={({ pressed, hovered }) => [
-            styles.quickModalQrRow,
-            !quickQrEnabled || attendanceBusy ? styles.quickModalQrRowDisabled : null,
-            pressed || hovered ? styles.quickModalQrRowPressed : null,
-          ]}
+          style={(state) => {
+            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+            return [
+              styles.quickModalQrRow,
+              !quickQrEnabled || attendanceBusy ? styles.quickModalQrRowDisabled : null,
+              state.pressed || hovered ? styles.quickModalQrRowPressed : null,
+            ];
+          }}
           testID="screens-admin-dashboard-attendance-modal-qr-row"
         >
           <View style={styles.quickModalQrRowContent}>

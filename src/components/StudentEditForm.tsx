@@ -108,7 +108,7 @@ export function editableToPayload(
   if (formatDate(original.birth_date) !== fields.birth_date) {
     payload.birth_date = asString(fields.birth_date);
   }
-  if (fields.birth_place !== (original.birth_place ?? "")) payload.birth_place = asNullableString(fields.birth_place);
+  if (fields.birth_place !== (original.birth_place ?? "")) payload.birth_place = asNullableString(fields.birth_place) ?? undefined;
   if (String(original.height_cm ?? "") !== fields.height_cm) payload.height_cm = asNullableNumber(fields.height_cm);
   if (formatDate(original.enrollment_date) !== fields.enrollment_date) {
     payload.enrollment_date = asString(fields.enrollment_date);
@@ -571,12 +571,15 @@ export function StudentEditForm({
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 nativeID={`${idPrefix}-admin-view-payments-link`}
                 onPress={onViewPayments}
-                style={({ hovered, pressed }) => [
-                  styles.viewPaymentsLink,
-                  hovered ? styles.viewPaymentsLinkHovered : null,
-                  pressed ? styles.viewPaymentsLinkPressed : null,
-                  { minHeight: 36, minWidth: 36 },
-                ]}
+                style={(state) => {
+                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                  return [
+                    styles.viewPaymentsLink,
+                    hovered ? styles.viewPaymentsLinkHovered : null,
+                    state.pressed ? styles.viewPaymentsLinkPressed : null,
+                    { minHeight: 36, minWidth: 36 },
+                  ];
+                }}
                 testID={`${idPrefix}-admin-view-payments-link`}
               >
                 <Feather name="list" size={14} color={colors.wood} />
@@ -799,7 +802,7 @@ function EditableCell({ idPrefix, spec, fields, onFieldChange }: EditableCellPro
           items={spec.selectOptions ?? []}
           label={spec.label}
           nativeID={`${idPrefix}-select`}
-          onValueChange={(v) => onFieldChange(fieldKey, v as never)}
+          onValueChange={(v: string) => onFieldChange(fieldKey, v as never)}
           testID={`${idPrefix}-select`}
           value={spec.selectValue ?? String(currentValue)}
         />

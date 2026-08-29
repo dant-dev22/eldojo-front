@@ -20,7 +20,7 @@ interface SelectItem {
   value: string;
 }
 
-interface AppSelectProps {
+export interface AppSelectProps {
   label: string;
   value: string;
   onValueChange: (value: string) => void;

@@ -568,7 +568,7 @@ export function TrajectoryListScreen({ navigation }: Props) {
         onSuccess: async () => {
           await createBeltHistoryMutation.mutateAsync({
             student_id: activeStudentId,
-            belt_level_id: beltDraft.beltLevelId,
+            belt_level_id: beltDraft.beltLevelId!,
             stripe_id: beltDraft.stripeId ?? null,
             awarded_at: beltAwardedAt,
             awarded_by_user_id: user?.id ?? null,
