@@ -162,12 +162,17 @@ function WebDropdown({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const menuHostRef = useRef<HTMLDivElement | null>(null);
+  const menuContainerElRef = useRef<HTMLDivElement | null>(null);
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const animatedTranslate = useRef(new Animated.Value(-6)).current;
   const overlayAnimatedOpacity = useRef(new Animated.Value(0)).current;
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number; width: number } | null>(
     null,
   );
+  const menuCoordsRef = useRef(menuCoords);
+  useEffect(() => {
+    menuCoordsRef.current = menuCoords;
+  }, [menuCoords]);
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
@@ -181,24 +186,50 @@ function WebDropdown({
     if (!enabled) setOpen(false);
   }, [enabled]);
 
+  const readMenuPosition = useCallback(
+    (): { top: number; left: number; width: number } | null => {
+      const triggerNode = triggerRef.current;
+      if (!triggerNode) return null;
+      try {
+        const rect = triggerNode.getBoundingClientRect();
+        const win = typeof window !== "undefined" ? window : null;
+        return {
+          top: rect.bottom + 8 + (win ? win.scrollY : 0),
+          left: rect.left + (win ? win.scrollX : 0),
+          width: Math.max(rect.width, 200),
+        };
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
   const updateMenuPosition = useCallback(() => {
-    const triggerNode = triggerRef.current;
-    if (!triggerNode) {
+    const coords = readMenuPosition();
+    if (!coords) {
       setMenuCoords(null);
+      menuCoordsRef.current = null;
       return;
     }
-    try {
-      const rect = triggerNode.getBoundingClientRect();
-      const win = typeof window !== "undefined" ? window : null;
-      setMenuCoords({
-        top: rect.bottom + 8 + (win ? win.scrollY : 0),
-        left: rect.left + (win ? win.scrollX : 0),
-        width: Math.max(rect.width, 200),
-      });
-    } catch {
-      setMenuCoords(null);
+    menuCoordsRef.current = coords;
+    // Si el menú ya está pintado en el DOM, actualizar posición directamente sin tocar state
+    // (así evitamos re-ejecutar el efecto de renderizado completo del menú)
+    const containerEl = menuContainerElRef.current;
+    if (containerEl) {
+      try {
+        containerEl.style.top = `${coords.top}px`;
+        containerEl.style.left = `${coords.left}px`;
+        containerEl.style.width = `${coords.width}px`;
+        containerEl.style.maxWidth = `calc(100vw - ${coords.left + 24}px)`;
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // Aún no existe el container: actualizar state para el primer pintado
+      setMenuCoords(coords);
     }
-  }, []);
+  }, [readMenuPosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -354,6 +385,8 @@ function WebDropdown({
 
     // Clear previous content
     while (host.firstChild) host.removeChild(host.firstChild);
+    // Reset container ref on every rebuild / cleanup
+    menuContainerElRef.current = null;
 
     if (!open) {
       host.style.display = "none";
@@ -361,9 +394,28 @@ function WebDropdown({
     }
     host.style.display = "block";
 
-    const topPx = menuCoords ? `${menuCoords.top}px` : "0px";
-    const leftPx = menuCoords ? `${menuCoords.left}px` : "0px";
-    const widthPx = menuCoords ? `${menuCoords.width}px` : "220px";
+    // Leer coords desde la última lectura disponible (ref) o recalcular
+    let coords = menuCoordsRef.current ?? null;
+    if (!coords) {
+      try {
+        const triggerNode = triggerRef.current;
+        if (triggerNode) {
+          const rect = triggerNode.getBoundingClientRect();
+          const win = typeof window !== "undefined" ? window : null;
+          coords = {
+            top: rect.bottom + 8 + (win ? win.scrollY : 0),
+            left: rect.left + (win ? win.scrollX : 0),
+            width: Math.max(rect.width, 200),
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const topPx = coords ? `${coords.top}px` : "0px";
+    const leftPx = coords ? `${coords.left}px` : "0px";
+    const widthPx = coords ? `${coords.width}px` : "220px";
 
     const container = doc.createElement("div");
     container.id = `${baseId}-menu`;
@@ -377,7 +429,7 @@ function WebDropdown({
       left: leftPx,
       width: widthPx,
       minWidth: "220px",
-      maxWidth: `calc(100vw - ${menuCoords ? menuCoords.left + 24 : 24}px)`,
+      maxWidth: `calc(100vw - ${coords ? coords.left + 24 : 24}px)`,
       backgroundColor: "#FFFFFF",
       borderRadius: "12px",
       border: "1px solid rgba(26, 26, 26, 0.08)",
@@ -395,12 +447,17 @@ function WebDropdown({
       maxHeight: 0,
     });
 
+    // Expose the container for direct style updates (position) without state changes
+    menuContainerElRef.current = container;
+
     // Force reflow so transition triggers
     requestAnimationFrame(() => {
-      container.style.opacity = "1";
-      container.style.transform = "translateY(0)";
-      container.style.minHeight = "56px";
-      container.style.maxHeight = `${estimatedHeight}px`;
+      if (menuContainerElRef.current === container) {
+        container.style.opacity = "1";
+        container.style.transform = "translateY(0)";
+        container.style.minHeight = "56px";
+        container.style.maxHeight = `${estimatedHeight}px`;
+      }
     });
 
     const scroll = doc.createElement("div");
@@ -556,12 +613,18 @@ function WebDropdown({
 
     // Safety: if host still has no pointer-events auto for whatever reason, force it:
     host.style.pointerEvents = "auto";
+
+    return () => {
+      // Limpiar ref si este container es el que sigue vigente
+      if (menuContainerElRef.current === container) {
+        menuContainerElRef.current = null;
+      }
+    };
   }, [
     baseId,
     estimatedHeight,
     hasValue,
     items,
-    menuCoords,
     open,
     placeholder,
     transitions.fast,
