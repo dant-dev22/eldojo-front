@@ -277,21 +277,12 @@ function WebDropdown({
     function handleKey(evt: KeyboardEvent) {
       if (evt.key === "Escape") setOpen(false);
     }
-    function handleResize() {
-      setOpen(false);
-    }
 
     doc.addEventListener("mousedown", handlePointerDown as any);
     doc.addEventListener("keydown", handleKey as any);
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", handleResize);
-    }
     return () => {
       doc.removeEventListener("mousedown", handlePointerDown as any);
       doc.removeEventListener("keydown", handleKey as any);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("resize", handleResize);
-      }
     };
   }, []);
 
@@ -418,11 +409,24 @@ function WebDropdown({
       overflowX: "hidden" as const,
       width: "100%",
       maxHeight: `${estimatedHeight - 12}px`,
+      height: "auto",
       padding: "0px",
       display: "flex",
       flexDirection: "column" as const,
       gap: "2px",
+      overscrollBehavior: "contain" as const,
+      touchAction: "pan-y" as const,
+      position: "relative" as const,
     });
+
+    const stopScrollPropagation = (e: Event) => {
+      e.stopPropagation();
+    };
+    scroll.addEventListener("wheel", stopScrollPropagation, true);
+    scroll.addEventListener("touchmove", stopScrollPropagation, true);
+    scroll.addEventListener("scroll", stopScrollPropagation, true);
+    container.addEventListener("wheel", (e) => e.stopPropagation(), true);
+    container.addEventListener("touchmove", (e) => e.stopPropagation(), true);
 
     const optionRows: Array<{ __placeholder: boolean; label: string; value: string }> = [
       { __placeholder: true, label: placeholder, value: NONE_MENU_VALUE },
@@ -639,9 +643,9 @@ function WebDropdown({
 
         {enabled && Platform.OS === "web" ? (
           <PortalLayer
-            pointerEvents={open ? "auto" : "none"}
+            pointerEvents="none"
             animatedStyle={{ opacity: overlayAnimatedOpacity }}
-            onPress={() => setOpen(false)}
+            onPress={() => {}}
           />
         ) : null}
       </View>

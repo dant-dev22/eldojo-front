@@ -13,14 +13,17 @@ import type {
 import { buildAppUrl, buildPublicUrl, getDomainConfig } from "@/utils/domains";
 import {
   clearSessionAuthenticated,
+  hardClearSessionHint,
   writeSessionAuthenticated,
 } from "@/utils/sessionHint";
 import {
+  browserCacheBusterParam,
   clearPendingAcademyRegistration,
   clearSession,
   getAccessToken,
   getRefreshToken,
   getStoredUser,
+  hardClearAllEldojoItems,
   saveSession,
 } from "@/utils/storage";
 import { getGymAdminAccessMessage, isGymAdminUser } from "@/utils/roles";
@@ -51,9 +54,12 @@ interface AuthContextValue {
   justLoggedIn: boolean;
   consumeJustLoggedIn: () => void;
   redeemSessionTicket: (ticket: string) => Promise<User>;
-  redirectToPublicLogin: (redirectAfterLogin?: string) => void;
-  redirectToPublicHome: () => void;
-  redirectToAppDashboard: () => void;
+  redirectToPublicLogin: (
+    redirectAfterLogin?: string,
+    extras?: Record<string, string | undefined>
+  ) => void;
+  redirectToPublicHome: (extras?: Record<string, string | undefined>) => void;
+  redirectToAppDashboard: (extras?: Record<string, string | undefined>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -179,14 +185,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void restoreSession();
   }, []);
 
-  const redirectToPublicLogin: AuthContextValue["redirectToPublicLogin"] = (redirectAfterLogin) => {
+  function appendCacheBuster(query: Record<string, string | undefined> | undefined): Record<string, string | undefined> {
+    const out: Record<string, string | undefined> = { ...(query || {}) };
+    out._ = Date.now().toString(36);
+    return out;
+  }
+
+  function navigateWithBypass(destination: string): void {
+    if (typeof window === "undefined") return;
+    try {
+      window.location.replace(destination);
+    } catch {
+      window.location.assign(destination);
+    }
+  }
+
+  const redirectToPublicLogin: AuthContextValue["redirectToPublicLogin"] = (redirectAfterLogin, extras) => {
     if (typeof window === "undefined") return;
     const cfg = getDomainConfig();
-    const redirectQuery = redirectAfterLogin
-      ? { redirect_to: redirectAfterLogin }
-      : undefined;
+    const redirectQuery = appendCacheBuster({
+      ...(extras || {}),
+      ...(redirectAfterLogin ? { redirect_to: redirectAfterLogin } : undefined),
+    });
     const params = new URLSearchParams();
-    Object.entries(redirectQuery || {}).forEach(([k, v]) => {
+    Object.entries(redirectQuery).forEach(([k, v]) => {
       if (v) params.set(k, v);
     });
     const qs = params.toString();
@@ -197,42 +219,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } else {
       destination = buildPublicUrl("iniciar-sesion", redirectQuery);
     }
-    const current = `${window.location.pathname}${window.location.search}`;
-    const resolvedDest = destination.startsWith("http")
-      ? new URL(destination).pathname + new URL(destination).search
-      : destination;
-    if (resolvedDest === current) {
-      return;
-    }
-    window.location.assign(destination);
+    navigateWithBypass(destination);
   };
 
-  const redirectToPublicHome: AuthContextValue["redirectToPublicHome"] = () => {
+  const redirectToPublicHome: AuthContextValue["redirectToPublicHome"] = (extras) => {
     if (typeof window === "undefined") return;
     const cfg = getDomainConfig();
+    const query = appendCacheBuster(extras || {});
     let destination: string;
     if (cfg.isPublicHostname) {
-      destination = "/";
+      const qs = new URLSearchParams();
+      Object.entries(query).forEach(([k, v]) => { if (v) qs.set(k, v); });
+      destination = `/?${qs.toString()}`;
     } else {
-      destination = buildPublicUrl("");
+      destination = buildPublicUrl("", query);
     }
-    const current = window.location.pathname.replace(/\/+$/, "") || "/";
-    const resolvedDest = destination.startsWith("http")
-      ? new URL(destination).pathname
-      : destination.replace(/\/+$/, "") || "/";
-    if (resolvedDest === current) {
-      return;
-    }
-    window.location.assign(destination);
+    navigateWithBypass(destination);
   };
 
-  const redirectToAppDashboard: AuthContextValue["redirectToAppDashboard"] = () => {
+  const redirectToAppDashboard: AuthContextValue["redirectToAppDashboard"] = (extras) => {
     if (typeof window === "undefined") return;
     const cfg = getDomainConfig();
+    const query = appendCacheBuster(extras || {});
     if (cfg.isAppHostname) {
-      window.location.assign("/admin");
+      const qs = new URLSearchParams();
+      Object.entries(query).forEach(([k, v]) => { if (v) qs.set(k, v); });
+      navigateWithBypass(`/admin?${qs.toString()}`);
     } else {
-      window.location.assign(buildAppUrl("admin"));
+      navigateWithBypass(buildAppUrl("admin", query));
     }
   };
 
@@ -244,9 +258,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const cfg = getDomainConfig();
         const response = await authApi.login(payload);
         if (!isGymAdminUser(response.user)) {
+          hardClearAllEldojoItems();
+          hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
+        hardClearAllEldojoItems();
+        hardClearSessionHint(cfg.sessionCookieDomain);
         await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
@@ -260,11 +278,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("", {
+        const appRedirectUrl = buildAppUrl("", appendCacheBuster({
           session_ticket: ticketResponse.ticket,
-        });
+          login_fresh: "1",
+        }));
         if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
+          navigateWithBypass(appRedirectUrl);
         }
         return { redirectedToApp: true, appRedirectUrl };
       },
@@ -289,9 +308,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const cfg = getDomainConfig();
         const response = await authApi.confirmAcademy({ token });
         if (!isGymAdminUser(response.user)) {
+          hardClearAllEldojoItems();
+          hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
+        hardClearAllEldojoItems();
+        hardClearSessionHint(cfg.sessionCookieDomain);
         await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
@@ -305,12 +328,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", {
+        const appRedirectUrl = buildAppUrl("admin", appendCacheBuster({
           session_ticket: ticketResponse.ticket,
           welcome: "1",
-        });
+          login_fresh: "1",
+        }));
         if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
+          navigateWithBypass(appRedirectUrl);
         }
         return { redirectedToApp: true, appRedirectUrl };
       },
@@ -320,9 +344,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
           ticket: pendingRegistration.pendingSessionTicket,
         });
         if (!isGymAdminUser(response.user)) {
+          hardClearAllEldojoItems();
+          hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
           throw new Error(getGymAdminAccessMessage());
         }
+        hardClearAllEldojoItems();
+        hardClearSessionHint(cfg.sessionCookieDomain);
         await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
         setUser(response.user);
@@ -336,11 +364,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
 
         const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", {
+        const appRedirectUrl = buildAppUrl("admin", appendCacheBuster({
           session_ticket: ticketResponse.ticket,
-        });
+          login_fresh: "1",
+        }));
         if (typeof window !== "undefined") {
-          window.location.assign(appRedirectUrl);
+          navigateWithBypass(appRedirectUrl);
         }
         return { redirectedToApp: true, appRedirectUrl };
       },
@@ -355,9 +384,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
             // El cierre de sesión no debe bloquearse si la sincronización falla.
           }
         }
-        updateHintForUser(null);
+        hardClearSessionHint(cfg.sessionCookieDomain);
         await clearPendingAcademyRegistration();
         await clearSession();
+        hardClearAllEldojoItems();
         setUser(null);
         setShowPostConfirmation(false);
         setStatus("unauthenticated");
@@ -365,7 +395,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         if (redirectToPublic && typeof window !== "undefined") {
           if (cfg.isAppHostname) {
-            window.location.assign(buildPublicUrl(""));
+            navigateWithBypass(
+              buildPublicUrl("iniciar-sesion", appendCacheBuster({
+                clear_session: "1",
+                signed_out: "1",
+              }))
+            );
+          } else {
+            redirectToPublicLogin(undefined, { clear_session: "1", signed_out: "1" });
           }
         }
       },

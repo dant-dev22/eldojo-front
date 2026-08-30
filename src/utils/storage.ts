@@ -7,6 +7,8 @@ const ACCESS_TOKEN_KEY = "eldojo.access_token";
 const REFRESH_TOKEN_KEY = "eldojo.refresh_token";
 const USER_KEY = "eldojo.user";
 const PENDING_ACADEMY_REGISTRATION_KEY = "eldojo.pending_academy_registration";
+const ELDOJO_KEY_PREFIX = "eldojo.";
+const ELDOJO_STANDALONE_KEYS: ReadonlyArray<string> = ["eldojo_visitor_id"];
 
 function isWebPlatform(): boolean {
   return Platform.OS === "web";
@@ -102,4 +104,28 @@ export async function clearPendingAcademyRegistration(): Promise<void> {
   }
 
   await deleteItem(PENDING_ACADEMY_REGISTRATION_KEY);
+}
+
+export function hardClearAllEldojoItems(): void {
+  if (isWebPlatform()) {
+    const storage = getWebStorage();
+    if (storage) {
+      const toRemove: string[] = [];
+      for (let i = 0; i < storage.length; i += 1) {
+        const key = storage.key(i);
+        if (!key) continue;
+        if (
+          key.startsWith(ELDOJO_KEY_PREFIX) ||
+          ELDOJO_STANDALONE_KEYS.some((standalone) => standalone === key)
+        ) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach((key) => storage.removeItem(key));
+    }
+  }
+}
+
+export function browserCacheBusterParam(): string {
+  return `_=${Date.now().toString(36)}`;
 }

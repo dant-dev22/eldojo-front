@@ -133,4 +133,11 @@ export function clearSessionAuthenticated(cookieDomain?: string): SessionHint {
 
 export function hardClearSessionHint(cookieDomain?: string): void {
   tryDeleteCookie(HINT_COOKIE_NAME, cookieDomain);
+  tryDeleteCookie(HINT_COOKIE_NAME);
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.startsWith("app.")) {
+      tryDeleteCookie(HINT_COOKIE_NAME, host.substring(4));
+    }
+  }
 }

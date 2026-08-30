@@ -32,6 +32,8 @@ import {
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser } from "@/utils/roles";
+import { hardClearAllEldojoItems } from "@/utils/storage";
+import { hardClearSessionHint } from "@/utils/sessionHint";
 
 import type { AdminStackParamList, AuthStackParamList } from "./types";
 
@@ -226,11 +228,23 @@ export function AppNavigator() {
 
   const sessionTicket = readQueryParam("session_ticket");
   const redirectTo = readQueryParam("redirect_to") || readQueryParam("redirect");
+  const clearSessionFlag = readQueryParam("clear_session");
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (clearSessionFlag !== "1") return;
+    try {
+      hardClearSessionHint(domainCfg.sessionCookieDomain);
+      hardClearAllEldojoItems();
+    } catch {
+      /* noop */
+    }
+    removeQueryParams(["clear_session", "signed_out", "_"]);
+  }, [clearSessionFlag, domainCfg.sessionCookieDomain]);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
     if (!sessionTicket) return;
-    if (status !== "unauthenticated" && status !== "loading") return;
     if (ticketRedeemState !== "idle") return;
     if (!domainCfg.isAppHostname) return;
 
@@ -240,17 +254,25 @@ export function AppNavigator() {
 
     (async () => {
       try {
+        if (status === "authenticated") {
+          try {
+            hardClearSessionHint(domainCfg.sessionCookieDomain);
+            hardClearAllEldojoItems();
+          } catch {
+            /* noop */
+          }
+        }
         await redeemSessionTicket(sessionTicket);
         if (cancelled) return;
         setTicketRedeemState("success");
-        removeQueryParams(["session_ticket", "redirect", "redirect_to", "welcome"]);
+        removeQueryParams(["session_ticket", "redirect", "redirect_to", "welcome", "login_fresh", "_"]);
       } catch (err) {
         if (cancelled) return;
         const message =
           err instanceof Error ? err.message : "No fue posible validar el acceso.";
         setTicketRedeemError(message);
         setTicketRedeemState("error");
-        removeQueryParams(["session_ticket", "redirect", "redirect_to", "welcome"]);
+        removeQueryParams(["session_ticket", "redirect", "redirect_to", "welcome", "login_fresh", "_"]);
       }
     })();
 
@@ -262,6 +284,7 @@ export function AppNavigator() {
     status,
     ticketRedeemState,
     domainCfg.isAppHostname,
+    domainCfg.sessionCookieDomain,
     redeemSessionTicket,
   ]);
 
@@ -400,10 +423,16 @@ export function AppNavigator() {
           path === "/dashboard" ||
           path.startsWith("/dashboard/")
         ) {
-          const destination = buildAppUrl(
-            path.startsWith("/") ? path.substring(1) : path
-          );
-          window.location.assign(destination);
+          const target = path.startsWith("/") ? path.substring(1) : path;
+          const qs = new URLSearchParams();
+          qs.set("_", Date.now().toString(36));
+          qs.set("login_fresh", "1");
+          const destination = `${buildAppUrl(target)}${target.includes("?") ? "&" : "?"}${qs.toString()}`;
+          try {
+            window.location.replace(destination);
+          } catch {
+            window.location.assign(destination);
+          }
           return (
             <NavigationContainer linking={linking} theme={navigationTheme}>
               <StatusView
@@ -420,12 +449,17 @@ export function AppNavigator() {
         window.location.pathname.startsWith("/admin") ||
         window.location.pathname.startsWith("/dashboard")
       ) {
-        const destination = buildAppUrl(
-          window.location.pathname.startsWith("/")
-            ? window.location.pathname.substring(1)
-            : window.location.pathname
-        );
-        window.location.assign(destination);
+        const target = window.location.pathname.startsWith("/")
+          ? window.location.pathname.substring(1)
+          : window.location.pathname;
+        const qs = new URLSearchParams();
+        qs.set("_", Date.now().toString(36));
+        const destination = `${buildAppUrl(target)}${target.includes("?") ? "&" : "?"}${qs.toString()}`;
+        try {
+          window.location.replace(destination);
+        } catch {
+          window.location.assign(destination);
+        }
         return (
           <NavigationContainer linking={linking} theme={navigationTheme}>
             <StatusView
