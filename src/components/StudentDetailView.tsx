@@ -16,6 +16,7 @@ import {
 } from "@/utils/format";
 
 import type {
+  Attendance,
   AuthorizedPerson,
   Branch,
   DocumentType,
@@ -27,6 +28,7 @@ import type {
   PaymentRecordStatus,
   PaymentStatus,
   Student,
+  StudentAttendanceSummary,
   StudentDocument,
   StudentFightRecord,
   StudentStatus,
@@ -56,6 +58,9 @@ interface StudentDetailViewProps {
   onEditFightRecord?: () => void;
   onGoToTrajectory?: () => void;
   onOpenLastEvent?: () => void;
+  attendanceSummary?: StudentAttendanceSummary | null;
+  attendanceHistory?: Attendance[];
+  attendanceSection?: React.ReactNode;
 }
 
 interface InfoRowData {
@@ -1146,6 +1151,9 @@ export function StudentDetailView({
   onEditFightRecord,
   onGoToTrajectory,
   onOpenLastEvent,
+  attendanceSummary = null,
+  attendanceHistory = [],
+  attendanceSection = null,
 }: StudentDetailViewProps) {
   const { isDesktop } = useResponsiveLayout();
 
@@ -1719,6 +1727,12 @@ export function StudentDetailView({
 
   const slidePayments = (
     <View style={styles.slideInner} nativeID={`${idPrefix}-slide-payments`} testID={`${idPrefix}-slide-payments`}>
+      {attendanceSection ? (
+        <View nativeID={`${idPrefix}-attendance-section`} style={styles.section} testID={`${idPrefix}-attendance-section`}>
+          {attendanceSection}
+        </View>
+      ) : null}
+
       <View
         nativeID={`${idPrefix}-payments-block`}
         style={styles.section}

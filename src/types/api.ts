@@ -542,6 +542,20 @@ export interface MartialClass {
   updated_at: string;
 }
 
+export interface MartialClassSummary {
+  id: number;
+  name: string;
+  discipline_name: string | null;
+  instructor_name: string | null;
+}
+
+export interface StudentSummary {
+  id: number;
+  unique_code: string;
+  first_name: string;
+  last_name: string;
+}
+
 export interface MartialClassCreatePayload {
   organization_id: number;
   branch_id: number;
@@ -620,6 +634,25 @@ export interface Attendance {
   method: AttendanceMethod;
   registered_by: number | null;
   created_at: string;
+  class_obj?: MartialClassSummary | null;
+  student?: StudentSummary | null;
+}
+
+export interface AttendanceByClassRow {
+  class_id: number;
+  class_name: string;
+  count: number;
+}
+
+export interface StudentAttendanceSummary {
+  student_id: number;
+  total_attendances: number;
+  last_7_days: number;
+  last_30_days: number;
+  by_class: AttendanceByClassRow[];
+  first_attendance_at: string | null;
+  last_attendance_at: string | null;
+  streak_days: number;
 }
 
 export interface AttendanceCreatePayload {
