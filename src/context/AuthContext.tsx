@@ -1,3 +1,4 @@
+import axios from "axios";
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
 
 import { authApi } from "@/api/authApi";
@@ -176,9 +177,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
         updateHintForUser(freshUser);
         setUser(freshUser);
         setStatus("authenticated");
-      } catch {
+      } catch (err) {
+        const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+        const statusCode = typeof status === "number" ? status : null;
+
+        if (statusCode === 401) {
+          updateHintForUser(null);
+          await handleUnauthorized();
+          return;
+        }
+
+        setStatus("unauthenticated");
+        setUser(null);
         updateHintForUser(null);
-        await handleUnauthorized();
       }
     };
 
