@@ -810,16 +810,17 @@ export function StudentsListScreen({ navigation, route }: Props) {
           },
         },
         {
-          key: "register-attendance",
-          label: "Registrar asistencia",
-          icon: "check-circle",
+          key: "attendances",
+          label: "asistencias",
+          icon: "book-open",
           tone: "success",
           onPress: () => {
             setShowContextSheet(false);
             navigation.navigate("AdminHome", {
               section: "operations",
-              openCreateAttendance: true,
-              focusedStudentId: contextSheetStudent.id,
+              openAttendanceManager: true,
+              openAttendanceManagerTab: "by-student",
+              attendanceManagerPrefillStudentId: contextSheetStudent.id,
             });
           },
         },

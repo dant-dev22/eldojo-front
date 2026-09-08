@@ -2501,6 +2501,40 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     }
   }, [route.params?.openCreateAttendance, route.params?.focusedStudentId]);
 
+  useEffect(() => {
+    const shouldOpen = route.params?.openAttendanceManager === true;
+    if (!shouldOpen) return;
+
+    const section = route.params?.section;
+    if (section === "operations" && operationsDashboardView !== "attendance") {
+      setOperationsDashboardView("attendance");
+    }
+
+    const desiredTab: "by-class" | "by-student" =
+      route.params?.openAttendanceManagerTab === "by-class" ? "by-class" : "by-student";
+    setAttendanceManagerTab(desiredTab);
+    setOperationsClassPickerValue(operationsSelectedClassId);
+
+    const prefillStudentId = route.params?.attendanceManagerPrefillStudentId;
+    if (desiredTab === "by-student" && typeof prefillStudentId === "number") {
+      const target = visibleStudents.find((s) => s.id === prefillStudentId);
+      if (target) {
+        setAttendanceManagerStudentId(target.id);
+        setAttendanceManagerStudentQuery(`${target.first_name} ${target.last_name}`);
+      } else {
+        setAttendanceManagerStudentId(null);
+        setAttendanceManagerStudentQuery(String(prefillStudentId));
+      }
+    }
+
+    setOperationsClassPickerVisible(true);
+  }, [
+    route.params?.openAttendanceManager,
+    route.params?.openAttendanceManagerTab,
+    route.params?.attendanceManagerPrefillStudentId,
+    route.params?.section,
+  ]);
+
   function openOrganizationModal() {
     if (!organization) {
       return;

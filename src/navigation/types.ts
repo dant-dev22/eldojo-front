@@ -17,6 +17,9 @@ export type AdminStackParamList = {
     section?: AdminDashboardSection;
     focusedStudentId?: number;
     openCreateAttendance?: boolean;
+    openAttendanceManager?: boolean;
+    openAttendanceManagerTab?: "by-class" | "by-student";
+    attendanceManagerPrefillStudentId?: number;
   } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
   QrCodesList: undefined;
