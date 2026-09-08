@@ -2045,14 +2045,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         onPress: openCreatePaymentModal,
       },
       {
-        key: "new-attendance",
-        label: "Registrar asistencia",
-        icon: "check-circle",
-        tone: "success",
-        onPress: openCreateAttendanceModal,
-        disabled: visibleStudents.length === 0,
-      },
-      {
         key: "open-attendance-route",
         label: "Abrir registro público",
         icon: "external-link",
@@ -2091,7 +2083,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       currentBranch,
       disciplineOptions.length,
       navigation,
-      openCreateAttendanceModal,
       openCreateBranchModal,
       openCreateClassModal,
       openCreatePaymentModal,
@@ -2904,13 +2895,13 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             }}
             testID="screens-admin-dashboard-register-attendance-action"
           >
-            <Feather name="check-square" size={16} color={colors.action} style={styles.heroActionIcon} />
+            <Feather name="more-horizontal" size={16} color={colors.action} style={styles.heroActionIcon} />
             <Text
               nativeID="screens-admin-dashboard-register-attendance-action-label"
               style={styles.heroActionLabel}
               testID="screens-admin-dashboard-register-attendance-action-label"
             >
-              Registrar asistencia
+              mas acciones rapidas
             </Text>
           </Pressable>
         </View>
@@ -7656,7 +7647,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.xs,
     width: "100%",
   },
   heroActionButton: {
@@ -7665,14 +7656,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flexDirection: "row",
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   heroActionButtonHovered: {
-    backgroundColor: colors.surfaceAlt,
+    opacity: 0.8,
   },
   heroActionButtonPressed: {
-    backgroundColor: "rgba(120, 78, 46, 0.12)",
+    opacity: 0.7,
     transform: [{ scale: 0.98 }],
   },
   heroActionIcon: {
