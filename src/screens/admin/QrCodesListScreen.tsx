@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
@@ -17,7 +17,8 @@ import { AdminShell } from "@/components/AdminShell";
 import { BeltIndicator } from "@/components/BeltIndicator";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { CredencialQRModal } from "@/components/CredencialQRModal";
-import { QrScanner } from "@/components/QrScanner";
+import { QrScanner, type QrScannerAttendanceProcessState } from "@/components/QrScanner";
+import type { AttendanceStepStatus, AttendanceSuccessPayload } from "@/components/AttendanceProgressView";
 import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
@@ -47,6 +48,7 @@ import type { Student } from "@/types/api";
 type Props = NativeStackScreenProps<AdminStackParamList, "QrCodesList">;
 
 const STUDENTS_PER_PAGE = 10;
+const PROCESS_TIMEOUT_MS = 15000;
 
 function getPaymentTone(status: string): "success" | "warning" | "danger" | "neutral" {
   switch (status) {
@@ -88,11 +90,14 @@ export function QrCodesListScreen({ navigation }: Props) {
   const [scannerVisible, setScannerVisible] = useState(false);
   const [attendanceFeedback, setAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
-  useEffect(() => {
-    if (!attendanceFeedback) return;
-    const timeoutId = setTimeout(() => setAttendanceFeedback(null), 3500);
-    return () => clearTimeout(timeoutId);
-  }, [attendanceFeedback]);
+  const [scannerProcessState, setScannerProcessState] = useState<QrScannerAttendanceProcessState | null>(null);
+  const scannerProcessTimeoutRef = useRef<number | null>(null);
+  const scannerProcessStartedAtRef = useRef<number | null>(null);
+  const lastScanContextRef = useRef<{
+    student_name: string;
+    class_name: string | null;
+    check_in_at: string | null;
+  } | null>(null);
 
   const classesQuery = useQuery({
     queryKey: ["dashboard-classes", organizationId, fixedBranchId],
@@ -124,20 +129,151 @@ export function QrCodesListScreen({ navigation }: Props) {
 
   const createAttendanceMutation = useMutation({
     mutationFn: (payload: Parameters<typeof attendanceApi.create>[0]) => attendanceApi.create(payload),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await invalidateQueries();
       setAttendanceFeedback({ tone: "success", message: "Asistencia registrada correctamente." });
+      const scanCtx = lastScanContextRef.current;
+      const successPayload: AttendanceSuccessPayload = {
+        attendance_id: typeof data === "object" && data && "id" in data ? (data as { id: number }).id : -1,
+        student_name: scanCtx?.student_name ?? "Alumno",
+        class_name: scanCtx?.class_name ?? null,
+        selected_class_name: scanCtx?.class_name ?? undefined,
+        check_in_at: scanCtx?.check_in_at ?? null,
+      };
+      setScannerProcessState((current) =>
+        current
+          ? {
+              ...current,
+              lookupStatus: "done",
+              registerStatus: "done",
+              overallStatus: "success",
+              errorMessage: null,
+              successPayload,
+              successCountdown: 3,
+            }
+          : current
+      );
+      lastScanContextRef.current = null;
     },
     onError: (error) => {
-      setAttendanceFeedback({ tone: "danger", message: getErrorMessage(error) });
+      const errorMsg = getErrorMessage(error);
+      setAttendanceFeedback({ tone: "danger", message: errorMsg });
+      setScannerProcessState((current) =>
+        current
+          ? {
+              ...current,
+              overallStatus: "error",
+              errorMessage: errorMsg,
+              registerStatus: current.lookupStatus === "error" ? current.registerStatus : "error",
+              lookupStatus: current.lookupStatus,
+            }
+          : current
+      );
+      lastScanContextRef.current = null;
     },
   });
+
+  const clearScannerProcessTimeout = useCallback(() => {
+    try {
+      if (scannerProcessTimeoutRef.current !== null) {
+        window.clearTimeout(scannerProcessTimeoutRef.current);
+        scannerProcessTimeoutRef.current = null;
+      }
+    } catch {
+      /* noop */
+    }
+    scannerProcessStartedAtRef.current = null;
+  }, []);
+
+  const closeScannerProcess = useCallback(() => {
+    clearScannerProcessTimeout();
+    setScannerProcessState(null);
+  }, [clearScannerProcessTimeout]);
+
+  const resetScannerForNextScan = useCallback(() => {
+    if (createAttendanceMutation.isPending) {
+      try { createAttendanceMutation.reset(); } catch { /* noop */ }
+    }
+    closeScannerProcess();
+  }, [closeScannerProcess, createAttendanceMutation]);
+
+  useEffect(() => {
+    if (!attendanceFeedback) return;
+    const timeoutId = setTimeout(() => setAttendanceFeedback(null), 3500);
+    return () => clearTimeout(timeoutId);
+  }, [attendanceFeedback]);
+
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.successCountdown === null) return;
+    if (scannerProcessState.successCountdown <= 0) return;
+
+    const intervalId = setInterval(() => {
+      setScannerProcessState((current) => {
+        if (!current || current.successCountdown === null) return current;
+        return { ...current, successCountdown: current.successCountdown - 1 };
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [scannerProcessState]);
+
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.successCountdown === null) return;
+    if (scannerProcessState.successCountdown > 0) return;
+
+    resetScannerForNextScan();
+  }, [scannerProcessState, resetScannerForNextScan]);
+
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.overallStatus === "processing") return;
+    clearScannerProcessTimeout();
+  }, [scannerProcessState, clearScannerProcessTimeout]);
 
   const handleQrCodeScanned = useCallback(
     async (code: string) => {
       const normalizedCode = code.trim().toUpperCase();
       if (!normalizedCode) return;
-      setScannerVisible(false);
+
+      clearScannerProcessTimeout();
+      setScannerProcessState({
+        lookupStatus: "active",
+        registerStatus: "pending",
+        overallStatus: "processing",
+        errorMessage: null,
+        successPayload: null,
+        successCountdown: null,
+      });
+      scannerProcessStartedAtRef.current = Date.now();
+      scannerProcessTimeoutRef.current = window.setTimeout(() => {
+        setScannerProcessState((current) => {
+          if (!current || current.overallStatus !== "processing") return current;
+          const erroredStep =
+            current.lookupStatus === "active" || current.lookupStatus === "pending"
+              ? "la búsqueda del alumno"
+              : current.registerStatus === "active" || current.registerStatus === "pending"
+                ? "el registro de la asistencia"
+                : "el proceso";
+          const errorMessage = `Tiempo de espera agotado en ${erroredStep}. La conexión puede estar lenta o el servidor no respondió. Vuelve a intentarlo.`;
+          if (createAttendanceMutation.isPending) {
+            try { createAttendanceMutation.reset(); } catch { /* noop */ }
+          }
+          return {
+            ...current,
+            overallStatus: "error",
+            lookupStatus: current.lookupStatus === "done" ? "done" : "error",
+            registerStatus:
+              current.registerStatus === "done"
+                ? "done"
+                : current.lookupStatus === "done"
+                  ? "error"
+                  : current.registerStatus,
+            errorMessage,
+          };
+        });
+      }, PROCESS_TIMEOUT_MS);
 
       try {
         const students = await studentsApi.list({ search: normalizedCode });
@@ -145,38 +281,93 @@ export function QrCodesListScreen({ navigation }: Props) {
           (s) => s.unique_code.toUpperCase() === normalizedCode
         );
         if (!matchedStudent) {
-          setAttendanceFeedback({ tone: "danger", message: `No se encontró alumno con código ${normalizedCode}.` });
+          const errorMessage = `No se encontró alumno con código ${normalizedCode}.`;
+          setScannerProcessState({
+            lookupStatus: "error",
+            registerStatus: "pending",
+            overallStatus: "error",
+            errorMessage,
+            successPayload: null,
+            successCountdown: null,
+          });
+          setAttendanceFeedback({ tone: "danger", message: errorMessage });
           return;
         }
 
         const now = new Date();
         const branchId = matchedStudent.branch_id || fixedBranchId || (branchesQuery.data?.[0]?.id as number | undefined);
         if (!branchId) {
-          setAttendanceFeedback({ tone: "danger", message: "No se pudo determinar la sucursal para registrar la asistencia." });
+          const errorMessage = "No se pudo determinar la sucursal para registrar la asistencia.";
+          setScannerProcessState({
+            lookupStatus: "error",
+            registerStatus: "pending",
+            overallStatus: "error",
+            errorMessage,
+            successPayload: null,
+            successCountdown: null,
+          });
+          setAttendanceFeedback({ tone: "danger", message: errorMessage });
           return;
         }
 
         const classId = matchedStudent.primary_class_id ||
           classesQuery.data?.find((c) => c.branch_id === branchId && c.is_active)?.id ||
           null;
+        const matchedClassName = classesQuery.data?.find((c) => c.id === classId)?.name ?? null;
 
         const hh = String(now.getHours()).padStart(2, "0");
         const mm = String(now.getMinutes()).padStart(2, "0");
         const isoDate = now.toISOString().slice(0, 10);
+        const checkInAt = `${isoDate}T${hh}:${mm}:00`;
+
+        lastScanContextRef.current = {
+          student_name: `${matchedStudent.first_name} ${matchedStudent.last_name}`,
+          class_name: matchedClassName,
+          check_in_at: checkInAt,
+        };
+
+        setScannerProcessState((current) =>
+          current && current.lookupStatus !== "done"
+            ? {
+                ...current,
+                lookupStatus: "done",
+                registerStatus: "active",
+              }
+            : current
+        );
 
         createAttendanceMutation.mutate({
           student_id: matchedStudent.id,
           branch_id: branchId,
           class_id: classId,
-          check_in_at: `${isoDate}T${hh}:${mm}:00`,
+          check_in_at: checkInAt,
           method: "qr",
           registered_by: user?.id ?? null,
         });
       } catch (err) {
-        setAttendanceFeedback({ tone: "danger", message: getErrorMessage(err) });
+        const errorMsg = getErrorMessage(err);
+        setScannerProcessState((current) =>
+          current
+            ? {
+                ...current,
+                overallStatus: "error",
+                errorMessage: errorMsg,
+                lookupStatus: current.lookupStatus === "done" ? current.lookupStatus : "error",
+                registerStatus: current.lookupStatus === "done" ? "error" : current.registerStatus,
+              }
+            : current
+        );
+        setAttendanceFeedback({ tone: "danger", message: errorMsg });
       }
     },
-    [branchesQuery.data, classesQuery.data, createAttendanceMutation, fixedBranchId, user?.id]
+    [
+      branchesQuery.data,
+      classesQuery.data,
+      clearScannerProcessTimeout,
+      createAttendanceMutation,
+      fixedBranchId,
+      user?.id,
+    ]
   );
 
   const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
@@ -628,12 +819,23 @@ export function QrCodesListScreen({ navigation }: Props) {
 
       <QrScanner
         visible={scannerVisible}
-        onClose={() => setScannerVisible(false)}
+        onClose={() => {
+          if (scannerProcessState?.overallStatus === "processing") {
+            return;
+          }
+          if (createAttendanceMutation.isPending) {
+            try { createAttendanceMutation.reset(); } catch { /* noop */ }
+          }
+          resetScannerForNextScan();
+          setScannerVisible(false);
+        }}
         onCodeScanned={handleQrCodeScanned}
         title="Escanear credencial"
         description="Apunta la cámara al código QR del alumno para registrar su asistencia."
         nativeID="screens-admin-qr-codes-list-qr-scanner"
         testID="screens-admin-qr-codes-list-qr-scanner"
+        attendanceProcess={scannerProcessState}
+        onAttendanceProcessRetry={resetScannerForNextScan}
       />
     </Screen>
   );

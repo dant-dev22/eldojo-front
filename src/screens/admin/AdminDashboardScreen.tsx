@@ -23,6 +23,7 @@ import { AppStatusSwitch } from "@/components/AppStatusSwitch";
 import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboardTemplate";
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
+import { DashboardQuickActionsModal, type QuickActionItem } from "@/components/DashboardQuickActionsModal";
 import { AttendanceProgressView, type AttendanceSuccessPayload, type AttendanceStepStatus } from "@/components/AttendanceProgressView";
 import { QrScanner, type QrScannerAttendanceProcessState } from "@/components/QrScanner";
 import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
@@ -777,6 +778,12 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const [operationsSelectedClassId, setOperationsSelectedClassId] = useState<string>("");
   const [operationsClassPickerVisible, setOperationsClassPickerVisible] = useState(false);
   const [operationsClassPickerValue, setOperationsClassPickerValue] = useState("");
+  const [attendanceManagerTab, setAttendanceManagerTab] = useState<"by-class" | "by-student">("by-class");
+  const [attendanceManagerStudentQuery, setAttendanceManagerStudentQuery] = useState("");
+  const [attendanceManagerStudentId, setAttendanceManagerStudentId] = useState<number | null>(null);
+  const [attendanceManagerSuggestionsPage, setAttendanceManagerSuggestionsPage] = useState(1);
+  const [attendanceManagerRecordsPage, setAttendanceManagerRecordsPage] = useState(1);
+  const debouncedAttendanceManagerStudentQuery = useDebouncedValue(attendanceManagerStudentQuery, 200);
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
   const [tutorialBusy, setTutorialBusy] = useState(false);
   const [tutorialAnchorFrame, setTutorialAnchorFrame] = useState<TutorialAnchorFrame | null>(null);
@@ -1433,6 +1440,43 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     () => visibleClasses.find((item) => String(item.id) === operationsSelectedClassId) ?? null,
     [operationsSelectedClassId, visibleClasses]
   );
+  const normalizedAttendanceManagerStudentQuery = debouncedAttendanceManagerStudentQuery.trim().toLowerCase();
+  const AM_SUGGESTIONS_PAGE_SIZE = 12;
+  const AM_RECORDS_PAGE_SIZE = 12;
+  const attendanceManagerStudentMatches = useMemo(() => {
+    if (!normalizedAttendanceManagerStudentQuery) return [];
+    return visibleStudents
+      .filter((s) => {
+        const hay = [s.first_name, s.last_name, s.unique_code, String(s.id)]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(normalizedAttendanceManagerStudentQuery);
+      });
+  }, [normalizedAttendanceManagerStudentQuery, visibleStudents]);
+  const amSuggestionsTotalPages = Math.max(1, Math.ceil(attendanceManagerStudentMatches.length / AM_SUGGESTIONS_PAGE_SIZE));
+  const paginatedAmSuggestions = useMemo(() => {
+    const start = (attendanceManagerSuggestionsPage - 1) * AM_SUGGESTIONS_PAGE_SIZE;
+    return attendanceManagerStudentMatches.slice(start, start + AM_SUGGESTIONS_PAGE_SIZE);
+  }, [attendanceManagerStudentMatches, attendanceManagerSuggestionsPage]);
+  const attendanceManagerSelectedStudent = useMemo(
+    () => (attendanceManagerStudentId ? visibleStudents.find((s) => s.id === attendanceManagerStudentId) ?? null : null),
+    [attendanceManagerStudentId, visibleStudents]
+  );
+  const attendanceManagerAttendances = useMemo(() => {
+    if (attendanceManagerTab === "by-class") {
+      return visibleAttendanceRecords.filter(
+        (a) => !operationsClassPickerValue || String(a.class_id) === operationsClassPickerValue
+      );
+    }
+    return attendanceManagerStudentId
+      ? visibleAttendanceRecords.filter((a) => a.student_id === attendanceManagerStudentId)
+      : [];
+  }, [attendanceManagerTab, attendanceManagerStudentId, operationsClassPickerValue, visibleAttendanceRecords]);
+  const amRecordsTotalPages = Math.max(1, Math.ceil(attendanceManagerAttendances.length / AM_RECORDS_PAGE_SIZE));
+  const paginatedAmRecords = useMemo(() => {
+    const start = (attendanceManagerRecordsPage - 1) * AM_RECORDS_PAGE_SIZE;
+    return attendanceManagerAttendances.slice(start, start + AM_RECORDS_PAGE_SIZE);
+  }, [attendanceManagerAttendances, attendanceManagerRecordsPage]);
   const normalizedOperationsSearchQuery = operationsSearchQuery.trim().toLowerCase();
   const filteredOperationsAttendanceRecords = useMemo(
     () =>
@@ -2022,7 +2066,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     );
   };
 
-  const dashboardQuickActions = useMemo<BottomSheetAction[]>(
+  const dashboardQuickActions = useMemo<QuickActionItem[]>(
     () => [
       {
         key: "new-student",
@@ -2352,6 +2396,22 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   }, [operationsTotalPages]);
 
   useEffect(() => {
+    setAttendanceManagerSuggestionsPage(1);
+  }, [normalizedAttendanceManagerStudentQuery]);
+
+  useEffect(() => {
+    setAttendanceManagerSuggestionsPage((current) => Math.min(current, amSuggestionsTotalPages));
+  }, [amSuggestionsTotalPages]);
+
+  useEffect(() => {
+    setAttendanceManagerRecordsPage(1);
+  }, [attendanceManagerTab, attendanceManagerStudentId, operationsClassPickerValue]);
+
+  useEffect(() => {
+    setAttendanceManagerRecordsPage((current) => Math.min(current, amRecordsTotalPages));
+  }, [amRecordsTotalPages]);
+
+  useEffect(() => {
     if (!operationsSelectedClassId) {
       return;
     }
@@ -2422,6 +2482,24 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           : current.classId,
     }));
   }, [attendanceDialogMode, selectedAttendanceStudent]);
+
+  useEffect(() => {
+    const shouldOpen = route.params?.openCreateAttendance === true;
+    const focusedId = route.params?.focusedStudentId;
+    if (!shouldOpen) return;
+    const targetStudent = focusedId
+      ? visibleStudents.find((s) => s.id === focusedId) ?? null
+      : visibleStudents[0] ?? null;
+    setFeedback(null);
+    setAttendanceDialogMode("create");
+    setEditingAttendance(null);
+    setAttendanceErrors({});
+    setAttendanceForm(createEmptyAttendanceForm(targetStudent));
+    setAttendanceModalVisible(true);
+    if (isOperationsSection && operationsDashboardView === null) {
+      setOperationsDashboardView("attendance");
+    }
+  }, [route.params?.openCreateAttendance, route.params?.focusedStudentId]);
 
   function openOrganizationModal() {
     if (!organization) {
@@ -2731,6 +2809,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     });
   }
 
+  function setAttendanceField<K extends keyof AttendanceFormState>(field: K, value: AttendanceFormState[K]) {
+    setAttendanceForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleAttendanceBranchChange(value: string) {
+    setAttendanceForm((current) => ({
+      ...current,
+      branchId: value,
+      classId: current.classId === "none" ? "none" : "",
+    }));
+  }
+
   function handleCloseDestructiveAction() {
     if (!destructiveActionBusy) {
       setDestructiveAction(null);
@@ -2885,14 +2975,11 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             accessibilityRole="button"
             nativeID="screens-admin-dashboard-register-attendance-action"
             onPress={() => setDashboardSheetVisible(true)}
-            style={(state) => {
-              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-              return [
+            style={(state: any) => [
                 styles.heroActionButton,
                 state.pressed ? styles.heroActionButtonPressed : null,
-                hovered ? styles.heroActionButtonHovered : null,
-              ];
-            }}
+                state.hovered ? styles.heroActionButtonHovered : null,
+              ]}
             testID="screens-admin-dashboard-register-attendance-action"
           >
             <Feather name="more-horizontal" size={16} color={colors.action} style={styles.heroActionIcon} />
@@ -4743,31 +4830,319 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
 
       <AppModal
         visible={operationsClassPickerVisible}
-        title="Elegir clase"
-        description="Selecciona la clase cuya asistencia quieres administrar en el dashboard."
+        title="Administrador de asistencias"
+        description="Busca y gestiona asistencias por clase o por alumno, y administra registros con acciones CRUD."
         onClose={() => setOperationsClassPickerVisible(false)}
       >
-        <AppSelect
-          label="Clase"
-          value={operationsClassPickerValue}
-          onValueChange={setOperationsClassPickerValue}
-          items={operationsClassOptions}
-          placeholder={operationsClassOptions.length > 0 ? "Selecciona una clase" : "Sin clases disponibles"}
-          enabled={operationsClassOptions.length > 0}
-        />
+        <View nativeID="screens-admin-dashboard-operations-attendance-manager-tabs" style={styles.amTabsRow} testID="screens-admin-dashboard-operations-attendance-manager-tabs">
+          <Pressable
+            accessibilityRole="tab"
+            nativeID="screens-admin-dashboard-operations-attendance-manager-tab-by-class"
+            onPress={() => setAttendanceManagerTab("by-class")}
+            style={(state: any) => [
+              styles.amTabButton,
+              attendanceManagerTab === "by-class" ? styles.amTabButtonActive : null,
+              state.hovered && attendanceManagerTab !== "by-class" ? styles.amTabButtonHovered : null,
+              state.pressed ? styles.amTabButtonPressed : null,
+            ]}
+            testID="screens-admin-dashboard-operations-attendance-manager-tab-by-class"
+          >
+            <Feather name="book-open" size={14} color={attendanceManagerTab === "by-class" ? colors.onPrimary : colors.textMuted} />
+            <Text
+              nativeID="screens-admin-dashboard-operations-attendance-manager-tab-by-class-label"
+              style={[styles.amTabLabel, attendanceManagerTab === "by-class" ? styles.amTabLabelActive : null]}
+              testID="screens-admin-dashboard-operations-attendance-manager-tab-by-class-label"
+            >
+              Por clase
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            nativeID="screens-admin-dashboard-operations-attendance-manager-tab-by-student"
+            onPress={() => setAttendanceManagerTab("by-student")}
+            style={(state: any) => [
+              styles.amTabButton,
+              attendanceManagerTab === "by-student" ? styles.amTabButtonActive : null,
+              state.hovered && attendanceManagerTab !== "by-student" ? styles.amTabButtonHovered : null,
+              state.pressed ? styles.amTabButtonPressed : null,
+            ]}
+            testID="screens-admin-dashboard-operations-attendance-manager-tab-by-student"
+          >
+            <Feather name="user" size={14} color={attendanceManagerTab === "by-student" ? colors.onPrimary : colors.textMuted} />
+            <Text
+              nativeID="screens-admin-dashboard-operations-attendance-manager-tab-by-student-label"
+              style={[styles.amTabLabel, attendanceManagerTab === "by-student" ? styles.amTabLabelActive : null]}
+              testID="screens-admin-dashboard-operations-attendance-manager-tab-by-student-label"
+            >
+              Por alumno
+            </Text>
+          </Pressable>
+        </View>
+
+        {attendanceManagerTab === "by-class" ? (
+          <View nativeID="screens-admin-dashboard-operations-attendance-manager-by-class" style={styles.amPanelBody} testID="screens-admin-dashboard-operations-attendance-manager-by-class">
+            <AppSelect
+              label="Clase"
+              nativeID="screens-admin-dashboard-operations-attendance-manager-class-select"
+              testID="screens-admin-dashboard-operations-attendance-manager-class-select"
+              value={operationsClassPickerValue}
+              onValueChange={setOperationsClassPickerValue}
+              items={operationsClassOptions}
+              placeholder={operationsClassOptions.length > 0 ? "Selecciona una clase" : "Sin clases disponibles"}
+              enabled={operationsClassOptions.length > 0}
+            />
+          </View>
+        ) : (
+          <View nativeID="screens-admin-dashboard-operations-attendance-manager-by-student" style={styles.amPanelBody} testID="screens-admin-dashboard-operations-attendance-manager-by-student">
+            <AppInput
+              label="Buscar alumno por nombre, código o ID"
+              nativeID="screens-admin-dashboard-operations-attendance-manager-student-input"
+              testID="screens-admin-dashboard-operations-attendance-manager-student-input"
+              placeholder="Ej: Juan Pérez, A-0012, 38"
+              value={attendanceManagerStudentQuery}
+              onChangeText={setAttendanceManagerStudentQuery}
+            />
+            {attendanceManagerStudentId ? (
+              attendanceManagerSelectedStudent ? (
+                <View nativeID="screens-admin-dashboard-operations-attendance-manager-selected-student" style={styles.amSelectedChip} testID="screens-admin-dashboard-operations-attendance-manager-selected-student">
+                  <Feather name="user" size={14} color={colors.action} />
+                  <Text style={styles.amSelectedChipText}>
+                    {attendanceManagerSelectedStudent.first_name} {attendanceManagerSelectedStudent.last_name} · {attendanceManagerSelectedStudent.unique_code}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    nativeID="screens-admin-dashboard-operations-attendance-manager-clear-student"
+                    onPress={() => {
+                      setAttendanceManagerStudentId(null);
+                      setAttendanceManagerStudentQuery("");
+                    }}
+                    style={({ pressed }) => [styles.amChipClose, pressed ? styles.amChipClosePressed : null]}
+                    testID="screens-admin-dashboard-operations-attendance-manager-clear-student"
+                  >
+                    <Feather name="x" size={12} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              ) : null
+            ) : normalizedAttendanceManagerStudentQuery ? (
+              <View nativeID="screens-admin-dashboard-operations-attendance-manager-student-suggestions" style={[styles.amSuggestionList, isDesktop ? desktopStyles.amSuggestionList : null]} testID="screens-admin-dashboard-operations-attendance-manager-student-suggestions">
+                {attendanceManagerStudentMatches.length === 0 ? (
+                  <Text style={styles.amSuggestionEmpty}>Sin coincidencias para tu búsqueda.</Text>
+                ) : (
+                  paginatedAmSuggestions.map((student) => (
+                    <Pressable
+                      key={student.id}
+                      accessibilityRole="button"
+                      nativeID={`screens-admin-dashboard-operations-attendance-manager-student-suggestion-${student.id}`}
+                      onPress={() => {
+                        setAttendanceManagerStudentId(student.id);
+                        setAttendanceManagerStudentQuery(`${student.first_name} ${student.last_name}`);
+                      }}
+                      style={(state: any) => [
+                        styles.amSuggestionRow,
+                        isDesktop ? desktopStyles.amSuggestionRow : null,
+                        state.hovered ? styles.amSuggestionRowHovered : null,
+                        state.pressed ? styles.amSuggestionRowPressed : null,
+                      ]}
+                      testID={`screens-admin-dashboard-operations-attendance-manager-student-suggestion-${student.id}`}
+                    >
+                      <View style={styles.amSuggestionAvatar}>
+                        <Text style={styles.amSuggestionAvatarText}>
+                          {`${student.first_name[0] ?? ""}${student.last_name[0] ?? ""}`.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.amSuggestionCopy}>
+                        <Text style={styles.amSuggestionTitle}>{student.first_name} {student.last_name}</Text>
+                        <Text style={styles.amSuggestionSubtitle}>Código {student.unique_code} · ID {student.id}</Text>
+                      </View>
+                      <Feather name="chevron-right" size={16} color={colors.textMuted} />
+                    </Pressable>
+                  ))
+                )}
+                {attendanceManagerStudentMatches.length > AM_SUGGESTIONS_PAGE_SIZE ? (
+                  <View nativeID="screens-admin-dashboard-operations-attendance-manager-suggestions-pagination" style={[styles.paymentsPaginationControls, { width: "100%" }]} testID="screens-admin-dashboard-operations-attendance-manager-suggestions-pagination">
+                    <AppButton
+                      label="Anterior"
+                      variant="secondary"
+                      nativeID="screens-admin-dashboard-operations-attendance-manager-suggestions-prev"
+                      testID="screens-admin-dashboard-operations-attendance-manager-suggestions-prev"
+                      onPress={() => setAttendanceManagerSuggestionsPage((current) => Math.max(1, current - 1))}
+                      disabled={attendanceManagerSuggestionsPage === 1}
+                    />
+                    <Text nativeID="screens-admin-dashboard-operations-attendance-manager-suggestions-pagination-label" style={styles.paymentsPaginationLabel} testID="screens-admin-dashboard-operations-attendance-manager-suggestions-pagination-label">
+                      {`Página ${attendanceManagerSuggestionsPage} de ${amSuggestionsTotalPages} · ${attendanceManagerStudentMatches.length} coincidencias`}
+                    </Text>
+                    <AppButton
+                      label="Siguiente"
+                      variant="secondary"
+                      nativeID="screens-admin-dashboard-operations-attendance-manager-suggestions-next"
+                      testID="screens-admin-dashboard-operations-attendance-manager-suggestions-next"
+                      onPress={() => setAttendanceManagerSuggestionsPage((current) => Math.min(amSuggestionsTotalPages, current + 1))}
+                      disabled={attendanceManagerSuggestionsPage === amSuggestionsTotalPages}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.amSuggestionEmpty}>Escribe para buscar alumnos por nombre, código o ID.</Text>
+            )}
+          </View>
+        )}
+
+        <View nativeID="screens-admin-dashboard-operations-attendance-manager-records" style={styles.amRecordsWrap} testID="screens-admin-dashboard-operations-attendance-manager-records">
+          <View style={styles.amRecordsHeader}>
+            <Text style={styles.amRecordsTitle}>
+              {attendanceManagerTab === "by-class" ? (operationsClassPickerValue ? "Registros de la clase" : "Todos los registros") : (attendanceManagerStudentId ? "Historial del alumno" : "Selecciona un alumno")}
+            </Text>
+            <Text style={styles.amRecordsCount}>
+              {attendanceManagerAttendances.length} {attendanceManagerAttendances.length === 1 ? "registro" : "registros"}
+            </Text>
+          </View>
+          {attendanceManagerAttendances.length === 0 ? (
+            <View style={styles.amEmptyRecords}>
+              <Feather name="clipboard" size={28} color={colors.textMuted} />
+              <Text style={styles.amEmptyRecordsTitle}>Sin asistencias que mostrar</Text>
+              <Text style={styles.amEmptyRecordsSubtitle}>
+                {attendanceManagerTab === "by-class"
+                  ? operationsClassPickerValue
+                    ? "Esta clase no cuenta con registros de asistencia."
+                    : "Selecciona una clase para ver sus registros o usa el botón de registrar."
+                  : attendanceManagerStudentId
+                    ? "Este alumno no tiene asistencias registradas."
+                    : "Elige un alumno para ver su historial de asistencias."}
+              </Text>
+              {attendanceManagerTab === "by-student" && attendanceManagerStudentId ? (
+                <AppButton
+                  label="Registrar asistencia"
+                  nativeID="screens-admin-dashboard-operations-attendance-manager-empty-new"
+                  testID="screens-admin-dashboard-operations-attendance-manager-empty-new"
+                  variant="success"
+                  onPress={() => {
+                    setOperationsClassPickerVisible(false);
+                    const target = visibleStudents.find((s) => s.id === attendanceManagerStudentId) ?? null;
+                    setFeedback(null);
+                    setAttendanceDialogMode("create");
+                    setEditingAttendance(null);
+                    setAttendanceErrors({});
+                    setAttendanceForm(createEmptyAttendanceForm(target));
+                    setAttendanceModalVisible(true);
+                  }}
+                />
+              ) : null}
+            </View>
+          ) : (
+            <View style={[styles.amRecordsList, isDesktop ? desktopStyles.amRecordsList : null]}>
+              {paginatedAmRecords.map((attendance) => {
+                const student = visibleStudents.find((s) => s.id === attendance.student_id) ?? null;
+                const className = visibleClasses.find((c) => c.id === attendance.class_id)?.name ?? `Clase ${attendance.class_id}`;
+                return (
+                  <View
+                    key={attendance.id}
+                    nativeID={`screens-admin-dashboard-operations-attendance-manager-record-${attendance.id}`}
+                    style={[styles.amRecordRow, isDesktop ? desktopStyles.amRecordRow : null]}
+                    testID={`screens-admin-dashboard-operations-attendance-manager-record-${attendance.id}`}
+                  >
+                    <View style={styles.amRecordIcon}>
+                      <Feather name="check-circle" size={14} color={colors.success} />
+                    </View>
+                    <View style={styles.amRecordCopy}>
+                      <Text style={styles.amRecordTitle}>
+                        {student ? `${student.first_name} ${student.last_name}` : `Alumno #${attendance.student_id}`}
+                      </Text>
+                      <Text style={styles.amRecordSubtitle}>
+                        {className} · {formatDate(attendance.check_in_at.split("T")[0] ?? "")} · {attendance.method}
+                      </Text>
+                    </View>
+                    <View style={styles.amRecordActions}>
+                      <AppButton
+                        label="Editar"
+                        nativeID={`screens-admin-dashboard-operations-attendance-manager-record-edit-${attendance.id}`}
+                        testID={`screens-admin-dashboard-operations-attendance-manager-record-edit-${attendance.id}`}
+                        variant="secondary"
+                        onPress={() => {
+                          setOperationsClassPickerVisible(false);
+                          openEditAttendanceModal(attendance);
+                        }}
+                      />
+                      <AppButton
+                        label="Eliminar"
+                        nativeID={`screens-admin-dashboard-operations-attendance-manager-record-delete-${attendance.id}`}
+                        testID={`screens-admin-dashboard-operations-attendance-manager-record-delete-${attendance.id}`}
+                        variant="danger"
+                        onPress={() => {
+                          setOperationsClassPickerVisible(false);
+                          setDestructiveAction({
+                            title: "Eliminar asistencia",
+                            description: `Se eliminará el registro del ${formatDate(
+                              attendance.check_in_at.split("T")[0] ?? ""
+                            )} para el alumno seleccionado. Confirma solo si se registro por error.`,
+                            confirmLabel: "Si, eliminar",
+                            onConfirm: () => deleteAttendanceMutation.mutate(attendance.id),
+                          });
+                        }}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          {attendanceManagerAttendances.length > AM_RECORDS_PAGE_SIZE ? (
+            <View nativeID="screens-admin-dashboard-operations-attendance-manager-records-pagination" style={[styles.paymentsPaginationControls, { marginTop: spacing.md, width: "100%" }]} testID="screens-admin-dashboard-operations-attendance-manager-records-pagination">
+              <AppButton
+                label="Anterior"
+                variant="secondary"
+                nativeID="screens-admin-dashboard-operations-attendance-manager-records-prev"
+                testID="screens-admin-dashboard-operations-attendance-manager-records-prev"
+                onPress={() => setAttendanceManagerRecordsPage((current) => Math.max(1, current - 1))}
+                disabled={attendanceManagerRecordsPage === 1}
+              />
+              <Text nativeID="screens-admin-dashboard-operations-attendance-manager-records-pagination-label" style={styles.paymentsPaginationLabel} testID="screens-admin-dashboard-operations-attendance-manager-records-pagination-label">
+                {`Página ${attendanceManagerRecordsPage} de ${amRecordsTotalPages} · ${attendanceManagerAttendances.length} registros`}
+              </Text>
+              <AppButton
+                label="Siguiente"
+                variant="secondary"
+                nativeID="screens-admin-dashboard-operations-attendance-manager-records-next"
+                testID="screens-admin-dashboard-operations-attendance-manager-records-next"
+                onPress={() => setAttendanceManagerRecordsPage((current) => Math.min(amRecordsTotalPages, current + 1))}
+                disabled={attendanceManagerRecordsPage === amRecordsTotalPages}
+              />
+            </View>
+          ) : null}
+        </View>
+
         <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null]}>
           <View style={styles.modalPrimaryActions}>
-            <AppButton label="Cancelar" onPress={() => setOperationsClassPickerVisible(false)} variant="secondary" />
-            <AppButton
-              label="Cargar asistencias"
-              onPress={() => {
-                setOperationsSelectedClassId(operationsClassPickerValue);
-                setOperationsDashboardView("attendance");
-                setOperationsClassPickerVisible(false);
-              }}
-              variant="success"
-              disabled={!operationsClassPickerValue}
-            />
+            <AppButton label="Cerrar" onPress={() => setOperationsClassPickerVisible(false)} variant="secondary" />
+            {attendanceManagerTab === "by-class" && operationsClassPickerValue ? (
+              <AppButton
+                label="Ver en dashboard"
+                onPress={() => {
+                  setOperationsSelectedClassId(operationsClassPickerValue);
+                  setOperationsDashboardView("attendance");
+                  setOperationsClassPickerVisible(false);
+                }}
+                variant="success"
+                disabled={!operationsClassPickerValue}
+              />
+            ) : null}
+            {attendanceManagerTab === "by-student" && attendanceManagerStudentId ? (
+              <AppButton
+                label="Registrar asistencia"
+                onPress={() => {
+                  const target = visibleStudents.find((s) => s.id === attendanceManagerStudentId) ?? null;
+                  setOperationsClassPickerVisible(false);
+                  setFeedback(null);
+                  setAttendanceDialogMode("create");
+                  setEditingAttendance(null);
+                  setAttendanceErrors({});
+                  setAttendanceForm(createEmptyAttendanceForm(target));
+                  setAttendanceModalVisible(true);
+                }}
+                variant="success"
+                disabled={!attendanceManagerStudentId}
+              />
+            ) : null}
           </View>
         </View>
       </AppModal>
@@ -4782,65 +5157,59 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
           }
         }}
       >
-        {/* TEMPORAL COMENTADO PARA DEBUG: formulario manual completo */}
-        {/*
-        <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
-          <AppSelect
-            label="Alumno"
-            value={attendanceForm.studentId}
-            onValueChange={(value) => setAttendanceForm((current) => ({ ...current, studentId: value }))}
-            items={studentOptions}
-            error={attendanceErrors.studentId}
-            enabled={!attendanceBusy}
-          />
-          <AppSelect
-            label="Metodo"
-            value={attendanceForm.method}
-            onValueChange={(value) => setAttendanceForm((current) => ({ ...current, method: value as AttendanceMethod }))}
-            items={ATTENDANCE_METHOD_OPTIONS}
-            enabled={!attendanceBusy}
-          />
-        </View>
-        <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
-          <AppSelect
-            label="Sucursal"
-            value={attendanceForm.branchId}
-            onValueChange={(value) =>
-              setAttendanceForm((current) => ({
-                ...current,
-                branchId: value,
-                classId: current.classId === "none" ? "none" : "",
-              }))
-            }
-            items={attendanceBranchOptions}
-            error={attendanceErrors.branchId}
-            enabled={!attendanceBusy}
-          />
-          <AppSelect
-            label="Clase"
-            value={attendanceForm.classId}
-            onValueChange={(value) => setAttendanceForm((current) => ({ ...current, classId: value }))}
-            items={attendanceClassOptions}
-            error={attendanceErrors.classId}
-            enabled={!attendanceBusy}
-          />
-        </View>
-        <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
-          <AppDateInput
-            label="Fecha"
-            value={attendanceForm.checkInDate}
-            onChangeText={(value) => setAttendanceForm((current) => ({ ...current, checkInDate: value }))}
-            error={attendanceErrors.checkInDate}
-            editable={!attendanceBusy}
-          />
-          <AppInput
-            label="Hora"
-            placeholder="HH:MM"
-            value={attendanceForm.checkInTime}
-            onChangeText={(value) => setAttendanceForm((current) => ({ ...current, checkInTime: value }))}
-            error={attendanceErrors.checkInTime}
-            editable={!attendanceBusy}
-          />
+        <View nativeID="screens-admin-dashboard-attendance-form" style={styles.modalFormBody} testID="screens-admin-dashboard-attendance-form">
+          <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
+            <AppSelect
+              label="Alumno"
+              value={attendanceForm.studentId}
+              onValueChange={v => setAttendanceField("studentId", v)}
+              items={studentOptions}
+              error={attendanceErrors.studentId}
+              enabled={!attendanceBusy}
+            />
+            <AppSelect
+              label="Metodo"
+              value={attendanceForm.method}
+              onValueChange={v => setAttendanceField("method", v as AttendanceMethod)}
+              items={ATTENDANCE_METHOD_OPTIONS}
+              enabled={!attendanceBusy}
+            />
+          </View>
+          <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
+            <AppSelect
+              label="Sucursal"
+              value={attendanceForm.branchId}
+              onValueChange={handleAttendanceBranchChange}
+              items={attendanceBranchOptions}
+              error={attendanceErrors.branchId}
+              enabled={!attendanceBusy}
+            />
+            <AppSelect
+              label="Clase"
+              value={attendanceForm.classId}
+              onValueChange={v => setAttendanceField("classId", v)}
+              items={attendanceClassOptions}
+              error={attendanceErrors.classId}
+              enabled={!attendanceBusy}
+            />
+          </View>
+          <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : null]}>
+            <AppDateInput
+              label="Fecha"
+              value={attendanceForm.checkInDate}
+              onChangeText={v => setAttendanceField("checkInDate", v)}
+              error={attendanceErrors.checkInDate}
+              editable={!attendanceBusy}
+            />
+            <AppInput
+              label="Hora"
+              placeholder="HH:MM"
+              value={attendanceForm.checkInTime}
+              onChangeText={v => setAttendanceField("checkInTime", v)}
+              error={attendanceErrors.checkInTime}
+              editable={!attendanceBusy}
+            />
+          </View>
         </View>
         {selectedAttendanceStudent ? (
           <View style={styles.paymentContextBox}>
@@ -4861,31 +5230,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             </Text>
           </View>
         ) : null}
-        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null]}>
-          {attendanceDialogMode === "edit" && editingAttendance ? (
-            <AppButton
-              label="Eliminar asistencia"
-              onPress={handleAttendanceDelete}
-              variant="danger"
-              loading={deleteAttendanceMutation.isPending}
-            />
-          ) : null}
-          <View style={styles.modalPrimaryActions}>
-            <AppButton
-              label="Cancelar"
-              onPress={() => setAttendanceModalVisible(false)}
-              variant="secondary"
-              disabled={attendanceBusy}
-            />
-            <AppButton
-              label={attendanceDialogMode === "create" ? "Registrar asistencia" : "Guardar cambios"}
-              onPress={handleAttendanceSave}
-              loading={createAttendanceMutation.isPending || updateAttendanceMutation.isPending}
-              variant="success"
-            />
-          </View>
-        </View>
-        */}
 
         <Pressable
           accessibilityRole="button"
@@ -4895,14 +5239,11 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             setAttendanceModalVisible(false);
             setQuickScannerVisible(true);
           }}
-          style={(state) => {
-            const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-            return [
-              styles.quickModalQrRow,
-              !quickQrEnabled || attendanceBusy ? styles.quickModalQrRowDisabled : null,
-              state.pressed || hovered ? styles.quickModalQrRowPressed : null,
-            ];
-          }}
+          style={(state: any) => [
+            styles.quickModalQrRow,
+            !quickQrEnabled || attendanceBusy ? styles.quickModalQrRowDisabled : null,
+            state.pressed || state.hovered ? styles.quickModalQrRowPressed : null,
+          ]}
           testID="screens-admin-dashboard-attendance-modal-qr-row"
         >
           <View style={styles.quickModalQrRowContent}>
@@ -4926,13 +5267,29 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             color={quickQrEnabled ? matchaGreen : colors.textMuted}
           />
         </Pressable>
-        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null, { marginTop: 20 }]}>
-          <AppButton
-            label="Cerrar"
-            onPress={() => setAttendanceModalVisible(false)}
-            variant="secondary"
-            disabled={attendanceBusy}
-          />
+        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : null, { marginTop: spacing.lg }]}>
+          {attendanceDialogMode === "edit" && editingAttendance ? (
+            <AppButton
+              label="Eliminar asistencia"
+              onPress={handleAttendanceDelete}
+              variant="danger"
+              loading={deleteAttendanceMutation.isPending}
+            />
+          ) : null}
+          <View style={styles.modalPrimaryActions}>
+            <AppButton
+              label="Cancelar"
+              onPress={() => setAttendanceModalVisible(false)}
+              variant="secondary"
+              disabled={attendanceBusy}
+            />
+            <AppButton
+              label={attendanceDialogMode === "create" ? "Registrar asistencia" : "Guardar cambios"}
+              onPress={handleAttendanceSave}
+              loading={createAttendanceMutation.isPending || updateAttendanceMutation.isPending}
+              variant="success"
+            />
+          </View>
         </View>
       </AppModal>
 
@@ -5790,14 +6147,11 @@ function OverviewHybridGraphCard({
                   disabled={!onPress}
                   nativeID={onPress ? `${idPrefix}-tile-${tile.key}-pressable` : `${idPrefix}-tile-${tile.key}`}
                   onPress={onPress}
-                  style={(state) => {
-                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-                    return [
+                  style={(state: any) => [
                       styles.hybridTile,
-                      hovered && onPress ? styles.hybridTileHovered : null,
+                      state.hovered && onPress ? styles.hybridTileHovered : null,
                       state.pressed && onPress ? styles.hybridTilePressed : null,
-                    ];
-                  }}
+                    ]}
                   testID={onPress ? `${idPrefix}-tile-${tile.key}-pressable` : `${idPrefix}-tile-${tile.key}`}
                 >
                   <Text
@@ -5877,139 +6231,6 @@ function OverviewHybridGraphCard({
   );
 }
 
-function DashboardQuickActionsModal({
-  idPrefix,
-  visible,
-  onClose,
-  actions,
-}: {
-  idPrefix: string;
-  visible: boolean;
-  onClose: () => void;
-  actions: Array<{
-    key: string;
-    label: string;
-    icon?: keyof typeof Feather.glyphMap | ReactNode;
-    onPress: () => void;
-    tone?: "default" | "primary" | "success" | "warning" | "danger";
-    destructive?: boolean;
-    disabled?: boolean;
-  }>;
-}) {
-  const { isDesktop, isTablet } = useResponsiveLayout();
-
-  const toneDecor = (tone?: "default" | "primary" | "success" | "warning" | "danger", destructive?: boolean) => {
-    if (tone === "primary") {
-      return {
-        wrap: styles.modalActionPrimary,
-        iconWrap: styles.modalActionIconWrapPrimary,
-        iconColor: colors.onPrimary,
-        title: colors.text,
-      };
-    }
-    if (tone === "success") {
-      return {
-        wrap: styles.modalActionSuccess,
-        iconWrap: styles.modalActionIconWrapSuccess,
-        iconColor: colors.onPrimary,
-        title: colors.text,
-      };
-    }
-    if (tone === "warning") {
-      return {
-        wrap: styles.modalActionWarning,
-        iconWrap: styles.modalActionIconWrapWarning,
-        iconColor: colors.onPrimary,
-        title: colors.text,
-      };
-    }
-    if (tone === "danger" || destructive) {
-      return {
-        wrap: styles.modalActionDanger,
-        iconWrap: styles.modalActionIconWrapDanger,
-        iconColor: colors.onPrimary,
-        title: colors.danger,
-      };
-    }
-    return {
-      wrap: null,
-      iconWrap: styles.modalActionIconWrapDefault,
-      iconColor: colors.text,
-      title: colors.text,
-    };
-  };
-
-  const renderActionIcon = (
-    action: { icon?: keyof typeof Feather.glyphMap | ReactNode; label?: string },
-    color: string
-  ) => {
-    if (!action.icon) {
-      return (
-        <Feather name="arrow-up-right" size={16} color={color} />
-      );
-    }
-    if (typeof action.icon === "string") {
-      return <Feather name={action.icon as keyof typeof Feather.glyphMap} size={16} color={color} />;
-    }
-    return action.icon as ReactNode;
-  };
-
-  return (
-    <AppModal
-      visible={visible}
-      nativeID={idPrefix}
-      testID={idPrefix}
-      title="Acciones rápidas"
-      description="Operaciones diarias del dojo: altas, cobros y registro de asistencias."
-      onClose={onClose}
-    >
-      <View nativeID={`${idPrefix}-modal-actions-list`} style={styles.modalQuickActionsGrid} testID={`${idPrefix}-modal-actions-list`}>
-        {actions.map((action) => {
-          const decor = toneDecor(action.tone, action.destructive);
-          return (
-            <Pressable
-              key={action.key}
-              accessibilityRole="button"
-              disabled={action.disabled}
-              nativeID={`${idPrefix}-${action.key}-button`}
-              onPress={() => {
-                onClose();
-                setTimeout(() => action.onPress(), 200);
-              }}
-              style={(state) => {
-                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-                return [
-                  styles.modalQuickActionCard,
-                  decor.wrap,
-                  hovered && !action.disabled ? styles.modalQuickActionCardHovered : null,
-                  state.pressed && !action.disabled ? styles.modalQuickActionCardPressed : null,
-                  action.disabled ? styles.modalQuickActionCardDisabled : null,
-                ];
-              }}
-              testID={`${idPrefix}-${action.key}-button`}
-            >
-              <View
-                nativeID={`${idPrefix}-${action.key}-icon-wrap`}
-                style={[styles.modalActionIconWrap, decor.iconWrap]}
-                testID={`${idPrefix}-${action.key}-icon-wrap`}
-              >
-                {renderActionIcon(action, decor.iconColor)}
-              </View>
-              <Text
-                nativeID={`${idPrefix}-${action.key}-label`}
-                style={[styles.modalQuickActionTitle, { color: decor.title }]}
-                testID={`${idPrefix}-${action.key}-label`}
-              >
-                {action.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </AppModal>
-  );
-}
-
 function QuickAction({
   label,
   description,
@@ -6038,18 +6259,14 @@ function QuickAction({
       disabled={disabled}
       nativeID={idPrefix ? `${idPrefix}-button` : undefined}
       onPress={onPress}
-      style={(state) => {
-        const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-
-        return [
-          styles.quickAction,
-          tone === "primary" ? styles.quickActionPrimary : null,
-          tone === "success" ? styles.quickActionSuccess : null,
-          hovered && !disabled ? styles.quickActionHovered : null,
-          disabled ? styles.quickActionDisabled : null,
-          state.pressed && !disabled ? styles.quickActionPressed : null,
-        ];
-      }}
+      style={(state: any) => [
+        styles.quickAction,
+        tone === "primary" ? styles.quickActionPrimary : null,
+        tone === "success" ? styles.quickActionSuccess : null,
+        state.hovered && !disabled ? styles.quickActionHovered : null,
+        disabled ? styles.quickActionDisabled : null,
+        state.pressed && !disabled ? styles.quickActionPressed : null,
+      ]}
       testID={idPrefix ? `${idPrefix}-button` : undefined}
     >
       <View nativeID={idPrefix ? `${idPrefix}-header` : undefined} style={styles.quickActionHeader} testID={idPrefix ? `${idPrefix}-header` : undefined}>
@@ -7309,19 +7526,276 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "flex-end",
   },
-  paymentContextBox: {
+  modalFormBody: {
+    gap: spacing.md,
+    width: "100%",
+  },
+  amTabsRow: {
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
-    borderRadius: 18,
+    borderRadius: radius.md,
     borderWidth: 1,
-    gap: 4,
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+    padding: spacing.xs,
+    width: "100%",
+  },
+  amTabButton: {
+    alignItems: "center",
+    borderRadius: radius.md - 2,
+    flexDirection: "row",
+    flexGrow: 1,
+    gap: 6,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  amTabButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  amTabButtonHovered: {
+    backgroundColor: colors.surface,
+  },
+  amTabButtonPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.985 }],
+  },
+  amTabLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  amTabLabelActive: {
+    color: colors.onPrimary,
+  },
+  amPanelBody: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    width: "100%",
+  },
+  amSelectedChip: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    width: "100%",
+  },
+  amSelectedChipText: {
+    color: colors.text,
+    flexGrow: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  amChipClose: {
+    alignItems: "center",
+    borderRadius: radius.pill,
+    height: 28,
+    justifyContent: "center",
+    width: 28,
+  },
+  amChipClosePressed: {
+    backgroundColor: colors.surface,
+    opacity: 0.9,
+    transform: [{ scale: 0.95 }],
+  },
+  amSuggestionList: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: 2,
+    maxHeight: 280,
+    overflow: "hidden",
+    padding: spacing.xs,
+    width: "100%",
+  },
+  amSuggestionRow: {
+    alignItems: "center",
+    borderRadius: radius.md - 2,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 56,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 8,
+  },
+  amSuggestionRowHovered: {
+    backgroundColor: colors.surface,
+  },
+  amSuggestionRowPressed: {
+    backgroundColor: colors.surface,
+    opacity: 0.94,
+    transform: [{ scale: 0.995 }],
+  },
+  amSuggestionAvatar: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  amSuggestionAvatarText: {
+    color: colors.onPrimary,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  amSuggestionCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  amSuggestionTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  amSuggestionSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  amSuggestionEmpty: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 19,
+    marginVertical: spacing.sm,
+    textAlign: "center",
+  },
+  amRecordsWrap: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
     padding: spacing.md,
+    width: "100%",
+  },
+  amRecordsHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+  amRecordsTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  amRecordsCount: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    overflow: "hidden",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  amEmptyRecords: {
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.lg,
+    width: "100%",
+  },
+  amEmptyRecordsTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: spacing.sm,
+  },
+  amEmptyRecordsSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  amRecordsList: {
+    gap: 6,
+    maxHeight: 360,
+    overflow: "scroll",
+    width: "100%",
+  },
+  amRecordRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 64,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    width: "100%",
+  },
+  amRecordIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(67,160,71,0.12)",
+    borderRadius: 14,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  amRecordCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  amRecordTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  amRecordSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  amRecordActions: {
+    flexDirection: "row",
+    flexGrow: 0,
+    flexShrink: 0,
+    gap: spacing.sm,
   },
   paymentContextText: {
     color: colors.textMuted,
     fontFamily: typography.bodyFamily,
     fontSize: 13,
     lineHeight: 19,
+  },
+  paymentContextBox: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 6,
+    padding: spacing.md,
+    width: "100%",
   },
   attendanceRow: {
     backgroundColor: colors.surfaceAlt,
@@ -7816,79 +8290,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.1,
   },
-  modalQuickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    width: "100%",
-  },
-  modalQuickActionCard: {
-    alignItems: "flex-start",
-    alignSelf: "flex-start",
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flexBasis: "100%",
-    flexGrow: 0,
-    flexShrink: 1,
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  modalQuickActionCardHovered: {
-    backgroundColor: "rgba(120, 78, 46, 0.05)",
-    borderColor: "rgba(120, 78, 46, 0.25)",
-    transform: [{ translateY: -1 }],
-  },
-  modalQuickActionCardPressed: {
-    backgroundColor: "rgba(120, 78, 46, 0.12)",
-    transform: [{ scale: 0.985 }],
-  },
-  modalQuickActionCardDisabled: {
-    opacity: 0.55,
-  },
-  modalActionIconWrap: {
-    alignItems: "center",
-    borderRadius: radius.md,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  modalActionIconWrapDefault: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-  },
-  modalActionPrimary: {
-    borderColor: "rgba(46, 125, 50, 0.3)",
-  },
-  modalActionIconWrapPrimary: {
-    backgroundColor: colors.info,
-  },
-  modalActionSuccess: {
-    borderColor: "rgba(46, 125, 50, 0.3)",
-  },
-  modalActionIconWrapSuccess: {
-    backgroundColor: colors.success,
-  },
-  modalActionWarning: {
-    borderColor: "rgba(249, 168, 37, 0.3)",
-  },
-  modalActionIconWrapWarning: {
-    backgroundColor: colors.warning,
-  },
-  modalActionDanger: {
-    borderColor: "rgba(198, 40, 40, 0.25)",
-  },
-  modalActionIconWrapDanger: {
-    backgroundColor: colors.danger,
-  },
-  modalQuickActionTitle: {
-    fontFamily: typography.headingFamily,
-    fontSize: 14,
-    fontWeight: "800",
-    lineHeight: 18,
-  },
 });
 
 const mobileStyles = StyleSheet.create({
@@ -7986,10 +8387,23 @@ const desktopStyles = StyleSheet.create({
     marginTop: spacing.md,
   },
   quickAttendancePanelInline: {},
-  modalQuickActionCard: {
-    flexBasis: "48.5%",
-  },
   hybridTile: {
     minWidth: 110,
+  },
+  amRecordsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    maxHeight: 420,
+  },
+  amRecordRow: {
+    flexBasis: "48.5%",
+  },
+  amSuggestionList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  amSuggestionRow: {
+    flexBasis: "48.5%",
   },
 });

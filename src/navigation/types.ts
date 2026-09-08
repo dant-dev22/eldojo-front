@@ -13,7 +13,11 @@ export type AuthStackParamList = {
 };
 
 export type AdminStackParamList = {
-  AdminHome: { section?: AdminDashboardSection } | undefined;
+  AdminHome: {
+    section?: AdminDashboardSection;
+    focusedStudentId?: number;
+    openCreateAttendance?: boolean;
+  } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
   QrCodesList: undefined;
   TrajectoryList: undefined;

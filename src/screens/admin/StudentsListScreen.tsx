@@ -18,9 +18,9 @@ import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
 import { BeltIndicator } from "@/components/BeltIndicator";
 import { BeltSelector, type BeltSelectorValue } from "@/components/BeltSelector";
-import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { CredencialQRModal } from "@/components/CredencialQRModal";
+import { DashboardQuickActionsModal, type QuickActionItem } from "@/components/DashboardQuickActionsModal";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { SkeletonList } from "@/components/SkeletonLoader";
 import { Screen } from "@/components/Screen";
@@ -795,10 +795,34 @@ export function StudentsListScreen({ navigation, route }: Props) {
     }, 300);
   }
 
-  const contextActions = useMemo<BottomSheetAction[]>(
+  const contextActions = useMemo<QuickActionItem[]>(
     () => {
       if (!contextSheetStudent) return [];
       return [
+        {
+          key: "edit",
+          label: "Editar alumno",
+          icon: "edit-3",
+          tone: "primary",
+          onPress: () => {
+            setShowContextSheet(false);
+            handleOpenEdit(contextSheetStudent);
+          },
+        },
+        {
+          key: "register-attendance",
+          label: "Registrar asistencia",
+          icon: "check-circle",
+          tone: "success",
+          onPress: () => {
+            setShowContextSheet(false);
+            navigation.navigate("AdminHome", {
+              section: "operations",
+              openCreateAttendance: true,
+              focusedStudentId: contextSheetStudent.id,
+            });
+          },
+        },
         {
           key: "qr",
           label: "Ver código QR",
@@ -826,15 +850,6 @@ export function StudentsListScreen({ navigation, route }: Props) {
           },
         },
         {
-          key: "edit",
-          label: "Editar alumno",
-          icon: "edit-3",
-          onPress: () => {
-            setShowContextSheet(false);
-            handleOpenEdit(contextSheetStudent);
-          },
-        },
-        {
           key: "delete",
           label: "Eliminar / dar de baja",
           icon: "trash-2",
@@ -848,7 +863,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         },
       ];
     },
-    [contextSheetStudent],
+    [contextSheetStudent, navigation],
   );
 
   function handleUpdateField<K extends keyof StudentFormState>(field: K, value: StudentFormState[K]) {
@@ -1248,10 +1263,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
         variant="extended"
       />
 
-      <BottomSheet
-        nativeID="screens-admin-students-list-context-sheet"
+      <DashboardQuickActionsModal
+        idPrefix="screens-admin-students-list-row-quick-actions"
         title={contextSheetStudent ? `${contextSheetStudent.first_name} ${contextSheetStudent.last_name}` : "Acciones"}
-        subtitle={contextSheetStudent?.unique_code ? `Código ${contextSheetStudent.unique_code}` : undefined}
+        description={contextSheetStudent?.unique_code ? `Código ${contextSheetStudent.unique_code} · Acciones rápidas para administrar al alumno.` : "Operaciones sobre el alumno seleccionado."}
         visible={showContextSheet}
         onClose={() => setShowContextSheet(false)}
         actions={contextActions}

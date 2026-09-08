@@ -426,6 +426,9 @@ export function QrScanner({
     if (attendanceProcess !== null) {
       pauseAllScanning();
     } else {
+      setLastScannedCode(null);
+      setFlashMessage(null);
+      cooldownRef.current = false;
       resumeAllScanning();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
