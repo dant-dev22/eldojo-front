@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppBadge } from "@/components/AppBadge";
 import { BeltIndicator } from "@/components/BeltIndicator";
+import { studentToPersonalInfo, StudentPersonalInfo } from "@/components/StudentPersonalInfo";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
@@ -1541,28 +1542,46 @@ export function StudentDetailView({
     </View>
   );
 
+  const extraProfileRows: InfoRowData[] = useMemo(() => {
+    const rows: InfoRowData[] = [];
+    rows.push({
+      label: "Fecha de inscripción",
+      value: formatDate(student.enrollment_date),
+      icon: "clipboard",
+    });
+    if (student.height_cm) {
+      rows.push({
+        label: "Altura",
+        value: `${student.height_cm} cm`,
+        icon: "maximize-2",
+      });
+    }
+    rows.push({
+      label: "Sucursal",
+      value: branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`,
+      icon: "map-pin",
+    });
+    rows.push({
+      label: "Clase principal",
+      value: primaryClass?.name ?? "No asignada",
+      icon: "users",
+    });
+    return rows;
+  }, [student, branch, primaryClass]);
+
   const slideGeneral = (
     <View style={styles.slideInner} nativeID={`${idPrefix}-slide-general`} testID={`${idPrefix}-slide-general`}>
       {heroNode}
-      <View
-        style={[
-          styles.twoColGrid,
-          isDesktop ? desktopStyles.twoColGrid : mobileStyles.twoColGrid,
-        ]}
-      >
-        <InfoListSection
-          idPrefix={`${idPrefix}-status`}
-          title="Estado y cobro"
-          subtitle="Estatus operativo y condiciones económicas"
-          rows={statusRows}
-        />
-        <InfoListSection
-          idPrefix={`${idPrefix}-profile`}
-          title="Perfil deportivo"
-          subtitle="Datos generales del alumno en el dojo"
-          rows={profileRows}
-        />
-      </View>
+      <StudentPersonalInfo
+        student={studentToPersonalInfo(student)}
+        idPrefix={`${idPrefix}-personal-info`}
+      />
+      <InfoListSection
+        idPrefix={`${idPrefix}-profile-extra`}
+        title="Información adicional"
+        subtitle="Datos de inscripción y asignaciones del dojo"
+        rows={extraProfileRows}
+      />
     </View>
   );
 

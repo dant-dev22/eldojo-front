@@ -4,6 +4,7 @@ import { Image, Pressable, Platform, StyleSheet, Text, View } from "react-native
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { BeltIndicator } from "@/components/BeltIndicator";
+import { studentToPersonalInfo, StudentPersonalInfo } from "@/components/StudentPersonalInfo";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import type { FightRecordType, Student, StudentStatus, TrajectoryEvent } from "@/types/api";
 import {
@@ -209,58 +210,30 @@ export function StudentView({
 
       <View style={styles.summaryDivider} />
 
-      <View
-        style={[
-          styles.summaryTwoColGrid,
-          isDesktop ? desktopStyles.summaryTwoColGrid : mobileStyles.summaryTwoColGrid,
-        ]}
-      >
-        <View style={styles.summaryInfoBlock} testID={`${baseId}-status-block`}>
-          <Text style={styles.summarySectionLabel}>Estado</Text>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-status-payment`} testID={`${baseId}-status-payment`}>
-            <Text style={styles.summaryInfoRowLabel}>Pago</Text>
-            <Text style={[styles.summaryInfoRowValue, { color: getStudentPaymentColor(student.payment_status) }]}>
-              {formatPaymentStatus(student.payment_status)}
-            </Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-status-student`} testID={`${baseId}-status-student`}>
-            <Text style={styles.summaryInfoRowLabel}>Alumno</Text>
-            <Text style={[styles.summaryInfoRowValue, { color: getStudentStatusColor(student.status) }]}>
-              {formatStudentStatus(student.status)}
-            </Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-status-next`} testID={`${baseId}-status-next`}>
-            <Text style={styles.summaryInfoRowLabel}>Próximo pago</Text>
-            <Text style={styles.summaryInfoRowValue}>{formatDate(student.next_payment_date)}</Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-status-fee`} testID={`${baseId}-status-fee`}>
-            <Text style={styles.summaryInfoRowLabel}>Mensualidad</Text>
-            <Text style={styles.summaryInfoRowValue}>{formatCurrency(student.monthly_fee, student.currency)}</Text>
-          </View>
-        </View>
+      <StudentPersonalInfo
+        student={studentToPersonalInfo(student)}
+        idPrefix={`${baseId}-personal-info`}
+      />
 
-        <View style={styles.summaryInfoBlock} testID={`${baseId}-profile-block`}>
-          <Text style={styles.summarySectionLabel}>Perfil</Text>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-profile-birth`} testID={`${baseId}-profile-birth`}>
-            <Text style={styles.summaryInfoRowLabel}>Nacimiento</Text>
-            <Text style={styles.summaryInfoRowValue}>
-              {formatDate(student.birth_date)} · {student.birth_place}
-            </Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-profile-enrollment`} testID={`${baseId}-profile-enrollment`}>
-            <Text style={styles.summaryInfoRowLabel}>Inscripción</Text>
-            <Text style={styles.summaryInfoRowValue}>{formatDate(student.enrollment_date)}</Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-profile-branch`} testID={`${baseId}-profile-branch`}>
-            <Text style={styles.summaryInfoRowLabel}>Sucursal</Text>
-            <Text style={styles.summaryInfoRowValue}>
-              {branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
-            </Text>
-          </View>
-          <View style={styles.summaryInfoRow} nativeID={`${baseId}-profile-class`} testID={`${baseId}-profile-class`}>
-            <Text style={styles.summaryInfoRowLabel}>Clase</Text>
-            <Text style={styles.summaryInfoRowValue}>{primaryClass?.name ?? "No asignada"}</Text>
-          </View>
+      <View
+        nativeID={`${baseId}-dojo-info-block`}
+        style={styles.summaryInfoBlock}
+        testID={`${baseId}-dojo-info-block`}
+      >
+        <Text style={styles.summarySectionLabel}>Datos del dojo</Text>
+        <View style={styles.summaryInfoRow} nativeID={`${baseId}-enrollment-date`} testID={`${baseId}-enrollment-date`}>
+          <Text style={styles.summaryInfoRowLabel}>Inscripción</Text>
+          <Text style={styles.summaryInfoRowValue}>{formatDate(student.enrollment_date)}</Text>
+        </View>
+        <View style={styles.summaryInfoRow} nativeID={`${baseId}-branch-info`} testID={`${baseId}-branch-info`}>
+          <Text style={styles.summaryInfoRowLabel}>Sucursal</Text>
+          <Text style={styles.summaryInfoRowValue}>
+            {branch ? `${branch.name} · ${branch.city}` : `ID ${student.branch_id}`}
+          </Text>
+        </View>
+        <View style={styles.summaryInfoRow} nativeID={`${baseId}-class-info`} testID={`${baseId}-class-info`}>
+          <Text style={styles.summaryInfoRowLabel}>Clase principal</Text>
+          <Text style={styles.summaryInfoRowValue}>{primaryClass?.name ?? "No asignada"}</Text>
         </View>
       </View>
 

@@ -19,6 +19,7 @@ import { AppCard } from "@/components/AppCard";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
+import { myProfileToPersonalInfo, StudentPersonalInfo } from "@/components/StudentPersonalInfo";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate, formatPaymentStatus } from "@/utils/format";
@@ -161,13 +162,7 @@ export function StudentProfileScreen() {
           testID="screens-student-profile-avatar"
         />
         <View nativeID="screens-student-profile-copy" style={styles.profileCopy} testID="screens-student-profile-copy">
-          <Text nativeID="screens-student-profile-name" style={styles.name} testID="screens-student-profile-name">{profile.full_name}</Text>
           <Text nativeID="screens-student-profile-code" style={styles.meta} testID="screens-student-profile-code">Código: {profile.unique_code}</Text>
-          <Text nativeID="screens-student-profile-birth-date" style={styles.meta} testID="screens-student-profile-birth-date">Nacimiento: {formatDate(profile.birth_date)}</Text>
-        </View>
-        <View nativeID="screens-student-profile-badges-row" style={styles.badgesRow} testID="screens-student-profile-badges-row">
-          <AppBadge label={formatPaymentStatus(profile.payment_status)} nativeID="screens-student-profile-payment-badge" testID="screens-student-profile-payment-badge" tone={getPaymentTone(profile.payment_status)} />
-          <AppBadge label={profile.status === "active" ? "Activo" : profile.status} nativeID="screens-student-profile-status-badge" testID="screens-student-profile-status-badge" tone="neutral" />
         </View>
         <AppButton
           label="Cambiar foto"
@@ -180,16 +175,17 @@ export function StudentProfileScreen() {
         </View>
       </AppCard>
 
+      <StudentPersonalInfo
+        student={myProfileToPersonalInfo(profile)}
+        idPrefix="screens-student-profile-personal-info"
+      />
+
       <AppCard nativeID="screens-student-profile-summary-card" testID="screens-student-profile-summary-card">
         <View nativeID="screens-student-profile-summary-section" style={styles.sectionMarker} testID="screens-student-profile-summary-section">
-          <Text nativeID="screens-student-profile-summary-title" style={styles.sectionTitle} testID="screens-student-profile-summary-title">Resumen</Text>
+          <Text nativeID="screens-student-profile-summary-title" style={styles.sectionTitle} testID="screens-student-profile-summary-title">Cuenta</Text>
           <View nativeID="screens-student-profile-email-group" style={styles.infoGroup} testID="screens-student-profile-email-group">
             <Text nativeID="screens-student-profile-email-label" style={styles.infoLabel} testID="screens-student-profile-email-label">Correo</Text>
             <Text nativeID="screens-student-profile-email-value" style={styles.infoValue} testID="screens-student-profile-email-value">{profile.email}</Text>
-          </View>
-          <View nativeID="screens-student-profile-next-payment-group" style={styles.infoGroup} testID="screens-student-profile-next-payment-group">
-            <Text nativeID="screens-student-profile-next-payment-label" style={styles.infoLabel} testID="screens-student-profile-next-payment-label">Próximo pago</Text>
-            <Text nativeID="screens-student-profile-next-payment-value" style={styles.infoValue} testID="screens-student-profile-next-payment-value">{formatDate(profile.next_payment_date)}</Text>
           </View>
           <View nativeID="screens-student-profile-current-class-group" style={styles.infoGroup} testID="screens-student-profile-current-class-group">
             <Text nativeID="screens-student-profile-current-class-label" style={styles.infoLabel} testID="screens-student-profile-current-class-label">Clase actual</Text>
