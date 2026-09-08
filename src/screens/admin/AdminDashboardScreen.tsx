@@ -23,7 +23,6 @@ import { AppStatusSwitch } from "@/components/AppStatusSwitch";
 import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboardTemplate";
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
-import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { AttendanceProgressView, type AttendanceSuccessPayload, type AttendanceStepStatus } from "@/components/AttendanceProgressView";
 import { QrScanner, type QrScannerAttendanceProcessState } from "@/components/QrScanner";
 import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
@@ -2890,41 +2889,104 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             {renderQuickAttendanceForm("hero")}
           </View>
         </View>
+        <View nativeID="screens-admin-dashboard-hero-action-row" style={styles.heroActionRow} testID="screens-admin-dashboard-hero-action-row">
+          <Pressable
+            accessibilityRole="button"
+            nativeID="screens-admin-dashboard-register-attendance-action"
+            onPress={() => setDashboardSheetVisible(true)}
+            style={(state) => {
+              const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+              return [
+                styles.heroActionButton,
+                state.pressed ? styles.heroActionButtonPressed : null,
+                hovered ? styles.heroActionButtonHovered : null,
+              ];
+            }}
+            testID="screens-admin-dashboard-register-attendance-action"
+          >
+            <Feather name="check-square" size={16} color={colors.action} style={styles.heroActionIcon} />
+            <Text
+              nativeID="screens-admin-dashboard-register-attendance-action-label"
+              style={styles.heroActionLabel}
+              testID="screens-admin-dashboard-register-attendance-action-label"
+            >
+              Registrar asistencia
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   ) : null;
   const overviewHeaderMainContent = isOverviewSection && !isLoading && !hasError ? (
     <View nativeID="screens-admin-dashboard-overview-central-content" style={styles.overviewCentralContent} testID="screens-admin-dashboard-overview-central-content">
       <View nativeID="screens-admin-dashboard-chart-grid" style={[styles.chartGrid, isDesktop ? desktopStyles.chartGrid : mobileStyles.chartGrid]} testID="screens-admin-dashboard-chart-grid">
-        <OverviewCircularGraphCard
-          compact={!isDesktop}
+        <OverviewHybridGraphCard
           delay={120}
-          footerLink={{
-            label: "Ir a alumnos",
-            onPress: () => navigation.navigate("StudentsList"),
-          }}
           idPrefix="screens-admin-dashboard-students-graph"
           items={overviewGraphData}
           subtitle="Distribución actual del alumnado visible en el resumen."
           title="Estado del alumnado"
+          ctaLabel="Ir a alumnos"
+          onCtaPress={() => navigation.navigate("StudentsList")}
+          summaryTiles={[
+            {
+              key: "total",
+              label: "Total alumnos",
+              value: visibleStudents.length,
+              tone: colors.text,
+            },
+            {
+              key: "active",
+              label: "Activos",
+              value: activeStudents,
+              tone: colors.success,
+            },
+            {
+              key: "attention",
+              label: "Atención",
+              value: inactiveStudents + latePayments,
+              tone: colors.warning,
+            },
+          ]}
         />
-        <OverviewCircularGraphCard
-          compact
+        <OverviewHybridGraphCard
           delay={150}
-          circleLinks={{
-            "branches-active": {
-              label: "Ir a sucursales",
-              onPress: () => navigation.navigate("AdminHome", { section: "branches" }),
-            },
-            "classes-active": {
-              label: "Ir a clases",
-              onPress: () => navigation.navigate("AdminHome", { section: "operations" }),
-            },
-          }}
           idPrefix="screens-admin-dashboard-structure-graph"
           items={structureGraphData}
           subtitle={visibleBranches.length === 1 ? "Estructura actual de tu sucursal visible." : "Panorama general de sucursales y clases activas del dojo."}
           title="Estructura operativa"
+          ctaLabel="Ir a operaciones"
+          onCtaPress={() => navigation.navigate("AdminHome", { section: "operations" })}
+          summaryTiles={[
+            {
+              key: "branches",
+              label: "Sucursales",
+              value: visibleBranches.length,
+              tone: colors.info,
+            },
+            {
+              key: "classes",
+              label: "Clases totales",
+              value: visibleClasses.length,
+              tone: colors.action,
+            },
+            {
+              key: "active-classes",
+              label: "Clases activas",
+              value: activeClasses,
+              tone: colors.success,
+            },
+          ]}
+          tileLinks={[
+            {
+              tileKey: "branches",
+              onPress: () => navigation.navigate("AdminHome", { section: "branches" }),
+            },
+            {
+              tileKey: "classes",
+              onPress: () => navigation.navigate("AdminHome", { section: "operations" }),
+            },
+          ]}
         />
       </View>
     </View>
@@ -4473,18 +4535,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         </View>
       </AdminShell>
 
-      <FloatingActionButton
-        accessibilityLabel="Acciones rápidas"
-        onPress={() => setDashboardSheetVisible(true)}
-        icon="plus"
-        label="Acciones"
-        variant="extended"
-      />
-
-      <BottomSheet
+      <DashboardQuickActionsModal
         idPrefix="screens-admin-dashboard-quick-actions"
-        title="Acciones rápidas"
-        subtitle="Operaciones diarias del dojo"
         visible={dashboardSheetVisible}
         onClose={() => setDashboardSheetVisible(false)}
         actions={dashboardQuickActions}
@@ -5695,6 +5747,275 @@ function OverviewCircularGraphCard({
         ) : null}
       </AppCard>
     </AnimatedSurface>
+  );
+}
+
+function OverviewHybridGraphCard({
+  delay,
+  idPrefix,
+  items,
+  subtitle,
+  title,
+  ctaLabel,
+  onCtaPress,
+  summaryTiles,
+  tileLinks,
+}: {
+  delay: number;
+  idPrefix: string;
+  items: Array<{ key: string; label: string; value: number; tone: string }>;
+  subtitle: string;
+  title: string;
+  ctaLabel?: string;
+  onCtaPress?: () => void;
+  summaryTiles?: Array<{ key: string; label: string; value: number; tone: string }>;
+  tileLinks?: Array<{ tileKey: string; onPress: () => void }>;
+}) {
+  const maxValue = Math.max(items.reduce((acc, item) => acc + item.value, 0), 1);
+  const tileLinkMap = useMemo(() => {
+    const map = new Map<string, () => void>();
+    tileLinks?.forEach((entry) => map.set(entry.tileKey, entry.onPress));
+    return map;
+  }, [tileLinks]);
+
+  return (
+    <AnimatedSurface delay={delay}>
+      <AppCard nativeID={idPrefix} style={styles.hybridGraphCard} testID={idPrefix}>
+        <View nativeID={`${idPrefix}-header`} style={styles.hybridGraphHeader} testID={`${idPrefix}-header`}>
+          <View nativeID={`${idPrefix}-copy`} style={styles.hybridGraphHeaderCopy} testID={`${idPrefix}-copy`}>
+            <Text nativeID={`${idPrefix}-title`} style={styles.sectionTitle} testID={`${idPrefix}-title`}>{title}</Text>
+            <Text nativeID={`${idPrefix}-subtitle`} style={styles.helperText} testID={`${idPrefix}-subtitle`}>{subtitle}</Text>
+          </View>
+        </View>
+
+        {summaryTiles && summaryTiles.length > 0 ? (
+          <View nativeID={`${idPrefix}-tiles`} style={styles.hybridTileRow} testID={`${idPrefix}-tiles`}>
+            {summaryTiles.map((tile) => {
+              const onPress = tileLinkMap.get(tile.key);
+              return (
+                <Pressable
+                  key={tile.key}
+                  accessibilityRole={onPress ? "button" : undefined}
+                  disabled={!onPress}
+                  nativeID={onPress ? `${idPrefix}-tile-${tile.key}-pressable` : `${idPrefix}-tile-${tile.key}`}
+                  onPress={onPress}
+                  style={(state) => {
+                    const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                    return [
+                      styles.hybridTile,
+                      hovered && onPress ? styles.hybridTileHovered : null,
+                      state.pressed && onPress ? styles.hybridTilePressed : null,
+                    ];
+                  }}
+                  testID={onPress ? `${idPrefix}-tile-${tile.key}-pressable` : `${idPrefix}-tile-${tile.key}`}
+                >
+                  <Text
+                    nativeID={`${idPrefix}-tile-${tile.key}-value`}
+                    style={[styles.hybridTileValue, { color: tile.tone }]}
+                    testID={`${idPrefix}-tile-${tile.key}-value`}
+                  >
+                    {tile.value}
+                  </Text>
+                  <Text
+                    nativeID={`${idPrefix}-tile-${tile.key}-label`}
+                    style={styles.hybridTileLabel}
+                    testID={`${idPrefix}-tile-${tile.key}-label`}
+                  >
+                    {tile.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
+        <View nativeID={`${idPrefix}-bars`} style={styles.hybridBarsList} testID={`${idPrefix}-bars`}>
+          {items.map((item) => (
+            <View key={item.key} nativeID={`${idPrefix}-bar-row-${item.key}`} style={styles.hybridBarRow} testID={`${idPrefix}-bar-row-${item.key}`}>
+              <View nativeID={`${idPrefix}-bar-copy-${item.key}`} style={styles.hybridBarCopy} testID={`${idPrefix}-bar-copy-${item.key}`}>
+                <View nativeID={`${idPrefix}-bar-dot-${item.key}`} style={[styles.hybridBarDot, { backgroundColor: item.tone }]} testID={`${idPrefix}-bar-dot-${item.key}`} />
+                <Text nativeID={`${idPrefix}-bar-label-${item.key}`} style={styles.hybridBarLabel} testID={`${idPrefix}-bar-label-${item.key}`}>
+                  {item.label}
+                </Text>
+              </View>
+              <Text nativeID={`${idPrefix}-bar-value-${item.key}`} style={styles.hybridBarValue} testID={`${idPrefix}-bar-value-${item.key}`}>
+                {item.value}
+              </Text>
+              <View nativeID={`${idPrefix}-bar-track-${item.key}`} style={styles.hybridBarTrack} testID={`${idPrefix}-bar-track-${item.key}`}>
+                <View
+                  nativeID={`${idPrefix}-bar-fill-${item.key}`}
+                  style={[
+                    styles.hybridBarFill,
+                    {
+                      backgroundColor: item.tone,
+                      width: `${Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 4)}%`,
+                    },
+                  ]}
+                  testID={`${idPrefix}-bar-fill-${item.key}`}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {ctaLabel && onCtaPress ? (
+          <View nativeID={`${idPrefix}-cta`} style={styles.hybridGraphCta} testID={`${idPrefix}-cta`}>
+            <Pressable
+              accessibilityRole="link"
+              nativeID={`${idPrefix}-cta-link`}
+              onPress={onCtaPress}
+              style={({ pressed }) => {
+                const hovered = (pressed && false) as boolean;
+                return [
+                  styles.hybridGraphCtaLink,
+                  pressed ? styles.hybridGraphCtaLinkPressed : null,
+                  hovered ? null : null,
+                ];
+              }}
+              testID={`${idPrefix}-cta-link`}
+            >
+              <Feather name="arrow-right" size={14} color={colors.action} />
+              <Text nativeID={`${idPrefix}-cta-label`} style={styles.hybridGraphCtaLabel} testID={`${idPrefix}-cta-label`}>
+                {ctaLabel}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </AppCard>
+    </AnimatedSurface>
+  );
+}
+
+function DashboardQuickActionsModal({
+  idPrefix,
+  visible,
+  onClose,
+  actions,
+}: {
+  idPrefix: string;
+  visible: boolean;
+  onClose: () => void;
+  actions: Array<{
+    key: string;
+    label: string;
+    icon?: keyof typeof Feather.glyphMap | ReactNode;
+    onPress: () => void;
+    tone?: "default" | "primary" | "success" | "warning" | "danger";
+    destructive?: boolean;
+    disabled?: boolean;
+  }>;
+}) {
+  const { isDesktop, isTablet } = useResponsiveLayout();
+
+  const toneDecor = (tone?: "default" | "primary" | "success" | "warning" | "danger", destructive?: boolean) => {
+    if (tone === "primary") {
+      return {
+        wrap: styles.modalActionPrimary,
+        iconWrap: styles.modalActionIconWrapPrimary,
+        iconColor: colors.onPrimary,
+        title: colors.text,
+      };
+    }
+    if (tone === "success") {
+      return {
+        wrap: styles.modalActionSuccess,
+        iconWrap: styles.modalActionIconWrapSuccess,
+        iconColor: colors.onPrimary,
+        title: colors.text,
+      };
+    }
+    if (tone === "warning") {
+      return {
+        wrap: styles.modalActionWarning,
+        iconWrap: styles.modalActionIconWrapWarning,
+        iconColor: colors.onPrimary,
+        title: colors.text,
+      };
+    }
+    if (tone === "danger" || destructive) {
+      return {
+        wrap: styles.modalActionDanger,
+        iconWrap: styles.modalActionIconWrapDanger,
+        iconColor: colors.onPrimary,
+        title: colors.danger,
+      };
+    }
+    return {
+      wrap: null,
+      iconWrap: styles.modalActionIconWrapDefault,
+      iconColor: colors.text,
+      title: colors.text,
+    };
+  };
+
+  const renderActionIcon = (
+    action: { icon?: keyof typeof Feather.glyphMap | ReactNode; label?: string },
+    color: string
+  ) => {
+    if (!action.icon) {
+      return (
+        <Feather name="arrow-up-right" size={16} color={color} />
+      );
+    }
+    if (typeof action.icon === "string") {
+      return <Feather name={action.icon as keyof typeof Feather.glyphMap} size={16} color={color} />;
+    }
+    return action.icon as ReactNode;
+  };
+
+  return (
+    <AppModal
+      visible={visible}
+      nativeID={idPrefix}
+      testID={idPrefix}
+      title="Acciones rápidas"
+      description="Operaciones diarias del dojo: altas, cobros y registro de asistencias."
+      onClose={onClose}
+    >
+      <View nativeID={`${idPrefix}-modal-actions-list`} style={styles.modalQuickActionsGrid} testID={`${idPrefix}-modal-actions-list`}>
+        {actions.map((action) => {
+          const decor = toneDecor(action.tone, action.destructive);
+          return (
+            <Pressable
+              key={action.key}
+              accessibilityRole="button"
+              disabled={action.disabled}
+              nativeID={`${idPrefix}-${action.key}-button`}
+              onPress={() => {
+                onClose();
+                setTimeout(() => action.onPress(), 200);
+              }}
+              style={(state) => {
+                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                return [
+                  styles.modalQuickActionCard,
+                  decor.wrap,
+                  hovered && !action.disabled ? styles.modalQuickActionCardHovered : null,
+                  state.pressed && !action.disabled ? styles.modalQuickActionCardPressed : null,
+                  action.disabled ? styles.modalQuickActionCardDisabled : null,
+                ];
+              }}
+              testID={`${idPrefix}-${action.key}-button`}
+            >
+              <View
+                nativeID={`${idPrefix}-${action.key}-icon-wrap`}
+                style={[styles.modalActionIconWrap, decor.iconWrap]}
+                testID={`${idPrefix}-${action.key}-icon-wrap`}
+              >
+                {renderActionIcon(action, decor.iconColor)}
+              </View>
+              <Text
+                nativeID={`${idPrefix}-${action.key}-label`}
+                style={[styles.modalQuickActionTitle, { color: decor.title }]}
+                testID={`${idPrefix}-${action.key}-label`}
+              >
+                {action.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </AppModal>
   );
 }
 
@@ -7327,6 +7648,256 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  heroActionRow: {
+    alignItems: "flex-start",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    width: "100%",
+  },
+  heroActionButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderRadius: radius.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  heroActionButtonHovered: {
+    backgroundColor: colors.surfaceAlt,
+  },
+  heroActionButtonPressed: {
+    backgroundColor: "rgba(120, 78, 46, 0.12)",
+    transform: [{ scale: 0.98 }],
+  },
+  heroActionIcon: {
+    marginRight: spacing.xs,
+  },
+  heroActionLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  hybridGraphCard: {
+    gap: spacing.lg,
+    padding: spacing.lg,
+    width: "100%",
+  },
+  hybridGraphHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  hybridGraphHeaderCopy: {
+    flex: 1,
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  hybridTileRow: {
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    width: "100%",
+  },
+  hybridTile: {
+    alignItems: "flex-start",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: "auto",
+    gap: spacing.xs,
+    minWidth: 84,
+    padding: spacing.md,
+  },
+  hybridTileHovered: {
+    backgroundColor: "rgba(120, 78, 46, 0.06)",
+    borderColor: "rgba(120, 78, 46, 0.2)",
+    transform: [{ translateY: -1 }],
+  },
+  hybridTilePressed: {
+    backgroundColor: "rgba(120, 78, 46, 0.1)",
+    transform: [{ scale: 0.98 }],
+  },
+  hybridTileValue: {
+    fontFamily: typography.headingFamily,
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: -0.2,
+    lineHeight: 26,
+  },
+  hybridTileLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  hybridBarsList: {
+    gap: spacing.md,
+    width: "100%",
+  },
+  hybridBarRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    width: "100%",
+  },
+  hybridBarCopy: {
+    alignItems: "center",
+    flexBasis: "auto",
+    flexDirection: "row",
+    flexGrow: 0,
+    flexShrink: 1,
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  hybridBarDot: {
+    borderRadius: 999,
+    height: 8,
+    width: 8,
+  },
+  hybridBarLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 17,
+  },
+  hybridBarValue: {
+    color: colors.textMuted,
+    flexGrow: 0,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 17,
+    marginLeft: "auto",
+  },
+  hybridBarTrack: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    flexBasis: "100%",
+    flexGrow: 1,
+    flexShrink: 1,
+    height: 8,
+    overflow: "hidden",
+    width: "100%",
+  },
+  hybridBarFill: {
+    borderRadius: radius.pill,
+    height: "100%",
+  },
+  hybridGraphCta: {
+    alignItems: "flex-end",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: spacing.md,
+    width: "100%",
+  },
+  hybridGraphCtaLink: {
+    alignItems: "center",
+    borderRadius: radius.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  hybridGraphCtaLinkPressed: {
+    backgroundColor: "rgba(120, 78, 46, 0.1)",
+  },
+  hybridGraphCtaLabel: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+  modalQuickActionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    width: "100%",
+  },
+  modalQuickActionCard: {
+    alignItems: "flex-start",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexBasis: "100%",
+    flexGrow: 0,
+    flexShrink: 1,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  modalQuickActionCardHovered: {
+    backgroundColor: "rgba(120, 78, 46, 0.05)",
+    borderColor: "rgba(120, 78, 46, 0.25)",
+    transform: [{ translateY: -1 }],
+  },
+  modalQuickActionCardPressed: {
+    backgroundColor: "rgba(120, 78, 46, 0.12)",
+    transform: [{ scale: 0.985 }],
+  },
+  modalQuickActionCardDisabled: {
+    opacity: 0.55,
+  },
+  modalActionIconWrap: {
+    alignItems: "center",
+    borderRadius: radius.md,
+    height: 34,
+    justifyContent: "center",
+    width: 34,
+  },
+  modalActionIconWrapDefault: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  modalActionPrimary: {
+    borderColor: "rgba(46, 125, 50, 0.3)",
+  },
+  modalActionIconWrapPrimary: {
+    backgroundColor: colors.info,
+  },
+  modalActionSuccess: {
+    borderColor: "rgba(46, 125, 50, 0.3)",
+  },
+  modalActionIconWrapSuccess: {
+    backgroundColor: colors.success,
+  },
+  modalActionWarning: {
+    borderColor: "rgba(249, 168, 37, 0.3)",
+  },
+  modalActionIconWrapWarning: {
+    backgroundColor: colors.warning,
+  },
+  modalActionDanger: {
+    borderColor: "rgba(198, 40, 40, 0.25)",
+  },
+  modalActionIconWrapDanger: {
+    backgroundColor: colors.danger,
+  },
+  modalQuickActionTitle: {
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
 });
 
 const mobileStyles = StyleSheet.create({
@@ -7424,4 +7995,10 @@ const desktopStyles = StyleSheet.create({
     marginTop: spacing.md,
   },
   quickAttendancePanelInline: {},
+  modalQuickActionCard: {
+    flexBasis: "48.5%",
+  },
+  hybridTile: {
+    minWidth: 110,
+  },
 });

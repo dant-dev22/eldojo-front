@@ -9,7 +9,6 @@ import { branchesApi } from "@/api/branchesApi";
 import { classesApi } from "@/api/classesApi";
 import { studentsApi } from "@/api/studentsApi";
 import { getErrorMessage } from "@/api/http";
-import { AppBadge } from "@/components/AppBadge";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppDateInput } from "@/components/AppDateInput";
@@ -972,35 +971,45 @@ export function StudentsListScreen({ navigation, route }: Props) {
             Encuentra coincidencias al instante, revisa cuántos alumnos aparecen y entra al detalle desde una vista más ligera para web y móvil.
           </Text>
           <View nativeID="screens-admin-students-list-dashboard-links" style={styles.dashboardHeaderLinks} testID="screens-admin-students-list-dashboard-links">
-            <Pressable
-              accessibilityRole="link"
-              nativeID="screens-admin-students-list-new-link"
-              onPress={handleOpenCreate}
-              style={(state) => {
-                const hovered = (state as typeof state & { hovered?: boolean }).hovered;
-                return [
-                  styles.inlineLink,
-                  hovered ? styles.inlineLinkHovered : null,
-                  state.pressed ? styles.inlineLinkPressed : null,
-                ];
-              }}
-              testID="screens-admin-students-list-new-link"
+            <View
+              nativeID="screens-admin-students-list-new-student-fab-wrap"
+              style={styles.inlineFabWrap}
+              testID="screens-admin-students-list-new-student-fab-wrap"
             >
-              <Text nativeID="screens-admin-students-list-new-link-label" style={styles.inlineLinkLabel} testID="screens-admin-students-list-new-link-label">
-                Agregar alumno
-              </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                nativeID="screens-admin-students-list-new-link"
+                onPress={handleOpenCreate}
+                style={(state) => {
+                  const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                  return [
+                    styles.inlineFabButton,
+                    hovered ? styles.inlineFabButtonHovered : null,
+                    state.pressed ? styles.inlineFabButtonPressed : null,
+                  ];
+                }}
+                testID="screens-admin-students-list-new-link"
+              >
+                <View nativeID="screens-admin-students-list-new-link-icon-wrap" style={styles.inlineFabIconWrap} testID="screens-admin-students-list-new-link-icon-wrap">
+                  <Feather color={colors.onPrimary} name="user-plus" size={18} />
+                </View>
+                <Text nativeID="screens-admin-students-list-new-link-label" style={styles.inlineFabLabel} testID="screens-admin-students-list-new-link-label">
+                  Agregar alumno
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
         {!studentsQuery.isLoading && !studentsQuery.isError ? (
-          <View nativeID="screens-admin-students-list-dashboard-badge-wrap" style={styles.dashboardBadgeWrap} testID="screens-admin-students-list-dashboard-badge-wrap">
-            <AppBadge
-              label={foundStudentsLabel}
-              nativeID="screens-admin-students-list-dashboard-found-badge"
-              testID="screens-admin-students-list-dashboard-found-badge"
-              tone="info"
-            />
+          <View nativeID="screens-admin-students-list-dashboard-found-wrap" style={styles.dashboardBadgeWrap} testID="screens-admin-students-list-dashboard-found-wrap">
+            <Text
+              nativeID="screens-admin-students-list-dashboard-found-text"
+              style={styles.dashboardFoundText}
+              testID="screens-admin-students-list-dashboard-found-text"
+            >
+              {foundStudentsLabel}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -1232,6 +1241,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
       <FloatingActionButton
         accessibilityLabel="Agregar nuevo alumno"
+        idPrefix="screens-admin-students-list-new-student-fab"
         onPress={handleOpenCreate}
         icon="user-plus"
         label="Agregar alumno"
@@ -2741,28 +2751,50 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
   },
-  inlineLink: {
-    alignSelf: "flex-start",
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 6,
-  },
-  inlineLinkHovered: {
-    backgroundColor: colors.actionSoft ?? colors.primarySoft,
-    opacity: 1,
-  },
-  inlineLinkPressed: {
-    opacity: 0.84,
-  },
-  inlineLinkLabel: {
-    color: colors.action,
+  dashboardFoundText: {
+    color: colors.info,
     fontFamily: typography.headingFamily,
     fontSize: 12,
     fontWeight: "700",
-    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
-  inlineLinkLabelHovered: {
-    textDecorationLine: "underline",
+  inlineFabWrap: {
+    alignSelf: "flex-start",
+  },
+  inlineFabButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    elevation: 4,
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  inlineFabButtonHovered: {
+    backgroundColor: colors.primaryHover,
+    elevation: 6,
+    shadowOpacity: 0.32,
+  },
+  inlineFabButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  inlineFabIconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inlineFabLabel: {
+    color: colors.onPrimary,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   searchRow: {
     gap: spacing.sm,

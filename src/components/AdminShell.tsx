@@ -361,11 +361,6 @@ export function AdminShell({
             </View>
           ) : null}
           <View style={styles.headerCopyTextBlock} testID="components-admin-shell-header-copy-text-block">
-            <View nativeID="components-admin-shell-page-kicker" style={styles.pageKicker} testID="components-admin-shell-page-kicker">
-              <Text nativeID="components-admin-shell-page-kicker-label" style={styles.pageKickerLabel} testID="components-admin-shell-page-kicker-label">
-                Centro de Operaciones
-              </Text>
-            </View>
             <Text
               nativeID="components-admin-shell-page-title"
               style={[
@@ -376,7 +371,6 @@ export function AdminShell({
             >
               {title}
             </Text>
-            <Text nativeID="components-admin-shell-page-subtitle" style={styles.pageSubtitle} testID="components-admin-shell-page-subtitle">{subtitle}</Text>
           </View>
         </View>
 
