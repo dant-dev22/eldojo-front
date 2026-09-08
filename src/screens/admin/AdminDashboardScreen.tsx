@@ -5103,7 +5103,6 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                         testID={`screens-admin-dashboard-operations-attendance-manager-record-delete-${attendance.id}`}
                         variant="danger"
                         onPress={() => {
-                          setOperationsClassPickerVisible(false);
                           setDestructiveAction({
                             title: "Eliminar asistencia",
                             description: `Se eliminará el registro del ${formatDate(
