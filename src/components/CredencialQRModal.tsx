@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { captureRef } from "react-native-view-shot";
 import QRCode, { QRCodeProps } from "react-native-qrcode-svg";
 
 import { AppButton } from "@/components/AppButton";
@@ -55,6 +56,7 @@ export function CredencialQRModal({
   const { width: windowWidth } = useWindowDimensions();
   const baseId = nativeID ?? testID ?? "credential-qr-modal";
   const qrSvgRef = useRef<QRCodeProps>(null);
+  const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
 
   const cardMaxWidth = Math.min(windowWidth - spacing.lg * 2 - spacing.lg * 2, 380);
@@ -63,47 +65,88 @@ export function CredencialQRModal({
   async function handleShare() {
     try {
       setSharing(true);
+
       if (Platform.OS === "web") {
-        const textPayload = buildShareText();
-        if (navigator.share) {
-          await navigator.share({ title: "Credencial QR ElDojo", text: textPayload });
-        } else {
-          await Share.share({ message: textPayload, title: "Credencial QR ElDojo" });
-        }
+        await handleShareWeb();
         return;
       }
 
-      const dataUri = await getQrDataUri();
-      if (!dataUri) {
-        const textPayload = buildShareText();
-        await Share.share({ message: textPayload, title: "Credencial QR ElDojo" });
-        return;
-      }
-
-      const filename = `${sanitizeFilename(studentFullName)}-${uniqueCode}-eldojo-qr.png`;
-      const cacheDirectory = (FileSystemLegacy as unknown as { cacheDirectory?: string | null }).cacheDirectory ?? "";
-      const cachePath = `${cacheDirectory}${filename}`;
-      const base64Payload = dataUri.replace(/^data:image\/png;base64,/, "");
-      await FileSystemLegacy.writeAsStringAsync(cachePath, base64Payload, { encoding: FileSystemLegacy.EncodingType.Base64 });
-
-      const Sharing = await import("expo-sharing");
-      const canShareNative = await Sharing.isAvailableAsync();
-      if (canShareNative) {
-        await Sharing.shareAsync(cachePath, {
-          mimeType: "image/png",
-          dialogTitle: `Compartir credencial QR de ${studentFullName}`,
-          UTI: "public.png",
-        });
-      } else {
-        await Share.share({
-          message: buildShareText(),
-          title: "Credencial QR ElDojo",
-        });
-      }
-    } catch {
+      await handleShareNative();
+    } catch (err) {
       Alert.alert("No pudimos abrir el menú de compartir", "Podés guardar la imagen primero y luego compartirla manualmente.");
     } finally {
       setSharing(false);
+    }
+  }
+
+  async function handleShareWeb() {
+    const cardUri = await captureCardAsDataUri();
+    if (cardUri) {
+      try {
+        const file = dataUriToFile(cardUri, `${sanitizeFilename(studentFullName)}-eldojo-qr.png`);
+        if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Credencial QR de ${studentFullName}`,
+            text: buildShareText(),
+            files: [file],
+          });
+          return;
+        }
+      } catch {
+        // Web Share API with files not supported, fall through to download
+      }
+    }
+
+    if (cardUri) {
+      triggerWebDownload(cardUri, `${sanitizeFilename(studentFullName)}-eldojo-qr.png`);
+      return;
+    }
+
+    const textPayload = buildShareText();
+    if (navigator.share) {
+      await navigator.share({ title: "Credencial QR ElDojo", text: textPayload });
+    } else {
+      await Share.share({ message: textPayload, title: "Credencial QR ElDojo" });
+    }
+  }
+
+  async function handleShareNative() {
+    const cardUri = await captureCardAsDataUriWithRetry();
+    if (!cardUri) {
+      const textPayload = buildShareText();
+      await Share.share({ message: textPayload, title: "Credencial QR ElDojo" });
+      return;
+    }
+
+    const filename = `${sanitizeFilename(studentFullName)}-${uniqueCode}-eldojo-qr.png`;
+    const cacheDirectory = (FileSystemLegacy as unknown as { cacheDirectory?: string | null }).cacheDirectory ?? "";
+    const cachePath = `${cacheDirectory}${filename}`;
+    const base64Payload = cardUri.replace(/^data:image\/png;base64,/, "");
+    await FileSystemLegacy.writeAsStringAsync(cachePath, base64Payload, { encoding: FileSystemLegacy.EncodingType.Base64 });
+
+    let shareUri: string = cachePath;
+    if (Platform.OS === "android") {
+      try {
+        const contentUri = await FileSystemLegacy.getContentUriAsync(cachePath);
+        if (contentUri) shareUri = contentUri;
+      } catch {
+        // fallback to cachePath
+      }
+    }
+
+    const Sharing = await import("expo-sharing");
+    const canShareNative = await Sharing.isAvailableAsync();
+    if (canShareNative) {
+      await Sharing.shareAsync(shareUri, {
+        mimeType: "image/png",
+        dialogTitle: `Compartir credencial QR de ${studentFullName}`,
+        UTI: "public.png",
+      });
+    } else {
+      await Share.share({
+        message: buildShareText(),
+        title: "Credencial QR ElDojo",
+      });
     }
   }
 
@@ -114,7 +157,34 @@ export function CredencialQRModal({
     Alert.alert("Código único", `${uniqueCode}\n\n${fallbackMessage}`);
   }
 
-  async function getQrDataUri(): Promise<string | null> {
+  async function captureCardAsDataUri(): Promise<string | null> {
+    if (!cardRef.current) return captureQrOnlyAsDataUri();
+    try {
+      const uri = await captureRef(cardRef.current, {
+        result: "data-uri",
+        format: "png",
+        quality: 0.92,
+        snapshotContentContainer: true,
+      });
+      if (uri && uri.startsWith("data:image")) return uri;
+      return captureQrOnlyAsDataUri();
+    } catch {
+      return captureQrOnlyAsDataUri();
+    }
+  }
+
+  async function captureCardAsDataUriWithRetry(): Promise<string | null> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await captureCardAsDataUri();
+      if (result) return result;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    }
+    return null;
+  }
+
+  async function captureQrOnlyAsDataUri(): Promise<string | null> {
     return new Promise((resolve) => {
       const svgRef = qrSvgRef.current as unknown as { toDataURL?: (callback: (data: string) => void) => void } | null;
       if (!svgRef?.toDataURL) {
@@ -146,6 +216,30 @@ export function CredencialQRModal({
     return raw.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "alumno";
   }
 
+  function dataUriToFile(dataUri: string, filename: string): File | null {
+    try {
+      const matches = dataUri.match(/^data:(image\/\w+);base64,(.*)$/);
+      if (!matches) return null;
+      const mime = matches[1];
+      const b64 = matches[2];
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new File([bytes], filename, { type: mime });
+    } catch {
+      return null;
+    }
+  }
+
+  function triggerWebDownload(dataUri: string, filename: string) {
+    const a = document.createElement("a");
+    a.href = dataUri;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   return (
     <AppModal
       visible={visible}
@@ -156,7 +250,12 @@ export function CredencialQRModal({
       testID={baseId}
     >
       <View style={styles.layout}>
-        <View style={[styles.credentialCard, { width: "100%", maxWidth: cardMaxWidth }]}>
+        <View
+          ref={cardRef}
+          style={[styles.credentialCard, { width: "100%", maxWidth: cardMaxWidth }]}
+          nativeID={`${baseId}-credential-card`}
+          testID={`${baseId}-credential-card`}
+        >
           <View style={styles.credentialHeader}>
             <View style={styles.brandBlock}>
               <View style={styles.brandDot} />
