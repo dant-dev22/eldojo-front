@@ -72,6 +72,13 @@ export function QrCodesListScreen({ navigation }: Props) {
   const { isDesktop, isMobile } = useResponsiveLayout();
   const { status: cameraStatus, isEnabled: qrScannerEnabled } = useCameraAvailability();
 
+  const [screenRefreshKey, setScreenRefreshKey] = useState(0);
+  const forceScreenReload = useCallback(() => {
+    try { queryClient.resetQueries(); } catch { /* noop */ }
+    try { queryClient.invalidateQueries(); } catch { /* noop */ }
+    setScreenRefreshKey((x) => x + 1);
+  }, [queryClient]);
+
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
   const fixedBranchId = currentAssignment?.branch_id ?? null;
@@ -755,6 +762,7 @@ export function QrCodesListScreen({ navigation }: Props) {
 
   return (
     <Screen
+      key={screenRefreshKey}
       contentStyle={styles.screenContent}
       nativeID="screens-admin-qr-codes-list-screen"
       scrollable
@@ -828,6 +836,7 @@ export function QrCodesListScreen({ navigation }: Props) {
           }
           resetScannerForNextScan();
           setScannerVisible(false);
+          forceScreenReload();
         }}
         onCodeScanned={handleQrCodeScanned}
         title="Escanear credencial"

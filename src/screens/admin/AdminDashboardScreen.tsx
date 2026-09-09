@@ -671,6 +671,12 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const canDeactivateBranches = user?.role === "org_admin";
   const canEditVisibleBranches = Boolean(user);
   const [feedback, setFeedback] = useState<{ tone: FeedbackTone; message: string } | null>(null);
+  const [screenRefreshKey, setScreenRefreshKey] = useState(0);
+  const forceScreenReload = useCallback(() => {
+    try { queryClient.resetQueries(); } catch { /* noop */ }
+    try { queryClient.invalidateQueries(); } catch { /* noop */ }
+    setScreenRefreshKey((x) => x + 1);
+  }, [queryClient]);
   const [organizationModalVisible, setOrganizationModalVisible] = useState(false);
   const [organizationForm, setOrganizationForm] = useState<OrganizationFormState>({
     name: "",
@@ -738,6 +744,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     if (quickScannerProcess.successCountdown <= 0) {
       closeQuickScannerProcess();
       setQuickScannerVisible(false);
+      forceScreenReload();
       return;
     }
     const id = setTimeout(() => {
@@ -748,7 +755,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       });
     }, 1000);
     return () => clearTimeout(id);
-  }, [closeQuickScannerProcess, quickScannerProcess]);
+  }, [closeQuickScannerProcess, quickScannerProcess, forceScreenReload]);
 
 
   const [branchModalVisible, setBranchModalVisible] = useState(false);
@@ -3802,6 +3809,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
 
   return (
     <Screen
+      key={screenRefreshKey}
       scrollable
       contentStyle={styles.screenContent}
       nativeID="screens-admin-dashboard-screen"
@@ -5831,6 +5839,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         onClose={() => {
           closeQuickScannerProcess();
           setQuickScannerVisible(false);
+          forceScreenReload();
         }}
         onCodeScanned={handleQuickQrCodeScanned}
         title="Escanear credencial"
