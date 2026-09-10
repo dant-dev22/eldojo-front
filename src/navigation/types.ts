@@ -10,6 +10,7 @@ export type AuthStackParamList = {
   CreateAccount: undefined;
   SignIn: undefined;
   ConfirmAccount: undefined;
+  ActivateStudent: undefined;
 };
 
 export type AdminStackParamList = {
@@ -29,4 +30,11 @@ export type AdminStackParamList = {
   About: undefined;
   Events: undefined;
   Stores: undefined;
+};
+
+export type StudentStackParamList = {
+  StudentHome: undefined;
+  StudentProfile: undefined;
+  AttendanceHistory: undefined;
+  SecuritySettings: undefined;
 };

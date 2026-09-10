@@ -8,6 +8,8 @@ import type {
   AcademyResendConfirmationPayload,
   LoginPayload,
   LoginResponse,
+  StudentInvitationPreviewResponse,
+  StudentInvitationRedeemPayload,
   StudentRegisterPayload,
   User,
 } from "@/types/api";
@@ -278,6 +280,33 @@ export const authApi = {
     }
 
     const { data } = await http.post<LoginResponse>("/auth/dev-login-by-email", payload);
+    return data;
+  },
+
+  async getStudentInvitationPreview(token: string): Promise<StudentInvitationPreviewResponse> {
+    const qs = new URLSearchParams({ token });
+    if (shouldUseWebFetch()) {
+      return requestJson<StudentInvitationPreviewResponse>(`/auth/student-invitation?${qs.toString()}`);
+    }
+
+    const { data } = await http.get<StudentInvitationPreviewResponse>("/auth/student-invitation", {
+      params: { token },
+    });
+    return data;
+  },
+
+  async redeemStudentInvitation(payload: StudentInvitationRedeemPayload): Promise<LoginResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<LoginResponse>("/auth/student-invitation/redeem", {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    }
+
+    const { data } = await http.post<LoginResponse>("/auth/student-invitation/redeem", payload);
     return data;
   },
 };

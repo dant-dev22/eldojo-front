@@ -9,6 +9,7 @@ import type {
   AuthTokens,
   LoginPayload,
   PendingAcademyRegistration,
+  StudentInvitationRedeemPayload,
   User,
 } from "@/types/api";
 import { buildAppUrl, buildPublicUrl, getDomainConfig } from "@/utils/domains";
@@ -27,7 +28,12 @@ import {
   hardClearAllEldojoItems,
   saveSession,
 } from "@/utils/storage";
-import { getGymAdminAccessMessage, isGymAdminUser } from "@/utils/roles";
+import {
+  getGymAdminAccessMessage,
+  getStudentAccessMessage,
+  isGymAdminUser,
+  isStudentUser,
+} from "@/utils/roles";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -43,6 +49,7 @@ interface AuthContextValue {
   devSignInByEmail: (email: string) => Promise<void>;
   registerAcademy: (payload: AcademyRegisterPayload) => Promise<AcademyRegisterResponse>;
   confirmAcademyAccount: (token: string) => Promise<CrossDomainAuthResult>;
+  redeemStudentInvitation: (payload: StudentInvitationRedeemPayload) => Promise<CrossDomainAuthResult>;
   redeemPendingAcademySession: (
     pendingRegistration: PendingAcademyRegistration
   ) => Promise<CrossDomainAuthResult>;
@@ -61,6 +68,17 @@ interface AuthContextValue {
   ) => void;
   redirectToPublicHome: (extras?: Record<string, string | undefined>) => void;
   redirectToAppDashboard: (extras?: Record<string, string | undefined>) => void;
+}
+
+function isValidAuthenticatedRole(user: User | null | undefined): user is User {
+  return isGymAdminUser(user) || isStudentUser(user);
+}
+
+function getAccessMessageForRole(user: User | null): string {
+  if (isStudentUser(user)) {
+    return getStudentAccessMessage();
+  }
+  return getGymAdminAccessMessage();
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -137,7 +155,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (devAutologinEmail) {
           try {
             const response = await authApi.devLoginByEmail(devAutologinEmail);
-            if (isGymAdminUser(response.user)) {
+            if (isValidAuthenticatedRole(response.user)) {
               await saveSession(mapTokens(response), response.user);
               updateHintForUser(response.user);
               setUser(response.user);
@@ -163,7 +181,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       try {
         const freshUser = await authApi.getCurrentUser();
-        if (!isGymAdminUser(freshUser)) {
+        if (!isValidAuthenticatedRole(freshUser)) {
           await clearSession();
           setUser(null);
           setStatus("unauthenticated");
@@ -268,11 +286,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn: async (payload) => {
         const cfg = getDomainConfig();
         const response = await authApi.login(payload);
-        if (!isGymAdminUser(response.user)) {
+        if (!isValidAuthenticatedRole(response.user)) {
           hardClearAllEldojoItems();
           hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
-          throw new Error(getGymAdminAccessMessage());
+          throw new Error(getAccessMessageForRole(response.user));
         }
         hardClearAllEldojoItems();
         hardClearSessionHint(cfg.sessionCookieDomain);
@@ -300,9 +318,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       },
       devSignInByEmail: async (email: string) => {
         const response = await authApi.devLoginByEmail(email);
-        if (!isGymAdminUser(response.user)) {
+        if (!isValidAuthenticatedRole(response.user)) {
           await clearSession();
-          throw new Error(getGymAdminAccessMessage());
+          throw new Error(getAccessMessageForRole(response.user));
         }
         await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
@@ -318,11 +336,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       confirmAcademyAccount: async (token) => {
         const cfg = getDomainConfig();
         const response = await authApi.confirmAcademy({ token });
-        if (!isGymAdminUser(response.user)) {
+        if (!isValidAuthenticatedRole(response.user)) {
           hardClearAllEldojoItems();
           hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
-          throw new Error(getGymAdminAccessMessage());
+          throw new Error(getAccessMessageForRole(response.user));
         }
         hardClearAllEldojoItems();
         hardClearSessionHint(cfg.sessionCookieDomain);
@@ -354,11 +372,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const response = await authApi.redeemAcademyPendingSession({
           ticket: pendingRegistration.pendingSessionTicket,
         });
-        if (!isGymAdminUser(response.user)) {
+        if (!isValidAuthenticatedRole(response.user)) {
           hardClearAllEldojoItems();
           hardClearSessionHint(cfg.sessionCookieDomain);
           await clearSession();
-          throw new Error(getGymAdminAccessMessage());
+          throw new Error(getAccessMessageForRole(response.user));
         }
         hardClearAllEldojoItems();
         hardClearSessionHint(cfg.sessionCookieDomain);
@@ -424,7 +442,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       },
       refreshUser: async () => {
         const freshUser = await authApi.getCurrentUser();
-        if (!isGymAdminUser(freshUser)) {
+        if (!isValidAuthenticatedRole(freshUser)) {
           await clearSession();
           setUser(null);
           setStatus("unauthenticated");
@@ -449,9 +467,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       consumeJustLoggedIn: () => setJustLoggedIn(false),
       redeemSessionTicket: async (ticket) => {
         const response = await authApi.redeemSessionSyncTicket(ticket);
-        if (!isGymAdminUser(response.user)) {
+        if (!isValidAuthenticatedRole(response.user)) {
           await clearSession();
-          throw new Error(getGymAdminAccessMessage());
+          throw new Error(getAccessMessageForRole(response.user));
         }
         await clearPendingAcademyRegistration();
         await saveSession(mapTokens(response), response.user);
@@ -461,6 +479,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
         setJustLoggedIn(true);
         return response.user;
+      },
+      redeemStudentInvitation: async (payload) => {
+        const cfg = getDomainConfig();
+        const response = await authApi.redeemStudentInvitation(payload);
+        if (!isStudentUser(response.user)) {
+          hardClearAllEldojoItems();
+          hardClearSessionHint(cfg.sessionCookieDomain);
+          await clearSession();
+          throw new Error(getAccessMessageForRole(response.user));
+        }
+        hardClearAllEldojoItems();
+        hardClearSessionHint(cfg.sessionCookieDomain);
+        await clearPendingAcademyRegistration();
+        await saveSession(mapTokens(response), response.user);
+        setUser(response.user);
+        setShowPostConfirmation(false);
+        setStatus("authenticated");
+        setJustLoggedIn(true);
+        updateHintForUser(response.user);
+
+        if (cfg.isAppHostname && !cfg.isPublicHostname) {
+          return { redirectedToApp: false };
+        }
+
+        if (typeof window !== "undefined") {
+          const homePath = "/";
+          navigateWithBypass(homePath);
+        }
+        return { redirectedToApp: false };
       },
       redirectToPublicLogin,
       redirectToPublicHome,

@@ -1,10 +1,11 @@
 import { NavigationContainer, DefaultTheme, LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect, useMemo, useState } from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 
+import { AppButton } from "@/components/AppButton";
 import { StatusView } from "@/components/StatusView";
-import { colors } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { AdminDashboardScreen } from "@/screens/admin/AdminDashboardScreen";
 import { QrCodesListScreen } from "@/screens/admin/QrCodesListScreen";
@@ -13,6 +14,7 @@ import { TrajectoryDetailScreen } from "@/screens/admin/TrajectoryDetailScreen";
 import { TrajectoryListScreen } from "@/screens/admin/TrajectoryListScreen";
 import { AccountConfirmedScreen } from "@/screens/auth/AccountConfirmedScreen";
 import { ConfirmAccountScreen } from "@/screens/auth/ConfirmAccountScreen";
+import { StudentActivateScreen } from "@/screens/auth/StudentActivateScreen";
 import {
   AboutScreen,
   CreateAccountScreen,
@@ -22,6 +24,10 @@ import {
   StoresScreen,
 } from "@/screens/auth/PublicSiteScreen";
 import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
+import { StudentHomeScreen } from "@/screens/student/StudentHomeScreen";
+import { StudentProfileScreen } from "@/screens/student/StudentProfileScreen";
+import { SecuritySettingsScreen } from "@/screens/student/SecuritySettingsScreen";
+import { AttendanceHistoryScreen } from "@/screens/student/AttendanceHistoryScreen";
 import {
   ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT,
   ADMIN_PATH_SEGMENT_TO_DASHBOARD_SECTION,
@@ -31,15 +37,16 @@ import {
 } from "@/navigation/publicRoutes";
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
-import { isGymAdminUser } from "@/utils/roles";
+import { isGymAdminUser, isStudentUser } from "@/utils/roles";
 import { hardClearAllEldojoItems } from "@/utils/storage";
 import { hardClearSessionHint } from "@/utils/sessionHint";
 
-import type { AdminStackParamList, AuthStackParamList } from "./types";
+import type { AdminStackParamList, AuthStackParamList, StudentStackParamList } from "./types";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AdminStack = createNativeStackNavigator<AdminStackParamList>();
-type RootPathParamList = AuthStackParamList & AdminStackParamList;
+const StudentStack = createNativeStackNavigator<StudentStackParamList>();
+type RootPathParamList = AuthStackParamList & AdminStackParamList & StudentStackParamList;
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -92,6 +99,7 @@ const linking: LinkingOptions<RootPathParamList> = {
         },
       },
       ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
+      ActivateStudent: PUBLIC_SCREEN_PATHS.ActivateStudent,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
       Home: PUBLIC_SCREEN_PATHS.Home,
@@ -101,6 +109,10 @@ const linking: LinkingOptions<RootPathParamList> = {
       StudentsList: `${ADMIN_ROUTE_SEGMENTS.root}/alumnos`,
       TrajectoryList: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria`,
       TrajectoryDetail: `${ADMIN_ROUTE_SEGMENTS.root}/trayectoria/:studentId`,
+      StudentHome: `alumno`,
+      StudentProfile: `alumno/perfil`,
+      AttendanceHistory: `alumno/asistencia`,
+      SecuritySettings: `alumno/seguridad`,
     },
   },
 };
@@ -165,6 +177,10 @@ function AuthFlow() {
         component={ConfirmAccountScreen}
         name="ConfirmAccount"
       />
+      <AuthStack.Screen
+        component={StudentActivateScreen}
+        name="ActivateStudent"
+      />
     </AuthStack.Navigator>
   );
 }
@@ -196,6 +212,29 @@ function AdminFlow() {
   );
 }
 
+function StudentFlow() {
+  return (
+    <StudentStack.Navigator screenOptions={{ headerShown: false }}>
+      <StudentStack.Screen
+        component={StudentHomeScreen}
+        name="StudentHome"
+      />
+      <StudentStack.Screen
+        component={StudentProfileScreen}
+        name="StudentProfile"
+      />
+      <StudentStack.Screen
+        component={SecuritySettingsScreen}
+        name="SecuritySettings"
+      />
+      <StudentStack.Screen
+        component={AttendanceHistoryScreen}
+        name="AttendanceHistory"
+      />
+    </StudentStack.Navigator>
+  );
+}
+
 function isPublicAllowedWithoutAuth(rawPath: string): boolean {
   const normalized = rawPath.replace(/\/+$/, "") || "/";
   return (
@@ -203,7 +242,8 @@ function isPublicAllowedWithoutAuth(rawPath: string): boolean {
     normalized === `/${PUBLIC_SCREEN_PATHS.Home}` ||
     normalized === `/${PUBLIC_SCREEN_PATHS.SignIn}` ||
     normalized === `/${PUBLIC_SCREEN_PATHS.CreateAccount}` ||
-    normalized === `/${PUBLIC_SCREEN_PATHS.ConfirmAccount}`
+    normalized === `/${PUBLIC_SCREEN_PATHS.ConfirmAccount}` ||
+    normalized === `/${PUBLIC_SCREEN_PATHS.ActivateStudent}`
   );
 }
 
@@ -294,9 +334,9 @@ export function AppNavigator() {
     if (status !== "authenticated" || !user) return;
     if (showPostConfirmation) return;
 
-    const adminPath = "/admin";
-    if (window.location.pathname !== adminPath) {
-      window.history.replaceState(window.history.state, "", adminPath);
+    const targetPath = isGymAdminUser(user) ? "/admin" : "/";
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState(window.history.state, "", targetPath);
     }
 
     consumeJustLoggedIn();
@@ -394,27 +434,130 @@ export function AppNavigator() {
         );
       }
 
-      if (!isGymAdminUser(user)) {
-        void signOut(true);
+      if (status === "authenticated" && user) {
+        const appMode = (process.env.EXPO_PUBLIC_APP_MODE ?? "").trim().toLowerCase();
+        if (appMode === "admin" && isStudentUser(user)) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StatusView
+                title="Esta compilación es solo para el personal del dojo"
+                description="Tu sesión pertenece a un alumno. Por seguridad cerraremos tu sesión y te redirigiremos al portal de alumnos."
+              />
+              <View style={{ alignItems: "center", padding: spacing.md }}>
+                <AppButton
+                  label="Cerrar sesión y volver al inicio"
+                  nativeID="app-gate-student-kick-button"
+                  onPress={() => void signOut(true)}
+                  testID="app-gate-student-kick-button"
+                  variant="secondary"
+                />
+              </View>
+            </NavigationContainer>
+          );
+        }
+        if (appMode === "student" && isGymAdminUser(user)) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StatusView
+                title="Esta compilación es solo para alumnos"
+                description="Tu sesión pertenece al personal del dojo. Por seguridad cerraremos tu sesión y te redirigiremos al panel administrativo."
+              />
+              <View style={{ alignItems: "center", padding: spacing.md }}>
+                <AppButton
+                  label="Cerrar sesión y volver al inicio"
+                  nativeID="app-gate-admin-kick-button"
+                  onPress={() => void signOut(true)}
+                  testID="app-gate-admin-kick-button"
+                  variant="secondary"
+                />
+              </View>
+            </NavigationContainer>
+          );
+        }
+      }
+
+      if (isGymAdminUser(user)) {
         return (
           <NavigationContainer linking={linking} theme={navigationTheme}>
-            <StatusView
-              title="Cuenta sin permisos"
-              description="Tu cuenta no puede usar el panel administrativo. Redirigiendo al sitio público."
-              loading
-            />
+            {showPostConfirmation ? <AccountConfirmedScreen /> : <AdminFlow />}
           </NavigationContainer>
         );
       }
 
+      if (isStudentUser(user)) {
+        return (
+          <NavigationContainer linking={linking} theme={navigationTheme}>
+            <StudentFlow />
+          </NavigationContainer>
+        );
+      }
+
+      void signOut(true);
       return (
         <NavigationContainer linking={linking} theme={navigationTheme}>
-          {showPostConfirmation ? <AccountConfirmedScreen /> : <AdminFlow />}
+          <StatusView
+            title="Cuenta sin permisos"
+            description="Tu cuenta no tiene un rol válido. Redirigiendo al sitio público."
+            loading
+          />
         </NavigationContainer>
       );
     }
 
     if (domainCfg.isPublicHostname) {
+      if (status === "authenticated" && user) {
+        const appMode = (process.env.EXPO_PUBLIC_APP_MODE ?? "").trim().toLowerCase();
+        if (appMode === "admin" && isStudentUser(user)) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StatusView
+                title="Esta compilación es solo para el personal del dojo"
+                description="Tu sesión pertenece a un alumno. Por seguridad cerraremos tu sesión y te redirigiremos al portal de alumnos."
+              />
+              <View style={{ alignItems: "center", padding: spacing.md }}>
+                <AppButton
+                  label="Cerrar sesión y volver al inicio"
+                  nativeID="public-gate-student-kick-button"
+                  onPress={() => void signOut(true)}
+                  testID="public-gate-student-kick-button"
+                  variant="secondary"
+                />
+              </View>
+            </NavigationContainer>
+          );
+        }
+        if (appMode === "student" && isGymAdminUser(user)) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StatusView
+                title="Esta compilación es solo para alumnos"
+                description="Tu sesión pertenece al personal del dojo. Por seguridad cerraremos tu sesión y te redirigiremos al panel administrativo."
+              />
+              <View style={{ alignItems: "center", padding: spacing.md }}>
+                <AppButton
+                  label="Cerrar sesión y volver al inicio"
+                  nativeID="public-gate-admin-kick-button"
+                  onPress={() => void signOut(true)}
+                  testID="public-gate-admin-kick-button"
+                  variant="secondary"
+                />
+              </View>
+            </NavigationContainer>
+          );
+        }
+      }
+
+      if (status === "authenticated" && user && isStudentUser(user)) {
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (isPublicAllowedWithoutAuth(currentPath)) {
+          return (
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <StudentFlow />
+            </NavigationContainer>
+          );
+        }
+      }
+
       if (status === "authenticated" && user && isGymAdminUser(user)) {
         const path = window.location.pathname;
         if (
@@ -507,7 +650,8 @@ export function AppNavigator() {
     );
   }
 
-  if (status === "unauthenticated" || !user || !isGymAdminUser(user)) {
+  const isKnownRole = isGymAdminUser(user) || isStudentUser(user);
+  if (status === "unauthenticated" || !user || !isKnownRole) {
     return (
       <NavigationContainer linking={linking} theme={navigationTheme}>
         <AuthFlow />
@@ -517,7 +661,13 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer linking={linking} theme={navigationTheme}>
-      {showPostConfirmation ? <AccountConfirmedScreen /> : <AdminFlow />}
+      {showPostConfirmation ? (
+        <AccountConfirmedScreen />
+      ) : isGymAdminUser(user) ? (
+        <AdminFlow />
+      ) : (
+        <StudentFlow />
+      )}
     </NavigationContainer>
   );
 }

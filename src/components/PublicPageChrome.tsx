@@ -111,6 +111,7 @@ export function PublicPageChrome({
       role: "org_admin",
       is_active: true,
       first_time: false,
+      email_verified_at: hintSnapshot.updatedAt ?? null,
       last_login_at: hintSnapshot.updatedAt,
       created_at: hintSnapshot.updatedAt,
       updated_at: hintSnapshot.updatedAt,

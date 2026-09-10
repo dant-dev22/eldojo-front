@@ -27,10 +27,53 @@ export interface User {
   role: UserRole;
   is_active: boolean;
   first_time: boolean;
+  email_verified_at: string | null;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
   admin_assignments: AdminAssignment[];
+}
+
+export type StudentInvitationStatus = "valid" | "invalid" | "expired" | "used";
+
+export interface StudentInvitationPreviewResponse {
+  status: StudentInvitationStatus;
+  dojo_name: string | null;
+  branch_name: string | null;
+  unique_code: string | null;
+  student_first_name: string | null;
+  student_last_name: string | null;
+  suggested_email: string | null;
+  expires_at: string | null;
+  used_at: string | null;
+  detail: string | null;
+}
+
+export interface StudentInvitationRedeemPayload {
+  token: string;
+  new_password: string;
+  accept_terms: boolean;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export const STUDENT_INVITATION_REDEEMABLE_STATUSES: StudentInvitationStatus[] = ["valid"];
+
+export function isStudentInvitationRedeemableStatus(
+  status: StudentInvitationStatus
+): status is (typeof STUDENT_INVITATION_REDEEMABLE_STATUSES)[number] {
+  return STUDENT_INVITATION_REDEEMABLE_STATUSES.includes(status);
+}
+
+export interface MyPasswordChangePayload {
+  current_password: string;
+  new_password: string;
+  confirm_new_password: string;
+}
+
+export interface MyEmailChangePayload {
+  new_email: string;
 }
 
 export interface AuthTokens {

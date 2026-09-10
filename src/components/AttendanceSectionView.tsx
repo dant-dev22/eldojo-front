@@ -21,7 +21,7 @@ import { formatDateTime } from "@/utils/format";
 
 import type { Attendance, AttendanceMethod, StudentAttendanceSummary } from "@/types/api";
 
-export const ATTENDANCE_HISTORY_PAGE_SIZE = 10;
+export const ATTENDANCE_HISTORY_PAGE_SIZE = 12;
 
 interface AttendanceSectionViewProps {
   studentId: number;
@@ -48,6 +48,9 @@ interface AttendanceSectionViewProps {
   onDateToChange?: (value: string) => void;
   onClearFilters?: () => void;
   hasActiveFilters?: boolean;
+
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 function formatMethodLabel(method: AttendanceMethod): string {
@@ -161,15 +164,26 @@ const AttendanceHistoryRow = memo(function AttendanceHistoryRow({
   );
 });
 
-const EmptyState = memo(function EmptyState({ onRetry }: { onRetry?: () => void }) {
+const EmptyState = memo(function EmptyState({
+  onRetry,
+  title,
+  description,
+}: {
+  onRetry?: () => void;
+  title?: string;
+  description?: string;
+}) {
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyIconDot}>
         <Feather name="calendar" size={22} color={woodAged} />
       </View>
-      <Text style={styles.emptyTitle}>Sin asistencias registradas</Text>
+      <Text style={styles.emptyTitle}>
+        {title ?? "Sin asistencias registradas"}
+      </Text>
       <Text style={styles.emptyDescription}>
-        Aún no hay asistencias para este alumno. El primer check-in QR o manual se verá aquí.
+        {description ??
+          "Aún no hay asistencias para este alumno. El primer check-in QR o manual se verá aquí."}
       </Text>
       {onRetry ? (
         <Pressable
@@ -278,6 +292,9 @@ export function AttendanceSectionView({
   onDateToChange,
   onClearFilters,
   hasActiveFilters,
+
+  emptyTitle,
+  emptyDescription,
 }: AttendanceSectionViewProps) {
   const [offset, setOffset] = useState(0);
 
@@ -379,7 +396,11 @@ export function AttendanceSectionView({
       onRetry={onRetryHistory ?? onRetryAll}
     />
   ) : history.length === 0 && summaryEmpty ? (
-    <EmptyState onRetry={onRetryAll ?? onRetryHistory} />
+    <EmptyState
+      description={emptyDescription}
+      onRetry={onRetryAll ?? onRetryHistory}
+      title={emptyTitle}
+    />
   ) : canRenderHistory ? (
     <>
       <FlatList

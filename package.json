@@ -9,6 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
+    "clean:web": "rimraf dist",
+    "build:web:admin": "cross-env EXPO_PUBLIC_APP_MODE=admin expo export --platform web",
+    "build:web:student": "cross-env EXPO_PUBLIC_APP_MODE=student expo export --platform web",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +33,7 @@
     "expo-sharing": "~12.0.1",
     "expo-status-bar": "~56.0.4",
     "framer-motion": "^13.0.0",
+    "jsqr": "^1.4.0",
     "npx": "^10.2.2",
     "react": "19.2.3",
     "react-datepicker": "^9.1.0",
@@ -48,7 +52,9 @@
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.2",
     "@types/react": "~19.2.14",
     "babel-plugin-module-resolver": "^5.0.2",
+    "cross-env": "^7.0.3",
     "react-refresh": "^0.18.0",
+    "rimraf": "^5.0.10",
     "typescript": "~6.0.3"
   }
 }

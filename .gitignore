@@ -1,6 +1,8 @@
 node_modules/
 .expo/
 dist/
+dist-admin/
+dist-student/
 web-build/
 *.log
 .env

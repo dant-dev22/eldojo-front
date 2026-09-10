@@ -98,16 +98,28 @@ export function getDomainConfig(): DomainConfig {
     } catch {
       isPublicHostname = true;
     }
-  } else if (currentHostname.startsWith("app.") || hostnameMatchesAny(currentHostname, [appWebOrigin])) {
+  } else if (
+    currentHostname.startsWith("app.") ||
+    currentHostname === "admin.eldojo.tech" ||
+    hostnameMatchesAny(currentHostname, [appWebOrigin])
+  ) {
     isAppHostname = true;
   } else if (
     currentHostname === "eldojo.tech" ||
     currentHostname === "www.eldojo.tech" ||
+    currentHostname === "mi.eldojo.tech" ||
     hostnameMatchesAny(currentHostname, [publicWebOrigin])
   ) {
     isPublicHostname = true;
   } else {
-    isPublicHostname = true;
+    const appMode = (process.env.EXPO_PUBLIC_APP_MODE ?? "").trim().toLowerCase();
+    if (appMode === "admin") {
+      isAppHostname = true;
+    } else if (appMode === "student") {
+      isPublicHostname = true;
+    } else {
+      isPublicHostname = true;
+    }
   }
 
   const cookieDomain = process.env.EXPO_PUBLIC_SESSION_COOKIE_DOMAIN || undefined;

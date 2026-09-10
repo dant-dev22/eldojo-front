@@ -19,6 +19,7 @@ export const PUBLIC_ROUTE_SEGMENTS = {
   createAccount: slugifyRouteSegment("crear cuenta"),
   signIn: slugifyRouteSegment("iniciar sesion"),
   confirmAccount: slugifyRouteSegment("confirmar cuenta"),
+  activateStudent: slugifyRouteSegment("activar"),
 } as const;
 
 export const ADMIN_ROUTE_SEGMENTS = {
@@ -57,6 +58,7 @@ export const PUBLIC_SCREEN_PATHS = {
   CreateAccount: PUBLIC_ROUTE_SEGMENTS.createAccount,
   SignIn: PUBLIC_ROUTE_SEGMENTS.signIn,
   ConfirmAccount: PUBLIC_ROUTE_SEGMENTS.confirmAccount,
+  ActivateStudent: PUBLIC_ROUTE_SEGMENTS.activateStudent,
 } as const;
 
 export const PUBLIC_HOME_ALIAS_PATHS: readonly string[] = [
