@@ -2600,14 +2600,15 @@ function StudentListRow({
   isCopyingInvitationLink?: boolean;
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
+  const hasLinkPending = Boolean(getInvitationLink(student));
   const portalStatusLabel = student.portal_access?.has_linked_user
     ? "Vinculado"
-    : getInvitationLink(student)
-      ? "Pendiente"
+    : hasLinkPending
+      ? "Copiar link"
       : "Sin link";
   const portalButtonLabel = isCopyingInvitationLink
     ? "Copiando..."
-    : getInvitationLink(student)
+    : hasLinkPending
       ? "Copiar link"
       : "Generar link";
   const isPortalButtonDisabled = Boolean(isCopyingInvitationLink);
