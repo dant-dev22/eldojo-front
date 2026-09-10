@@ -94,7 +94,8 @@ if ls dist/_expo/static/js/web/*.js >/dev/null 2>&1; then
 fi
 
 # Backend /api/v1/health 200 OK ({"status":"ok","service":"ElDojo Backend API"})
-run_test 6 "Backend /api/v1/health (eldojo.tech nginx reverse proxy)" GET "https://127.0.0.1/api/v1/health" "eldojo.tech" 200 '"status": "ok"'
+# ⚠️ FastAPI response JSON default = SIN ESPACIOS ({"status":"ok"  - grep NO space after colon)
+run_test 6 "Backend /api/v1/health (eldojo.tech nginx reverse proxy)" GET "https://127.0.0.1/api/v1/health" "eldojo.tech" 200 '"status":"ok"'
 
 # Endpoints NUEVOS Sprint 1 /me/* — NO deben devolver 404 (401 = auth required = endpoint EXISTE).
 # Ver métodos reales grep endpoints confirmados en me.py líneas 204/228/269/309 y auth.py L814:
