@@ -751,6 +751,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
   async function handleCopyInvitationLink(student: Student): Promise<void> {
     if (copyingInvitationByStudentId[student.id]) return;
     setCopyingInvitationByStudentId((current) => ({ ...current, [student.id]: true }));
+    let didGenerateNewLink = false;
     try {
       let finalLink = getInvitationLink(student);
       let latestPortalAccess: StudentPortalAccessStatus | null = student.portal_access ?? null;
@@ -767,12 +768,19 @@ export function StudentsListScreen({ navigation, route }: Props) {
         const updated = await studentsApi.resendInvitation(student.id);
         latestPortalAccess = updated.portal_access ?? null;
         finalLink = getInvitationLink(updated);
-      }
-      if (!finalLink) {
-        throw new Error("invitation_link_missing");
-      }
-      if (latestPortalAccess) {
-        await queryClient.setQueryData<Student[]>(["students"], (cached) => {
+        didGenerateNewLink = true;
+        if (latestPortalAccess) {
+          await queryClient.setQueryData<Student[]>(["students", debouncedSearch], (cached) => {
+            if (!Array.isArray(cached)) return cached;
+            return cached.map((s) =>
+              s.id === updated.id
+                ? { ...updated, profile_completeness: s.profile_completeness }
+                : s,
+            );
+          });
+        }
+      } else if (latestPortalAccess) {
+        await queryClient.setQueryData<Student[]>(["students", debouncedSearch], (cached) => {
           if (!Array.isArray(cached)) return cached;
           return cached.map((s) =>
             s.id === student.id
@@ -781,9 +789,22 @@ export function StudentsListScreen({ navigation, route }: Props) {
           );
         });
       }
-      await copyToClipboard(finalLink);
+      if (!finalLink) {
+        throw new Error("invitation_link_missing");
+      }
+      await Promise.all([
+        copyToClipboard(finalLink),
+        queryClient.invalidateQueries({
+          queryKey: ["students", debouncedSearch],
+          refetchType: "active",
+        }),
+      ]);
       setFeedbackTone("success");
-      setFeedbackMessage(`Link de invitación copiado para ${student.first_name} ${student.last_name}.`);
+      setFeedbackMessage(
+        didGenerateNewLink
+          ? `Link de invitación GENERADO y copiado para ${student.first_name} ${student.last_name}.`
+          : `Link de invitación copiado para ${student.first_name} ${student.last_name}.`,
+      );
     } catch (error) {
       setFeedbackTone("danger");
       const msg = getErrorMessage(error);
