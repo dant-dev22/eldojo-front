@@ -11,6 +11,7 @@ import type {
   StudentCreatePayload,
   StudentDocument,
   StudentDocumentCreatePayload,
+  StudentPortalAccessStatus,
   StudentProfileCompleteness,
   StudentUpdatePayload,
 } from "@/types/api";
@@ -98,6 +99,14 @@ export const studentsApi = {
   },
   async createAuthorizedPerson(studentId: number, payload: AuthorizedPersonCreatePayload): Promise<AuthorizedPerson> {
     const { data } = await http.post<AuthorizedPerson>(`/students/${studentId}/authorized-persons`, payload);
+    return data;
+  },
+  async getPortalAccess(studentId: number): Promise<StudentPortalAccessStatus> {
+    const { data } = await http.get<StudentPortalAccessStatus>(`/students/${studentId}/portal-access`);
+    return data;
+  },
+  async resendInvitation(studentId: number): Promise<Student> {
+    const { data } = await http.post<Student>(`/students/${studentId}/resend-invitation`);
     return data;
   },
 };

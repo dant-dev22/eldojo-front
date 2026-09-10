@@ -261,6 +261,17 @@ export interface StudentFightRecordUpdatePayload {
   fight_date?: string;
 }
 
+export interface StudentPortalAccessStatus {
+  has_linked_user: boolean;
+  user_is_active: boolean | null;
+  user_email_verified: boolean | null;
+  pending_invitation_exists: boolean;
+  invitation_expires_at: string | null;
+  invitation_sent_count: number;
+  invitation_link: string | null;
+  invitation_email_sent_to: string | null;
+}
+
 export interface Student {
   id: number;
   organization_id: number;
@@ -301,6 +312,7 @@ export interface Student {
   documents?: StudentDocument[] | null;
   authorized_persons?: AuthorizedPerson[] | null;
   profile_completeness?: StudentProfileCompleteness | null;
+  portal_access?: StudentPortalAccessStatus | null;
 }
 
 export interface StudentCreatePayload {

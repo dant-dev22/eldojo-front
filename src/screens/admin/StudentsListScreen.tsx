@@ -2,7 +2,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { beltsApi } from "@/api/beltsApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -37,6 +37,7 @@ import type {
   PaymentStatus,
   Student,
   StudentCreatePayload,
+  StudentPortalAccessStatus,
   StudentStatus,
   StudentUpdatePayload,
 } from "@/types/api";
@@ -212,6 +213,42 @@ const FORM_PAGES: FormPage[] = [
 ];
 
 const STUDENTS_PER_PAGE = 10;
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    if (typeof navigator !== "undefined" && navigator && typeof navigator.clipboard?.writeText === "function") {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // fallthrough fallback
+  }
+  const wnd = typeof window !== "undefined" ? window : undefined;
+  if (wnd && typeof wnd.document?.execCommand === "function") {
+    try {
+      const ta = wnd.document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "true");
+      ta.style.position = "fixed";
+      ta.style.top = "0";
+      ta.style.left = "0";
+      ta.style.opacity = "0";
+      wnd.document.body.appendChild(ta);
+      ta.select();
+      wnd.document.execCommand("copy");
+      wnd.document.body.removeChild(ta);
+      return;
+    } catch {
+      // fallthrough
+    }
+  }
+  throw new Error("clipboard_unavailable");
+}
+
+function getInvitationLink(student: Student | null, portalAccess?: StudentPortalAccessStatus | null): string | null {
+  const link = portalAccess?.invitation_link ?? student?.portal_access?.invitation_link ?? null;
+  return link && link.length > 0 ? link : null;
+}
 
 function createEmptyEmergencyContact(): EmergencyContactFormState {
   return {
@@ -709,6 +746,63 @@ export function StudentsListScreen({ navigation, route }: Props) {
     },
   });
 
+  const [copyingInvitationByStudentId, setCopyingInvitationByStudentId] = useState<Record<number, boolean>>({});
+
+  async function handleCopyInvitationLink(student: Student): Promise<void> {
+    if (copyingInvitationByStudentId[student.id]) return;
+    setCopyingInvitationByStudentId((current) => ({ ...current, [student.id]: true }));
+    try {
+      let finalLink = getInvitationLink(student);
+      let latestPortalAccess: StudentPortalAccessStatus | null = student.portal_access ?? null;
+      if (!finalLink) {
+        try {
+          const status = await studentsApi.getPortalAccess(student.id);
+          latestPortalAccess = status;
+          finalLink = status.invitation_link ?? null;
+        } catch {
+          finalLink = null;
+        }
+      }
+      if (!finalLink) {
+        const updated = await studentsApi.resendInvitation(student.id);
+        latestPortalAccess = updated.portal_access ?? null;
+        finalLink = getInvitationLink(updated);
+      }
+      if (!finalLink) {
+        throw new Error("invitation_link_missing");
+      }
+      if (latestPortalAccess) {
+        await queryClient.setQueryData<Student[]>(["students"], (cached) => {
+          if (!Array.isArray(cached)) return cached;
+          return cached.map((s) =>
+            s.id === student.id
+              ? { ...s, portal_access: latestPortalAccess }
+              : s,
+          );
+        });
+      }
+      await copyToClipboard(finalLink);
+      setFeedbackTone("success");
+      setFeedbackMessage(`Link de invitación copiado para ${student.first_name} ${student.last_name}.`);
+    } catch (error) {
+      setFeedbackTone("danger");
+      const msg = getErrorMessage(error);
+      if (msg === "clipboard_unavailable") {
+        setFeedbackMessage("No se pudo acceder al portapapeles. Por favor copiá el link manualmente.");
+      } else if (msg === "invitation_link_missing") {
+        setFeedbackMessage("No se generó el link de invitación. Volvé a intentar.");
+      } else {
+        setFeedbackMessage(msg);
+      }
+    } finally {
+      setCopyingInvitationByStudentId((current) => {
+        const next = { ...current };
+        delete next[student.id];
+        return next;
+      });
+    }
+  }
+
   useEffect(() => {
     if (fixedBranchId) {
       setForm((current) => ({
@@ -1119,6 +1213,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
                 <Text nativeID="screens-admin-students-list-table-head-belt" style={[styles.tableHeadCell, styles.beltColumn]} testID="screens-admin-students-list-table-head-belt">Grado</Text>
                 <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
+                <Text nativeID="screens-admin-students-list-table-head-portal" style={[styles.tableHeadCell, styles.portalColumn]} testID="screens-admin-students-list-table-head-portal">Portal alumno</Text>
                 <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
               </View>
             ) : null}
@@ -1136,6 +1231,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   key={item.id}
                   isDesktop={isDesktop}
                   onContext={() => handleOpenContextActions(item)}
+                  onCopyInvitationLink={() => handleCopyInvitationLink(item)}
                   onDelete={() => {
                     setFeedbackMessage(null);
                     setStudentToDelete(item);
@@ -1149,6 +1245,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   paymentLabel={formatPaymentStatus(item.payment_status)}
                   paymentTone={getPaymentTone(item.payment_status)}
                   branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
+                  isCopyingInvitationLink={Boolean(copyingInvitationByStudentId[item.id])}
                 />
               ))}
             </ScrollView>
@@ -2463,6 +2560,8 @@ function StudentListRow({
   onDelete,
   onContext,
   onOpenMedicalCard,
+  onCopyInvitationLink,
+  isCopyingInvitationLink,
 }: {
   student: Student;
   branchName: string;
@@ -2476,8 +2575,21 @@ function StudentListRow({
   onDelete: () => void;
   onContext?: () => void;
   onOpenMedicalCard?: () => void;
+  onCopyInvitationLink?: () => void;
+  isCopyingInvitationLink?: boolean;
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
+  const portalStatusLabel = student.portal_access?.has_linked_user
+    ? "Vinculado"
+    : getInvitationLink(student)
+      ? "Pendiente"
+      : "Sin link";
+  const portalButtonLabel = isCopyingInvitationLink
+    ? "Copiando..."
+    : getInvitationLink(student)
+      ? "Copiar link"
+      : "Generar link";
+  const isPortalButtonDisabled = Boolean(isCopyingInvitationLink);
 
   if (isDesktop) {
     return (
@@ -2534,6 +2646,37 @@ function StudentListRow({
             <Text nativeID={`screens-admin-students-list-row-payment-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-payment-badge-${student.id}`}>
               {paymentLabel}
             </Text>
+          </View>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-portal-${student.id}`} style={[styles.tableCell, styles.portalColumn]} testID={`screens-admin-students-list-row-portal-${student.id}`}>
+          <View style={styles.portalColumnInner}>
+            <Text nativeID={`screens-admin-students-list-row-portal-status-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-portal-status-${student.id}`}>
+              {portalStatusLabel}
+            </Text>
+            <Pressable
+              accessibilityLabel={portalButtonLabel}
+              accessibilityRole="button"
+              disabled={isPortalButtonDisabled}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              nativeID={`screens-admin-students-list-row-portal-copy-button-${student.id}`}
+              onPress={onCopyInvitationLink}
+              style={({ pressed }) => [
+                styles.compactActionButton,
+                pressed ? styles.compactActionButtonPressed : null,
+                isPortalButtonDisabled ? styles.compactActionButtonDisabled : null,
+              ]}
+              testID={`screens-admin-students-list-row-portal-copy-button-${student.id}`}
+            >
+              <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name="link" size={12} />
+              <Text
+                nativeID={`screens-admin-students-list-row-portal-copy-button-label-${student.id}`}
+                style={[styles.compactActionLabel, isPortalButtonDisabled ? styles.compactActionLabelDisabled : { color: colors.primary }]}
+                testID={`screens-admin-students-list-row-portal-copy-button-label-${student.id}`}
+              >
+                {portalButtonLabel}
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -2607,6 +2750,35 @@ function StudentListRow({
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-payment-date-${student.id}`} label="Próximo pago" value={formatDate(student.next_payment_date)} />
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-fee-${student.id}`} label="Mensualidad" value={formatStudentFee(student)} />
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-enrollment-${student.id}`} label="Alta" value={formatDate(student.enrollment_date)} />
+      </View>
+
+      <View nativeID={`screens-admin-students-list-row-mobile-portal-${student.id}`} style={styles.mobileRowPortal} testID={`screens-admin-students-list-row-mobile-portal-${student.id}`}>
+        <Pressable
+          accessibilityLabel={portalButtonLabel}
+          accessibilityRole="button"
+          disabled={isPortalButtonDisabled}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          nativeID={`screens-admin-students-list-row-mobile-portal-copy-button-${student.id}`}
+          onPress={onCopyInvitationLink}
+          style={({ pressed }) => [
+            styles.mobilePortalCopyButton,
+            pressed ? styles.mobilePortalCopyButtonPressed : null,
+            isPortalButtonDisabled ? styles.compactActionButtonDisabled : null,
+          ]}
+          testID={`screens-admin-students-list-row-mobile-portal-copy-button-${student.id}`}
+        >
+          <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name="link" size={14} />
+          <Text
+            nativeID={`screens-admin-students-list-row-mobile-portal-copy-button-label-${student.id}`}
+            style={[
+              styles.mobilePortalCopyButtonLabel,
+              isPortalButtonDisabled ? styles.compactActionLabelDisabled : { color: colors.primary },
+            ]}
+            testID={`screens-admin-students-list-row-mobile-portal-copy-button-label-${student.id}`}
+          >
+            {portalButtonLabel}
+          </Text>
+        </Pressable>
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-actions-${student.id}`} style={styles.mobileRowActions} testID={`screens-admin-students-list-row-mobile-actions-${student.id}`}>
@@ -3003,8 +3175,18 @@ const styles = StyleSheet.create({
   statusColumn: {
     flex: 1.5,
   },
-  actionsColumn: {
+  portalColumn: {
     flex: 1.8,
+    minWidth: 170,
+  },
+  portalColumnInner: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: spacing.xs,
+    justifyContent: "center",
+  },
+  actionsColumn: {
+    flex: 1.4,
   },
   tableStudentName: {
     color: colors.text,
@@ -3174,6 +3356,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: spacing.sm,
   },
+  mobileRowPortal: {
+    marginTop: spacing.sm,
+  },
+  mobilePortalCopyButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  mobilePortalCopyButtonPressed: {
+    opacity: 0.85,
+  },
+  mobilePortalCopyButtonLabel: {
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   mobileActionLink: {
     alignItems: "center",
     borderRadius: radius.sm,
@@ -3230,6 +3436,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
     justifyContent: "center",
     minHeight: 34,
     paddingHorizontal: spacing.sm,
@@ -3238,6 +3446,9 @@ const styles = StyleSheet.create({
   compactActionButtonDanger: {
     backgroundColor: colors.dangerSoft,
     borderColor: colors.danger,
+  },
+  compactActionButtonDisabled: {
+    opacity: 0.55,
   },
   compactActionButtonPressed: {
     opacity: 0.78,
@@ -3250,6 +3461,9 @@ const styles = StyleSheet.create({
   },
   compactActionLabelDanger: {
     color: colors.danger,
+  },
+  compactActionLabelDisabled: {
+    color: colors.textMuted,
   },
   emptyState: {
     alignItems: "center",
