@@ -24,13 +24,28 @@ run_test() {
   echo ""
   log "--- T${id}/$TOTAL: ${name} ---"
   log "    $method $url  (Host: ${host:--})"
+
+  local extra_args=()
+  local uppermethod
+  uppermethod="$(echo "$method" | tr '[:lower:]' '[:upper:]')"
+  if [[ "$uppermethod" != "GET" ]]; then
+    extra_args+=("-X" "$uppermethod")
+    # Si es PATCH/POST/PUT no GET, agregar Content-Type JSON y body {} minimo
+    # para que FastAPI no tire 415 Unsupported Media Type.
+    case "$uppermethod" in
+      PATCH|POST|PUT|DELETE)
+        extra_args+=("-H" "Content-Type: application/json" "--data" "{}")
+        ;;
+    esac
+  fi
+
   if [[ -n "$host" ]]; then
-    HTTP_HEADERS=$(curl -kfsS -D - -o /tmp/body.txt "$url" -H "Host: $host" 2>/dev/null | tr -d '\r') || true
+    HTTP_HEADERS=$(curl -kfsS "${extra_args[@]}" -D - -o /tmp/body.txt "$url" -H "Host: $host" 2>/dev/null | tr -d '\r') || true
   else
-    HTTP_HEADERS=$(curl -fsS -D - -o /tmp/body.txt "$url" 2>/dev/null | tr -d '\r') || true
+    HTTP_HEADERS=$(curl -fsS "${extra_args[@]}" -D - -o /tmp/body.txt "$url" 2>/dev/null | tr -d '\r') || true
   fi
   CODE=$(echo "$HTTP_HEADERS" | awk '/^HTTP\// {c=$2} END {print c+0}')
-  [[ -z "$CODE" || "$CODE" == "0" ]] && CODE=$(curl -ksSo /dev/null -w "%{http_code}" "$url" ${host:+-H "Host: $host"} 2>/dev/null || echo "000")
+  [[ -z "$CODE" || "$CODE" == "0" ]] && CODE=$(curl -ksSo /dev/null -w "%{http_code}" "$url" ${host:+-H "Host: $host"} "${extra_args[@]}" 2>/dev/null || echo "000")
   log "    HTTP=$CODE (expected $exp_code)"
 
   local ok=1
@@ -78,13 +93,20 @@ if ls dist/_expo/static/js/web/*.js >/dev/null 2>&1; then
                             { log "❌ T5 FAIL bundle JS no cache immutable"; FAIL=$((FAIL+1)); }
 fi
 
-# Backend /api/v1/health 200 healthy
-run_test 6 "Backend /api/v1/health (eldojo.tech nginx reverse proxy)" GET "https://127.0.0.1/api/v1/health" "eldojo.tech" 200 '"healthy"'
+# Backend /api/v1/health 200 OK ({"status":"ok","service":"ElDojo Backend API"})
+run_test 6 "Backend /api/v1/health (eldojo.tech nginx reverse proxy)" GET "https://127.0.0.1/api/v1/health" "eldojo.tech" 200 '"status": "ok"'
 
-# Endpoints NUEVOS Sprint 1 /me/* — NO deben devolver 404 (401 = ok auth required = endpoint EXISTE)
-run_test 7 "Sprint1 /me/password endpoint existe → 401 auth required" POST "http://127.0.0.1:5001/api/v1/me/password" - 401 "detail"
-run_test 8 "Sprint1 /me/attendance?limit=12 existe → 401 auth required" GET "http://127.0.0.1:5001/api/v1/me/attendance?limit=12" - 401 "detail"
-run_test 9 "Sprint1 /auth/student-invitation (405 method not allowed = endpoint EXISTE no GET)" GET "http://127.0.0.1:5001/api/v1/auth/student-invitation" - 405 "detail"
+# Endpoints NUEVOS Sprint 1 /me/* — NO deben devolver 404 (401 = auth required = endpoint EXISTE).
+# Ver métodos reales grep endpoints confirmados en me.py líneas 204/228/269/309 y auth.py L814:
+#   PATCH /api/v1/me/password          → 401 auth required
+#   PATCH /api/v1/me/email             → 401 auth required (redundante, probamos attendance)
+#   GET   /api/v1/me/attendance?limit=12 → 401 auth required
+#   GET   /api/v1/auth/student-invitation?token=xyz → preview. Sin param token: 422 validation (≠404 = endpoint EXISTE).
+run_test 7 "Sprint1 /me/password endpoint existe (PATCH 401 auth required)" PATCH "http://127.0.0.1:5001/api/v1/me/password" - 401
+run_test 8 "Sprint1 /me/attendance?limit=12 existe (GET 401 auth required)" GET "http://127.0.0.1:5001/api/v1/me/attendance?limit=12" - 401
+# T9: Sin token param → Pydantic ValidationError HTTP 422 (endpoint REAL es /auth/student-invitation GET con ?token=).
+# 422 ≠ 404 = endpoint EXISTE. Si no existiera el server devolvería 404 NotFound.
+run_test 9 "Sprint1 /auth/student-invitation GET (422 validación = endpoint EXISTE, requiere ?token=)" GET "http://127.0.0.1:5001/api/v1/auth/student-invitation" - 422
 
 echo ""
 log "======================================"
