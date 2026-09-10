@@ -13,8 +13,19 @@ echo " Builds 3: dist (público) + dist-admin + dist-student"
 echo "============================================="
 echo ""
 
-# Chmod +x todos los scripts deploy que invocamos
-chmod +x "$SCRIPT_DIR"/0[1-6]-*.sh
+# Chmod +x todos los scripts deploy que invocamos (incluye nuevo 00-pull-git.sh)
+chmod +x "$SCRIPT_DIR"/0[0-6]-*.sh
+
+SKIP_GIT_PULL="${SKIP_GIT_PULL:-0}"
+
+# Paso 0 (opcional skip): Actualizar git a último commit main
+if [ "$SKIP_GIT_PULL" != "1" ]; then
+  echo ""
+  echo "⏩ [Paso 0/6] git pull origin main (para skipear: SKIP_GIT_PULL=1 bash scripts/deploy/deploy.sh)"
+  "$SCRIPT_DIR/00-pull-git.sh"
+else
+  echo "ℹ️  SKIP_GIT_PULL=1: omitimos pull de git (se supone que ya corriste scripts/deploy/00-pull-git.sh)."
+fi
 
 # Paso 1: Preflight validaciones (.env, backend, node, nginx syntax previo)
 "$SCRIPT_DIR/01-preflight.sh"
