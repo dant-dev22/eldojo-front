@@ -271,15 +271,17 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
   buttonLabel: string;
   buttonIcon: "link" | "refresh-cw";
   badgeTone: "success" | "warning" | "danger" | "neutral";
+  badgeColor: string;
   disabled: boolean;
 } {
   switch (status) {
     case "linked":
       return {
-        statusLabel: "Vinculado",
+        statusLabel: "Copiar link",
         buttonLabel: "Vinculado",
         buttonIcon: "link",
         badgeTone: "success",
+        badgeColor: colors.success,
         disabled: true,
       };
     case "pending":
@@ -288,6 +290,7 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
         buttonLabel: "Copiar link",
         buttonIcon: "link",
         badgeTone: "warning",
+        badgeColor: colors.warning,
         disabled: false,
       };
     case "expired":
@@ -296,6 +299,7 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
         buttonLabel: "Generar link",
         buttonIcon: "refresh-cw",
         badgeTone: "danger",
+        badgeColor: colors.danger,
         disabled: false,
       };
     case "none":
@@ -305,6 +309,7 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
         buttonLabel: "Generar link",
         buttonIcon: "link",
         badgeTone: "neutral",
+        badgeColor: colors.textMuted,
         disabled: false,
       };
   }
@@ -2699,7 +2704,7 @@ function StudentListRow({
 
         <View nativeID={`screens-admin-students-list-row-portal-${student.id}`} style={[styles.tableCell, styles.portalColumn]} testID={`screens-admin-students-list-row-portal-${student.id}`}>
           <View style={styles.portalColumnInner}>
-            <Text nativeID={`screens-admin-students-list-row-portal-status-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-portal-status-${student.id}`}>
+            <Text nativeID={`screens-admin-students-list-row-portal-status-${student.id}`} style={[styles.tableBadgeText, { color: portalUi.badgeColor }]} testID={`screens-admin-students-list-row-portal-status-${student.id}`}>
               {portalStatusLabel}
             </Text>
             <Pressable
@@ -2801,6 +2806,11 @@ function StudentListRow({
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-portal-${student.id}`} style={styles.mobileRowPortal} testID={`screens-admin-students-list-row-mobile-portal-${student.id}`}>
+        <View nativeID={`screens-admin-students-list-row-mobile-portal-status-${student.id}`} style={styles.mobilePortalStatusRow} testID={`screens-admin-students-list-row-mobile-portal-status-${student.id}`}>
+          <Text style={[styles.mobilePortalStatusLabel, { color: portalUi.badgeColor }]} testID={`screens-admin-students-list-row-mobile-portal-status-value-${student.id}`}>
+            {portalStatusLabel}
+          </Text>
+        </View>
         <Pressable
           accessibilityLabel={portalButtonLabel}
           accessibilityRole="button"
@@ -3406,6 +3416,18 @@ const styles = StyleSheet.create({
   },
   mobileRowPortal: {
     marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  mobilePortalStatusRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  mobilePortalStatusLabel: {
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
   },
   mobilePortalCopyButton: {
     alignItems: "center",
