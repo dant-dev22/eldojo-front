@@ -38,6 +38,7 @@ import type {
   Student,
   StudentCreatePayload,
   StudentPortalAccessStatus,
+  StudentPortalInvitationStatus,
   StudentStatus,
   StudentUpdatePayload,
 } from "@/types/api";
@@ -248,6 +249,65 @@ async function copyToClipboard(text: string): Promise<void> {
 function getInvitationLink(student: Student | null, portalAccess?: StudentPortalAccessStatus | null): string | null {
   const link = portalAccess?.invitation_link ?? student?.portal_access?.invitation_link ?? null;
   return link && link.length > 0 ? link : null;
+}
+
+type ResolvedPortalInvitationStatus = Exclude<StudentPortalInvitationStatus, "used">;
+
+function resolvePortalInvitationStatus(
+  portalAccess: StudentPortalAccessStatus | null | undefined,
+): ResolvedPortalInvitationStatus {
+  if (!portalAccess) return "none";
+  const raw = portalAccess.invitation_status;
+  if (raw === "used") return "none";
+  if (raw === "linked" || raw === "pending" || raw === "expired" || raw === "none") return raw;
+  if (portalAccess.has_linked_user && portalAccess.user_is_active && portalAccess.user_email_verified) return "linked";
+  if (portalAccess.pending_invitation_exists) return "pending";
+  if ((portalAccess.invitation_sent_count ?? 0) > 0) return "expired";
+  return "none";
+}
+
+function getPortalUiState(status: ResolvedPortalInvitationStatus): {
+  statusLabel: string;
+  buttonLabel: string;
+  buttonIcon: "link" | "refresh-cw";
+  badgeTone: "success" | "warning" | "danger" | "neutral";
+  disabled: boolean;
+} {
+  switch (status) {
+    case "linked":
+      return {
+        statusLabel: "Vinculado",
+        buttonLabel: "Vinculado",
+        buttonIcon: "link",
+        badgeTone: "success",
+        disabled: true,
+      };
+    case "pending":
+      return {
+        statusLabel: "Pendiente de aprobación",
+        buttonLabel: "Copiar link",
+        buttonIcon: "link",
+        badgeTone: "warning",
+        disabled: false,
+      };
+    case "expired":
+      return {
+        statusLabel: "Link expirado",
+        buttonLabel: "Generar link",
+        buttonIcon: "refresh-cw",
+        badgeTone: "danger",
+        disabled: false,
+      };
+    case "none":
+    default:
+      return {
+        statusLabel: "Sin link",
+        buttonLabel: "Generar link",
+        buttonIcon: "link",
+        badgeTone: "neutral",
+        disabled: false,
+      };
+  }
 }
 
 function createEmptyEmergencyContact(): EmergencyContactFormState {
@@ -752,47 +812,22 @@ export function StudentsListScreen({ navigation, route }: Props) {
     if (copyingInvitationByStudentId[student.id]) return;
     setCopyingInvitationByStudentId((current) => ({ ...current, [student.id]: true }));
     let didGenerateNewLink = false;
+    let latestPortalAccess: StudentPortalAccessStatus | null = student.portal_access ?? null;
     try {
-      let finalLink = getInvitationLink(student);
-      let latestPortalAccess: StudentPortalAccessStatus | null = student.portal_access ?? null;
-      if (!finalLink) {
-        try {
-          const status = await studentsApi.getPortalAccess(student.id);
-          latestPortalAccess = status;
-          finalLink = status.invitation_link ?? null;
-        } catch {
-          finalLink = null;
-        }
-      }
-      if (!finalLink) {
-        const updated = await studentsApi.resendInvitation(student.id);
-        latestPortalAccess = updated.portal_access ?? null;
-        finalLink = getInvitationLink(updated);
-        didGenerateNewLink = true;
-        if (latestPortalAccess) {
-          await queryClient.setQueryData<Student[]>(["students", debouncedSearch], (cached) => {
-            if (!Array.isArray(cached)) return cached;
-            return cached.map((s) =>
-              s.id === updated.id
-                ? { ...updated, profile_completeness: s.profile_completeness }
-                : s,
-            );
-          });
-        }
-      } else if (latestPortalAccess) {
+      const result = await studentsApi.ensureAndGetInvitation(student.id, student.portal_access ?? null);
+      latestPortalAccess = result.portal_access;
+      didGenerateNewLink = result.created_new;
+      if (latestPortalAccess) {
         await queryClient.setQueryData<Student[]>(["students", debouncedSearch], (cached) => {
           if (!Array.isArray(cached)) return cached;
           return cached.map((s) =>
             s.id === student.id
-              ? { ...s, portal_access: latestPortalAccess }
+              ? { ...s, portal_access: latestPortalAccess! }
               : s,
           );
         });
       }
-      if (!finalLink) {
-        throw new Error("invitation_link_missing");
-      }
-      await copyToClipboard(finalLink);
+      await copyToClipboard(result.invitation_link);
       setFeedbackTone("success");
       setFeedbackMessage(
         didGenerateNewLink
@@ -804,7 +839,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
       const msg = getErrorMessage(error);
       if (msg === "clipboard_unavailable") {
         setFeedbackMessage("No se pudo acceder al portapapeles. Por favor copiá el link manualmente.");
-      } else if (msg === "invitation_link_missing") {
+      } else if (msg === "invitation_link_missing" || msg === "invitation_link_missing_after_resend") {
         setFeedbackMessage("No se generó el link de invitación. Volvé a intentar.");
       } else {
         setFeedbackMessage(msg);
@@ -2595,22 +2630,14 @@ function StudentListRow({
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
   const portalAccess = student.portal_access;
-  const hasLinkPending = Boolean(
-    getInvitationLink(student) ||
-      portalAccess?.pending_invitation_exists ||
-      (portalAccess?.invitation_sent_count ?? 0) > 0,
-  );
-  const portalStatusLabel = portalAccess?.has_linked_user
-    ? "Vinculado"
-    : hasLinkPending
-      ? "Copiar link"
-      : "Sin link";
+  const resolvedPortalStatus = resolvePortalInvitationStatus(portalAccess);
+  const portalUi = getPortalUiState(resolvedPortalStatus);
+  const portalStatusLabel = isCopyingInvitationLink ? portalUi.statusLabel : portalUi.statusLabel;
   const portalButtonLabel = isCopyingInvitationLink
     ? "Copiando..."
-    : hasLinkPending
-      ? "Copiar link"
-      : "Generar link";
-  const isPortalButtonDisabled = Boolean(isCopyingInvitationLink);
+    : portalUi.buttonLabel;
+  const isPortalButtonDisabled = Boolean(isCopyingInvitationLink) || portalUi.disabled;
+  const portalButtonIconName: "link" | "refresh-cw" = portalUi.buttonIcon;
 
   if (isDesktop) {
     return (
@@ -2689,7 +2716,7 @@ function StudentListRow({
               ]}
               testID={`screens-admin-students-list-row-portal-copy-button-${student.id}`}
             >
-              <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name="link" size={12} />
+              <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name={portalButtonIconName} size={12} />
               <Text
                 nativeID={`screens-admin-students-list-row-portal-copy-button-label-${student.id}`}
                 style={[styles.compactActionLabel, isPortalButtonDisabled ? styles.compactActionLabelDisabled : { color: colors.primary }]}
@@ -2788,7 +2815,7 @@ function StudentListRow({
           ]}
           testID={`screens-admin-students-list-row-mobile-portal-copy-button-${student.id}`}
         >
-          <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name="link" size={14} />
+          <Feather color={isPortalButtonDisabled ? colors.textMuted : colors.primary} name={portalButtonIconName} size={14} />
           <Text
             nativeID={`screens-admin-students-list-row-mobile-portal-copy-button-label-${student.id}`}
             style={[

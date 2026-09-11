@@ -28,10 +28,12 @@ export function StudentHomeScreen() {
   const { user, signOut, completeFirstTimeTutorial } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [postActivationGoToProfile, setPostActivationGoToProfile] = useState(false);
 
   useEffect(() => {
     if (isStudentUser(user) && user.first_time === true) {
       setShowWelcome(true);
+      setPostActivationGoToProfile(true);
     }
   }, [user]);
 
@@ -40,6 +42,14 @@ export function StudentHomeScreen() {
       await completeFirstTimeTutorial();
     }
     setShowWelcome(false);
+    if (save && postActivationGoToProfile) {
+      setPostActivationGoToProfile(false);
+      try {
+        navigation.navigate("StudentProfile");
+      } catch {
+        /* ignore si el nav aún no está listo */
+      }
+    }
   };
 
   const profileQuery = useQuery({

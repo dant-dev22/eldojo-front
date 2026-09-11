@@ -261,6 +261,13 @@ export interface StudentFightRecordUpdatePayload {
   fight_date?: string;
 }
 
+export type StudentPortalInvitationStatus =
+  | "none"
+  | "pending"
+  | "expired"
+  | "used"
+  | "linked";
+
 export interface StudentPortalAccessStatus {
   has_linked_user: boolean;
   user_is_active: boolean | null;
@@ -270,6 +277,8 @@ export interface StudentPortalAccessStatus {
   invitation_sent_count: number;
   invitation_link: string | null;
   invitation_email_sent_to: string | null;
+  invitation_status: StudentPortalInvitationStatus;
+  invitation_can_reconstruct: boolean;
 }
 
 export interface Student {

@@ -228,7 +228,7 @@ export function StudentWelcomeModal({
                 <View style={{ width: 0 }} />
               )}
               <AppButton
-                label={isLast ? "Comenzar" : "Siguiente"}
+                label={isLast ? "Ir a mi perfil" : "Siguiente"}
                 loading={dismissing}
                 nativeID={`${baseId}-next-button`}
                 onPress={() =>

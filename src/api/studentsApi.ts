@@ -12,9 +12,20 @@ import type {
   StudentDocument,
   StudentDocumentCreatePayload,
   StudentPortalAccessStatus,
+  StudentPortalInvitationStatus,
   StudentProfileCompleteness,
   StudentUpdatePayload,
 } from "@/types/api";
+
+export type EnsureInvitationResult = {
+  invitation_link: string;
+  portal_access: StudentPortalAccessStatus;
+  /**
+   * true → se creó una nueva invitación porque no había / expiró / era legacy.
+   * false → se reutilizó la invitación pendiente existente (mismo link).
+   */
+  created_new: boolean;
+};
 
 export const studentsApi = {
   async list(params?: {
@@ -109,5 +120,59 @@ export const studentsApi = {
   async resendInvitation(studentId: number): Promise<Student> {
     const { data } = await http.post<Student>(`/students/${studentId}/resend-invitation`);
     return data;
+  },
+  /**
+   * Semántica ensure-and-get del link de invitación.
+   *
+   * Orden de resolución:
+   *   1. Usa el `portal_access` ya cargado en el alumno si trae invitation_link
+   *      + invitation_status = "pending".
+   *   2. Hace GET /portal-access para refrescar y (posiblemente) traer el link
+   *      reconstruido si la invitación es del tipo determinístico.
+   *   3. Si aún no hay link (legacy sin nonce, expirado, usado, sin invitación),
+   *      llama a POST /resend-invitation para generar uno nuevo.
+   */
+  async ensureAndGetInvitation(
+    studentId: number,
+    cachedPortalAccess?: StudentPortalAccessStatus | null,
+  ): Promise<EnsureInvitationResult> {
+    const canReuseCached =
+      cachedPortalAccess &&
+      cachedPortalAccess.invitation_status === "pending" &&
+      typeof cachedPortalAccess.invitation_link === "string" &&
+      cachedPortalAccess.invitation_link.length > 0;
+
+    if (canReuseCached) {
+      return {
+        invitation_link: cachedPortalAccess!.invitation_link!,
+        portal_access: cachedPortalAccess!,
+        created_new: false,
+      };
+    }
+
+    const refreshedStatus = await this.getPortalAccess(studentId);
+    if (
+      refreshedStatus.invitation_status === "pending" &&
+      typeof refreshedStatus.invitation_link === "string" &&
+      refreshedStatus.invitation_link.length > 0
+    ) {
+      return {
+        invitation_link: refreshedStatus.invitation_link,
+        portal_access: refreshedStatus,
+        created_new: false,
+      };
+    }
+
+    const updatedStudent = await this.resendInvitation(studentId);
+    const nextStatus = updatedStudent.portal_access ?? refreshedStatus;
+    const nextLink = nextStatus?.invitation_link ?? null;
+    if (!nextLink) {
+      throw new Error("invitation_link_missing_after_resend");
+    }
+    return {
+      invitation_link: nextLink,
+      portal_access: nextStatus,
+      created_new: true,
+    };
   },
 };
