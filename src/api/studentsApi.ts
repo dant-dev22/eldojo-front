@@ -28,6 +28,7 @@ export const studentsApi = {
       params: {
         search: params?.search || undefined,
         incomplete_only: params?.incompleteOnly ? true : undefined,
+        include_portal_access: true,
         organization_id:
           typeof params?.organization_id === "number" && params.organization_id > 0
             ? params.organization_id

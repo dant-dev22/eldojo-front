@@ -792,13 +792,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
       if (!finalLink) {
         throw new Error("invitation_link_missing");
       }
-      await Promise.all([
-        copyToClipboard(finalLink),
-        queryClient.invalidateQueries({
-          queryKey: ["students", debouncedSearch],
-          refetchType: "active",
-        }),
-      ]);
+      await copyToClipboard(finalLink);
       setFeedbackTone("success");
       setFeedbackMessage(
         didGenerateNewLink
@@ -2600,8 +2594,13 @@ function StudentListRow({
   isCopyingInvitationLink?: boolean;
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
-  const hasLinkPending = Boolean(getInvitationLink(student));
-  const portalStatusLabel = student.portal_access?.has_linked_user
+  const portalAccess = student.portal_access;
+  const hasLinkPending = Boolean(
+    getInvitationLink(student) ||
+      portalAccess?.pending_invitation_exists ||
+      (portalAccess?.invitation_sent_count ?? 0) > 0,
+  );
+  const portalStatusLabel = portalAccess?.has_linked_user
     ? "Vinculado"
     : hasLinkPending
       ? "Copiar link"
