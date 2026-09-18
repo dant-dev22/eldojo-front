@@ -10,6 +10,8 @@ import type {
   LoginResponse,
   StudentInvitationPreviewResponse,
   StudentInvitationRedeemPayload,
+  StudentInvitationVerifyCodePayload,
+  StudentInvitationVerifyCodeResponse,
   StudentRegisterPayload,
   User,
 } from "@/types/api";
@@ -295,10 +297,65 @@ export const authApi = {
     return data;
   },
 
+  async verifyStudentInvitationCode(
+    payload: StudentInvitationVerifyCodePayload,
+  ): Promise<StudentInvitationVerifyCodeResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<StudentInvitationVerifyCodeResponse>(
+        "/auth/student-invitation/verify-code",
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        },
+      );
+    }
+
+    const { data } = await http.post<StudentInvitationVerifyCodeResponse>(
+      "/auth/student-invitation/verify-code",
+      payload,
+    );
+    return data;
+  },
+
+  async resendStudentInvitationCode(
+    payload: StudentInvitationVerifyCodePayload,
+  ): Promise<StudentInvitationVerifyCodeResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<StudentInvitationVerifyCodeResponse>(
+        "/auth/student-invitation/resend-code",
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        },
+      );
+    }
+
+    const { data } = await http.post<StudentInvitationVerifyCodeResponse>(
+      "/auth/student-invitation/resend-code",
+      payload,
+    );
+    return data;
+  },
+
   async redeemStudentInvitation(payload: StudentInvitationRedeemPayload): Promise<LoginResponse> {
+    const backendPayload = {
+      token: payload.token,
+      email: payload.email,
+      password: payload.new_password,
+      confirm_password: payload.confirm_password ?? payload.new_password,
+      accept_terms: payload.accept_terms,
+      challenge_token: payload.challenge_token ?? undefined,
+    };
+
     if (shouldUseWebFetch()) {
       return requestJson<LoginResponse>("/auth/student-invitation/redeem", {
-        body: JSON.stringify(payload),
+        body: JSON.stringify(backendPayload),
         headers: {
           "Content-Type": "application/json",
         },
@@ -306,7 +363,10 @@ export const authApi = {
       });
     }
 
-    const { data } = await http.post<LoginResponse>("/auth/student-invitation/redeem", payload);
+    const { data } = await http.post<LoginResponse>(
+      "/auth/student-invitation/redeem",
+      backendPayload,
+    );
     return data;
   },
 };

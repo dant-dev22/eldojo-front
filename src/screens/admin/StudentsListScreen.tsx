@@ -834,11 +834,28 @@ export function StudentsListScreen({ navigation, route }: Props) {
       }
       await copyToClipboard(result.invitation_link);
       setFeedbackTone("success");
-      setFeedbackMessage(
-        didGenerateNewLink
-          ? `Link de invitación GENERADO y copiado para ${student.first_name} ${student.last_name}.`
-          : `Link de invitación copiado para ${student.first_name} ${student.last_name}.`,
-      );
+      const maskedEmail = (() => {
+        const raw = result.code_sent_to_email;
+        if (!raw) return null;
+        const [local, domain] = raw.split("@");
+        if (!local || !domain) return raw;
+        const maskLocal = local.length <= 1 ? "*" : `${local[0]}${"*".repeat(Math.max(local.length - 1, 1))}`;
+        const maskDomain = domain.length <= 1 ? "*" : `${domain[0]}${"*".repeat(Math.max(domain.length - 1, 1))}`;
+        return `${maskLocal}@${maskDomain}`;
+      })();
+      if (result.code_sent && maskedEmail) {
+        setFeedbackMessage(
+          didGenerateNewLink
+            ? `Código de activación ENVIADO a ${maskedEmail}. Link GENERADO y copiado para ${student.first_name} ${student.last_name}.`
+            : `Código de activación ENVIADO a ${maskedEmail}. Link copiado para ${student.first_name} ${student.last_name}.`,
+        );
+      } else {
+        setFeedbackMessage(
+          didGenerateNewLink
+            ? `Link de invitación GENERADO y copiado para ${student.first_name} ${student.last_name}. No pudimos enviar el correo al alumno. Compártelo manualmente.`
+            : `Link de invitación copiado para ${student.first_name} ${student.last_name}. No pudimos enviar el correo al alumno. Compártelo manualmente.`,
+        );
+      }
     } catch (error) {
       setFeedbackTone("danger");
       const msg = getErrorMessage(error);

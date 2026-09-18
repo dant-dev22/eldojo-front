@@ -13,6 +13,7 @@ import { StudentsListScreen } from "@/screens/admin/StudentsListScreen";
 import { TrajectoryDetailScreen } from "@/screens/admin/TrajectoryDetailScreen";
 import { TrajectoryListScreen } from "@/screens/admin/TrajectoryListScreen";
 import { AccountConfirmedScreen } from "@/screens/auth/AccountConfirmedScreen";
+import { ActivateAccountScreen } from "@/screens/auth/ActivateAccountScreen";
 import { ConfirmAccountScreen } from "@/screens/auth/ConfirmAccountScreen";
 import { StudentActivateScreen } from "@/screens/auth/StudentActivateScreen";
 import {
@@ -99,6 +100,7 @@ const linking: LinkingOptions<RootPathParamList> = {
         },
       },
       ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
+      ActivateAccount: PUBLIC_SCREEN_PATHS.ActivateStudent,
       ActivateStudent: PUBLIC_SCREEN_PATHS.ActivateStudent,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
@@ -180,6 +182,10 @@ function AuthFlow() {
       <AuthStack.Screen
         component={StudentActivateScreen}
         name="ActivateStudent"
+      />
+      <AuthStack.Screen
+        component={ActivateAccountScreen}
+        name="ActivateAccount"
       />
     </AuthStack.Navigator>
   );

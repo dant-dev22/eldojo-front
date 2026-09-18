@@ -25,6 +25,18 @@ export type EnsureInvitationResult = {
    * false → se reutilizó la invitación pendiente existente (mismo link).
    */
   created_new: boolean;
+  /**
+   * true → el código OTP de 6 dígitos se generó y se envió por correo exitosamente
+   *        al email del alumno. El portal del alumno mostrará el paso de OTP.
+   * false → no se pudo enviar el código (SMTP falló / sin email del alumno),
+   *         cae en flujo legacy (no requiere verificación OTP).
+   */
+  code_sent: boolean;
+  /**
+   * Email al que se envió el código (si code_sent=true), para mostrar en el
+   * feedback del admin (ej: "Código enviado a a***@d***.com").
+   */
+  code_sent_to_email: string | null;
 };
 
 export const studentsApi = {
@@ -147,6 +159,8 @@ export const studentsApi = {
         invitation_link: cachedPortalAccess!.invitation_link!,
         portal_access: cachedPortalAccess!,
         created_new: false,
+        code_sent: Boolean(cachedPortalAccess!.verification_code_sent),
+        code_sent_to_email: cachedPortalAccess!.verification_code_sent_to_email ?? null,
       };
     }
 
@@ -160,6 +174,8 @@ export const studentsApi = {
         invitation_link: refreshedStatus.invitation_link,
         portal_access: refreshedStatus,
         created_new: false,
+        code_sent: Boolean(refreshedStatus.verification_code_sent),
+        code_sent_to_email: refreshedStatus.verification_code_sent_to_email ?? null,
       };
     }
 
@@ -173,6 +189,8 @@ export const studentsApi = {
       invitation_link: nextLink,
       portal_access: nextStatus,
       created_new: true,
+      code_sent: Boolean(nextStatus?.verification_code_sent),
+      code_sent_to_email: nextStatus?.verification_code_sent_to_email ?? null,
     };
   },
 };

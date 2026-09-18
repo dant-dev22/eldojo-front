@@ -38,6 +38,9 @@ export type StudentInvitationStatus = "valid" | "invalid" | "expired" | "used";
 
 export interface StudentInvitationPreviewResponse {
   status: StudentInvitationStatus;
+  message?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   dojo_name: string | null;
   branch_name: string | null;
   unique_code: string | null;
@@ -47,6 +50,28 @@ export interface StudentInvitationPreviewResponse {
   expires_at: string | null;
   used_at: string | null;
   detail: string | null;
+  verification_code_sent: boolean;
+  verification_code_verified: boolean;
+  verification_code_expires_at: string | null;
+  verification_code_masked_email: string | null;
+}
+
+export interface StudentInvitationVerifyCodePayload {
+  token: string;
+  code: string;
+}
+
+export interface StudentInvitationVerifyCodeResponse {
+  status:
+    | "ok"
+    | "invalid_token"
+    | "code_required"
+    | "expired_code"
+    | "wrong_code"
+    | "already_verified"
+    | string;
+  message: string;
+  challenge_token?: string | null;
 }
 
 export interface StudentInvitationRedeemPayload {
@@ -56,6 +81,8 @@ export interface StudentInvitationRedeemPayload {
   email?: string;
   first_name?: string;
   last_name?: string;
+  confirm_password?: string;
+  challenge_token?: string;
 }
 
 export const STUDENT_INVITATION_REDEEMABLE_STATUSES: StudentInvitationStatus[] = ["valid"];
@@ -279,6 +306,8 @@ export interface StudentPortalAccessStatus {
   invitation_email_sent_to: string | null;
   invitation_status: StudentPortalInvitationStatus;
   invitation_can_reconstruct: boolean;
+  verification_code_sent: boolean;
+  verification_code_sent_to_email: string | null;
 }
 
 export interface Student {
