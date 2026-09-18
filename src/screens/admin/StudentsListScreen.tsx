@@ -266,18 +266,85 @@ function resolvePortalInvitationStatus(
   return "none";
 }
 
-function getPortalUiState(status: ResolvedPortalInvitationStatus): {
+function resolveStudentAssignedEmail(student: Student): string | null {
+  const fromPortal = student.portal_access?.invitation_email_sent_to?.trim() ?? null;
+  const fromStudent = (student as Student & { email?: string | null }).email?.trim() ?? null;
+  if (fromPortal && fromPortal.length > 0) return fromPortal;
+  if (fromStudent && fromStudent.length > 0) return fromStudent;
+  return null;
+}
+
+type StudentAccountStatus = "activated" | "pending" | "missing_email";
+
+function getStudentAccountStatus(student: Student): {
+  status: StudentAccountStatus;
+  label: string;
+  description: string;
+  tone: "success" | "warning" | "danger" | "neutral";
+  color: string;
+} {
+  const portal = student.portal_access;
+  const hasEmail = Boolean(resolveStudentAssignedEmail(student));
+  if (portal && (portal.has_linked_user && portal.user_is_active && portal.user_email_verified)) {
+    return {
+      status: "activated",
+      label: "Cuenta activada",
+      description: `Inicio de sesión listo${hasEmail ? ` · ${resolveStudentAssignedEmail(student)!}` : ""}`,
+      tone: "success",
+      color: colors.success,
+    };
+  }
+  if (!hasEmail) {
+    return {
+      status: "missing_email",
+      label: "Falta correo asignado",
+      description: "Agrega un correo al alumno para poder generar el link de activación.",
+      tone: "danger",
+      color: colors.danger,
+    };
+  }
+  const resolved = resolvePortalInvitationStatus(portal);
+  if (resolved === "pending") {
+    return {
+      status: "pending",
+      label: "Pendiente de activar",
+      description: `Link vigente enviado a ${resolveStudentAssignedEmail(student)!}. Esperando que el alumno active su cuenta.`,
+      tone: "warning",
+      color: colors.warning,
+    };
+  }
+  if (resolved === "expired") {
+    return {
+      status: "pending",
+      label: "Pendiente de activar",
+      description: `Link anterior vencido · Genera uno nuevo para ${resolveStudentAssignedEmail(student)!}.`,
+      tone: "warning",
+      color: colors.warning,
+    };
+  }
+  return {
+    status: "pending",
+    label: "Pendiente de activar",
+    description: `Genera un link de activación para ${resolveStudentAssignedEmail(student)!}.`,
+    tone: "warning",
+    color: colors.warning,
+  };
+}
+
+function getPortalUiState(status: ResolvedPortalInvitationStatus, studentEmail: string | null): {
   statusLabel: string;
   buttonLabel: string;
   buttonIcon: "link" | "refresh-cw";
   badgeTone: "success" | "warning" | "danger" | "neutral";
   badgeColor: string;
   disabled: boolean;
+  disabledReason?: string;
 } {
+  const missingEmail = !studentEmail;
   switch (status) {
     case "linked":
       return {
-        statusLabel: "Copiar link",
+        statusLabel: "Vinculado",
         buttonLabel: "Vinculado",
         buttonIcon: "link",
         badgeTone: "success",
@@ -286,7 +353,7 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
       };
     case "pending":
       return {
-        statusLabel: "Pendiente de aprobación",
+        statusLabel: "Pendiente",
         buttonLabel: "Copiar link",
         buttonIcon: "link",
         badgeTone: "warning",
@@ -295,22 +362,24 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus): {
       };
     case "expired":
       return {
-        statusLabel: "Link expirado",
-        buttonLabel: "Generar link",
+        statusLabel: missingEmail ? "Falta correo" : "Link expirado",
+        buttonLabel: missingEmail ? "Sin correo" : "Generar link",
         buttonIcon: "refresh-cw",
-        badgeTone: "danger",
-        badgeColor: colors.danger,
-        disabled: false,
+        badgeTone: missingEmail ? "danger" : "danger",
+        badgeColor: missingEmail ? colors.danger : colors.danger,
+        disabled: missingEmail ? true : false,
+        disabledReason: missingEmail ? "Agrega un correo al alumno para poder generar el link." : undefined,
       };
     case "none":
     default:
       return {
-        statusLabel: "Sin link",
-        buttonLabel: "Generar link",
+        statusLabel: missingEmail ? "Falta correo" : "Sin link",
+        buttonLabel: missingEmail ? "Sin correo" : "Generar link",
         buttonIcon: "link",
-        badgeTone: "neutral",
-        badgeColor: colors.textMuted,
-        disabled: false,
+        badgeTone: missingEmail ? "danger" : "neutral",
+        badgeColor: missingEmail ? colors.danger : colors.textMuted,
+        disabled: missingEmail ? true : false,
+        disabledReason: missingEmail ? "Agrega un correo al alumno para poder generar el link." : undefined,
       };
   }
 }
@@ -844,7 +913,15 @@ export function StudentsListScreen({ navigation, route }: Props) {
   });
 
   function handlePortalButtonPress(student: Student): void {
+    const assignedEmail = resolveStudentAssignedEmail(student);
     const status = resolvePortalInvitationStatus(student.portal_access);
+    if (!assignedEmail) {
+      setFeedbackTone("danger");
+      setFeedbackMessage(
+        `No se puede generar un link de activación para ${student.first_name} ${student.last_name} porque no tiene un correo asignado. Agrega un correo desde la ficha del alumno.`,
+      );
+      return;
+    }
     if (status === "expired" || status === "none") {
       setPortalResendButtonState("idle");
       setStudentForPortalResendModal(student);
@@ -856,6 +933,15 @@ export function StudentsListScreen({ navigation, route }: Props) {
   function handleConfirmPortalResend(): void {
     if (!studentForPortalResendModal) return;
     if (portalResendButtonState === "loading" || portalResendButtonState === "sent") return;
+    const assignedEmail = resolveStudentAssignedEmail(studentForPortalResendModal);
+    if (!assignedEmail) {
+      setPortalResendButtonState("idle");
+      setFeedbackTone("danger");
+      setFeedbackMessage(
+        `No se puede generar un link porque ${studentForPortalResendModal.first_name} ${studentForPortalResendModal.last_name} no tiene un correo asignado. Agrega el correo desde su ficha.`,
+      );
+      return;
+    }
     setPortalResendButtonState("loading");
     resendInvitationMutation.mutate(studentForPortalResendModal.id);
   }
@@ -1340,6 +1426,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                 <Text nativeID="screens-admin-students-list-table-head-fee" style={[styles.tableHeadCell, styles.feeColumn]} testID="screens-admin-students-list-table-head-fee">Mensualidad</Text>
                 <Text nativeID="screens-admin-students-list-table-head-belt" style={[styles.tableHeadCell, styles.beltColumn]} testID="screens-admin-students-list-table-head-belt">Grado</Text>
                 <Text nativeID="screens-admin-students-list-table-head-status" style={[styles.tableHeadCell, styles.statusColumn]} testID="screens-admin-students-list-table-head-status">Estado</Text>
+                <Text nativeID="screens-admin-students-list-table-head-account" style={[styles.tableHeadCell, styles.accountStatusColumn]} testID="screens-admin-students-list-table-head-account">Estado de la cuenta</Text>
                 <Text nativeID="screens-admin-students-list-table-head-portal" style={[styles.tableHeadCell, styles.portalColumn]} testID="screens-admin-students-list-table-head-portal">Portal alumno</Text>
                 <Text nativeID="screens-admin-students-list-table-head-actions" style={[styles.tableHeadCell, styles.actionsColumn]} testID="screens-admin-students-list-table-head-actions">Acciones</Text>
               </View>
@@ -2273,13 +2360,23 @@ export function StudentsListScreen({ navigation, route }: Props) {
           </Text>
           <Text nativeID="screens-admin-students-list-portal-resend-text" style={styles.confirmText} testID="screens-admin-students-list-portal-resend-text">
             {studentForPortalResendModal
-              ? `Generar Link de activación de cuenta para alumno (${
-                  studentForPortalResendModal.portal_access?.invitation_email_sent_to ||
-                  studentForPortalResendModal.email ||
-                  "sin correo registrado"
-                }).`
+              ? (() => {
+                  const assignedEmail = resolveStudentAssignedEmail(studentForPortalResendModal);
+                  if (!assignedEmail) {
+                    return `Generar Link de activación de cuenta para alumno (sin correo registrado). Para continuar, agrega un correo al alumno desde su ficha.`;
+                  }
+                  return `Generar Link de activación de cuenta para alumno (${assignedEmail}).`;
+                })()
               : "Selecciona un alumno para continuar."}
           </Text>
+          {studentForPortalResendModal && !resolveStudentAssignedEmail(studentForPortalResendModal) ? (
+            <View nativeID="screens-admin-students-list-portal-resend-email-warning" style={styles.portalResendEmailWarning} testID="screens-admin-students-list-portal-resend-email-warning">
+              <Feather color={colors.danger} name="alert-triangle" size={14} />
+              <Text style={styles.portalResendEmailWarningText}>
+                Este alumno no tiene un correo asignado. Agrega un correo antes de generar el link.
+              </Text>
+            </View>
+          ) : null}
         </AppCard>
         <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
           <AppButton
@@ -2309,7 +2406,8 @@ export function StudentsListScreen({ navigation, route }: Props) {
             disabled={
               portalResendButtonState === "loading" ||
               portalResendButtonState === "sent" ||
-              !studentForPortalResendModal
+              !studentForPortalResendModal ||
+              !resolveStudentAssignedEmail(studentForPortalResendModal)
             }
           />
         </View>
@@ -2775,8 +2873,10 @@ function StudentListRow({
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
   const portalAccess = student.portal_access;
+  const assignedEmail = resolveStudentAssignedEmail(student);
   const resolvedPortalStatus = resolvePortalInvitationStatus(portalAccess);
-  const portalUi = getPortalUiState(resolvedPortalStatus);
+  const portalUi = getPortalUiState(resolvedPortalStatus, assignedEmail);
+  const accountStatus = getStudentAccountStatus(student);
   const portalStatusLabel = portalUi.statusLabel;
   const portalButtonLabel = copiedInvitationLink
     ? "✓ Copiado"
@@ -2840,6 +2940,27 @@ function StudentListRow({
             </Text>
             <Text nativeID={`screens-admin-students-list-row-payment-badge-${student.id}`} style={styles.tableBadgeText} testID={`screens-admin-students-list-row-payment-badge-${student.id}`}>
               {paymentLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View nativeID={`screens-admin-students-list-row-account-${student.id}`} style={[styles.tableCell, styles.accountStatusColumn]} testID={`screens-admin-students-list-row-account-${student.id}`}>
+          <View style={styles.accountStatusColumnInner}>
+            <View style={[styles.accountStatusBadge, { borderColor: accountStatus.color }]}>
+              <Text
+                nativeID={`screens-admin-students-list-row-account-badge-${student.id}`}
+                style={[styles.accountStatusBadgeText, { color: accountStatus.color }]}
+                testID={`screens-admin-students-list-row-account-badge-${student.id}`}
+              >
+                {accountStatus.label}
+              </Text>
+            </View>
+            <Text
+              nativeID={`screens-admin-students-list-row-account-desc-${student.id}`}
+              style={styles.accountStatusDescription}
+              testID={`screens-admin-students-list-row-account-desc-${student.id}`}
+            >
+              {accountStatus.description}
             </Text>
           </View>
         </View>
@@ -2945,6 +3066,25 @@ function StudentListRow({
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-payment-date-${student.id}`} label="Próximo pago" value={formatDate(student.next_payment_date)} />
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-fee-${student.id}`} label="Mensualidad" value={formatStudentFee(student)} />
         <MobileMetaItem idPrefix={`screens-admin-students-list-row-mobile-enrollment-${student.id}`} label="Alta" value={formatDate(student.enrollment_date)} />
+      </View>
+
+      <View nativeID={`screens-admin-students-list-row-mobile-account-${student.id}`} style={styles.mobileAccountWrap} testID={`screens-admin-students-list-row-mobile-account-${student.id}`}>
+        <View style={[styles.accountStatusBadge, { borderColor: accountStatus.color }]}>
+          <Text
+            nativeID={`screens-admin-students-list-row-mobile-account-badge-${student.id}`}
+            style={[styles.accountStatusBadgeText, { color: accountStatus.color }]}
+            testID={`screens-admin-students-list-row-mobile-account-badge-${student.id}`}
+          >
+            {accountStatus.label}
+          </Text>
+        </View>
+        <Text
+          nativeID={`screens-admin-students-list-row-mobile-account-desc-${student.id}`}
+          style={styles.accountStatusDescription}
+          testID={`screens-admin-students-list-row-mobile-account-desc-${student.id}`}
+        >
+          {accountStatus.description}
+        </Text>
       </View>
 
       <View nativeID={`screens-admin-students-list-row-mobile-portal-${student.id}`} style={styles.mobileRowPortal} testID={`screens-admin-students-list-row-mobile-portal-${student.id}`}>
@@ -3374,6 +3514,63 @@ const styles = StyleSheet.create({
   },
   statusColumn: {
     flex: 1.5,
+  },
+  accountStatusColumn: {
+    flex: 2.2,
+    minWidth: 240,
+  },
+  accountStatusColumnInner: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: spacing.xs,
+    justifyContent: "center",
+  },
+  accountStatusBadge: {
+    alignSelf: "flex-start",
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs * 0.5,
+  },
+  accountStatusBadgeText: {
+    fontFamily: typography.headingFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  accountStatusDescription: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  mobileAccountWrap: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
+    width: "100%",
+  },
+  portalResendEmailWarning: {
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    borderColor: "rgba(239, 68, 68, 0.35)",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.sm,
+  },
+  portalResendEmailWarningText: {
+    color: colors.danger,
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
   },
   portalColumn: {
     flex: 1.8,
