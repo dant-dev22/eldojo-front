@@ -812,6 +812,53 @@ export function StudentsListScreen({ navigation, route }: Props) {
   });
 
   const [copyingInvitationByStudentId, setCopyingInvitationByStudentId] = useState<Record<number, boolean>>({});
+  const [copiedInvitationSuccessByStudentId, setCopiedInvitationSuccessByStudentId] = useState<Record<number, boolean>>({});
+  const [studentForPortalResendModal, setStudentForPortalResendModal] = useState<Student | null>(null);
+  const [portalResendButtonState, setPortalResendButtonState] = useState<"idle" | "loading" | "sent">("idle");
+
+  const resendInvitationMutation = useMutation({
+    mutationFn: (studentId: number) => studentsApi.resendInvitation(studentId),
+    onSuccess: async (_, studentId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["students"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-students"] }),
+        queryClient.invalidateQueries({ queryKey: ["student", String(studentId)] }),
+      ]);
+      setPortalResendButtonState("sent");
+      setFeedbackTone("success");
+      setFeedbackMessage(
+        studentForPortalResendModal
+          ? `Link de activación ENVIADO para ${studentForPortalResendModal.first_name} ${studentForPortalResendModal.last_name}.`
+          : "Link de activación enviado correctamente.",
+      );
+      setTimeout(() => {
+        setStudentForPortalResendModal(null);
+        setPortalResendButtonState("idle");
+      }, 1000);
+    },
+    onError: (error) => {
+      setPortalResendButtonState("idle");
+      setFeedbackTone("danger");
+      setFeedbackMessage(getErrorMessage(error));
+    },
+  });
+
+  function handlePortalButtonPress(student: Student): void {
+    const status = resolvePortalInvitationStatus(student.portal_access);
+    if (status === "expired" || status === "none") {
+      setPortalResendButtonState("idle");
+      setStudentForPortalResendModal(student);
+      return;
+    }
+    void handleCopyInvitationLink(student);
+  }
+
+  function handleConfirmPortalResend(): void {
+    if (!studentForPortalResendModal) return;
+    if (portalResendButtonState === "loading" || portalResendButtonState === "sent") return;
+    setPortalResendButtonState("loading");
+    resendInvitationMutation.mutate(studentForPortalResendModal.id);
+  }
 
   async function handleCopyInvitationLink(student: Student): Promise<void> {
     if (copyingInvitationByStudentId[student.id]) return;
@@ -833,6 +880,14 @@ export function StudentsListScreen({ navigation, route }: Props) {
         });
       }
       await copyToClipboard(result.invitation_link);
+      setCopiedInvitationSuccessByStudentId((current) => ({ ...current, [student.id]: true }));
+      setTimeout(() => {
+        setCopiedInvitationSuccessByStudentId((current) => {
+          const next = { ...current };
+          delete next[student.id];
+          return next;
+        });
+      }, 1500);
       setFeedbackTone("success");
       const maskedEmail = (() => {
         const raw = result.code_sent_to_email;
@@ -1303,7 +1358,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   key={item.id}
                   isDesktop={isDesktop}
                   onContext={() => handleOpenContextActions(item)}
-                  onCopyInvitationLink={() => handleCopyInvitationLink(item)}
+                  onCopyInvitationLink={() => handlePortalButtonPress(item)}
                   onDelete={() => {
                     setFeedbackMessage(null);
                     setStudentToDelete(item);
@@ -1318,6 +1373,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   paymentTone={getPaymentTone(item.payment_status)}
                   branchName={studentsByBranchId.get(item.branch_id)?.name ?? "Sin sede"}
                   isCopyingInvitationLink={Boolean(copyingInvitationByStudentId[item.id])}
+                  copiedInvitationLink={Boolean(copiedInvitationSuccessByStudentId[item.id])}
                 />
               ))}
             </ScrollView>
@@ -2195,6 +2251,71 @@ export function StudentsListScreen({ navigation, route }: Props) {
       </AppModal>
 
       <AppModal
+        nativeID="screens-admin-students-list-portal-resend-modal"
+        visible={Boolean(studentForPortalResendModal)}
+        title="Generar link de activación"
+        description={
+          studentForPortalResendModal
+            ? `Se generará un nuevo link vigente y se enviará al correo del alumno.`
+            : undefined
+        }
+        onClose={() => {
+          if (portalResendButtonState !== "loading") {
+            setStudentForPortalResendModal(null);
+            setPortalResendButtonState("idle");
+          }
+        }}
+        testID="screens-admin-students-list-portal-resend-modal"
+      >
+        <AppCard nativeID="screens-admin-students-list-portal-resend-card" style={styles.confirmCard} testID="screens-admin-students-list-portal-resend-card">
+          <Text nativeID="screens-admin-students-list-portal-resend-title" style={styles.confirmTitle} testID="screens-admin-students-list-portal-resend-title">
+            Generar link de activación
+          </Text>
+          <Text nativeID="screens-admin-students-list-portal-resend-text" style={styles.confirmText} testID="screens-admin-students-list-portal-resend-text">
+            {studentForPortalResendModal
+              ? `Generar Link de activación de cuenta para alumno (${
+                  studentForPortalResendModal.portal_access?.invitation_email_sent_to ||
+                  studentForPortalResendModal.email ||
+                  "sin correo registrado"
+                }).`
+              : "Selecciona un alumno para continuar."}
+          </Text>
+        </AppCard>
+        <View style={[styles.modalActions, isDesktop ? desktopStyles.modalActions : mobileStyles.modalActions]}>
+          <AppButton
+            label="Cancelar"
+            nativeID="screens-admin-students-list-portal-resend-cancel-button"
+            onPress={() => {
+              if (portalResendButtonState !== "loading") {
+                setStudentForPortalResendModal(null);
+                setPortalResendButtonState("idle");
+              }
+            }}
+            testID="screens-admin-students-list-portal-resend-cancel-button"
+            variant="secondary"
+            disabled={portalResendButtonState === "loading"}
+          />
+          <AppButton
+            label={
+              portalResendButtonState === "sent"
+                ? "Link enviado!"
+                : "Enviar link de activación"
+            }
+            loading={portalResendButtonState === "loading"}
+            nativeID="screens-admin-students-list-portal-resend-confirm-button"
+            onPress={handleConfirmPortalResend}
+            testID="screens-admin-students-list-portal-resend-confirm-button"
+            variant={portalResendButtonState === "sent" ? "success" : "primary"}
+            disabled={
+              portalResendButtonState === "loading" ||
+              portalResendButtonState === "sent" ||
+              !studentForPortalResendModal
+            }
+          />
+        </View>
+      </AppModal>
+
+      <AppModal
         nativeID="screens-admin-students-list-medical-quick-view-modal"
         title={
           medicalQuickViewStudent
@@ -2634,6 +2755,7 @@ function StudentListRow({
   onOpenMedicalCard,
   onCopyInvitationLink,
   isCopyingInvitationLink,
+  copiedInvitationLink,
 }: {
   student: Student;
   branchName: string;
@@ -2649,16 +2771,19 @@ function StudentListRow({
   onOpenMedicalCard?: () => void;
   onCopyInvitationLink?: () => void;
   isCopyingInvitationLink?: boolean;
+  copiedInvitationLink?: boolean;
 }) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
   const portalAccess = student.portal_access;
   const resolvedPortalStatus = resolvePortalInvitationStatus(portalAccess);
   const portalUi = getPortalUiState(resolvedPortalStatus);
-  const portalStatusLabel = isCopyingInvitationLink ? portalUi.statusLabel : portalUi.statusLabel;
-  const portalButtonLabel = isCopyingInvitationLink
-    ? "Copiando..."
-    : portalUi.buttonLabel;
-  const isPortalButtonDisabled = Boolean(isCopyingInvitationLink) || portalUi.disabled;
+  const portalStatusLabel = portalUi.statusLabel;
+  const portalButtonLabel = copiedInvitationLink
+    ? "✓ Copiado"
+    : isCopyingInvitationLink
+      ? "Copiando..."
+      : portalUi.buttonLabel;
+  const isPortalButtonDisabled = Boolean(isCopyingInvitationLink) || portalUi.disabled || Boolean(copiedInvitationLink);
   const portalButtonIconName: "link" | "refresh-cw" = portalUi.buttonIcon;
 
   if (isDesktop) {
