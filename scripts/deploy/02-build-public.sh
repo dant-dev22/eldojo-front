@@ -31,6 +31,16 @@ fi
 log "Limpiando $DIST_PUBLIC..."
 npm run --silent clean:web 2>/dev/null || rm -rf "$DIST_PUBLIC"
 
+# Importante: SOURCE .env para exportar EXPO_PUBLIC_* vars a npm run build:web
+log "Cargando $PROJECT_ROOT/.env y exportando EXPO_PUBLIC_* ..."
+set -a
+# shellcheck disable=SC1091
+[[ -f "$PROJECT_ROOT/.env" ]] && source "$PROJECT_ROOT/.env"
+set +a
+log "  EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-<not set>}"
+log "  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN=${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-<not set>}"
+log "  EXPO_PUBLIC_APP_WEB_ORIGIN=${EXPO_PUBLIC_APP_WEB_ORIGIN:-<not set>}"
+
 log "Build web público (build:web)..."
 npm run --silent build:web >> "$LOG_FILE" 2>&1
 

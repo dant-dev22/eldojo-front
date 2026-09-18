@@ -50,6 +50,13 @@ interface AuthContextValue {
   registerAcademy: (payload: AcademyRegisterPayload) => Promise<AcademyRegisterResponse>;
   confirmAcademyAccount: (token: string) => Promise<CrossDomainAuthResult>;
   redeemStudentInvitation: (payload: StudentInvitationRedeemPayload) => Promise<CrossDomainAuthResult>;
+  finalizeStudentActivation: (response: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    refresh_expires_in: number;
+    user: User;
+  }) => Promise<void>;
   redeemPendingAcademySession: (
     pendingRegistration: PendingAcademyRegistration
   ) => Promise<CrossDomainAuthResult>;
@@ -508,6 +515,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
           navigateWithBypass(homePath);
         }
         return { redirectedToApp: false };
+      },
+      finalizeStudentActivation: async (response) => {
+        const cfg = getDomainConfig();
+        if (!isStudentUser(response.user)) {
+          hardClearAllEldojoItems();
+          hardClearSessionHint(cfg.sessionCookieDomain);
+          await clearSession();
+          throw new Error(getAccessMessageForRole(response.user));
+        }
+        hardClearAllEldojoItems();
+        hardClearSessionHint(cfg.sessionCookieDomain);
+        await clearPendingAcademyRegistration();
+        await saveSession(mapTokens(response), response.user);
+        setUser(response.user);
+        setShowPostConfirmation(false);
+        setStatus("authenticated");
+        setJustLoggedIn(true);
+        updateHintForUser(response.user);
       },
       redirectToPublicLogin,
       redirectToPublicHome,

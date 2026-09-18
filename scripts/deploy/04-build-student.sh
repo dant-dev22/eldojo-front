@@ -20,8 +20,26 @@ log "Limpiando $DIST_STUDENT..."
 rm -rf "$DIST_STUDENT"
 mkdir -p "$DIST_STUDENT"
 
+# Build condicional student (usa cross-env del package.json + expo export web --output-dir)
+# Importante: SOURCE .env para exportar EXPO_PUBLIC_* vars a npx expo export
+log "Cargando $PROJECT_ROOT/.env y exportando EXPO_PUBLIC_* ..."
+set -a
+# shellcheck disable=SC1091
+[[ -f "$PROJECT_ROOT/.env" ]] && source "$PROJECT_ROOT/.env"
+set +a
+export EXPO_PUBLIC_APP_MODE=student
+log "  EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-<not set>}"
+log "  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN=${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-<not set>}"
+log "  EXPO_PUBLIC_APP_WEB_ORIGIN=${EXPO_PUBLIC_APP_WEB_ORIGIN:-<not set>}"
+log "  EXPO_PUBLIC_APP_MODE=${EXPO_PUBLIC_APP_MODE:-<not set>}"
 log "Build EXPO_PUBLIC_APP_MODE=student..."
-npx cross-env EXPO_PUBLIC_APP_MODE=student \
+npx cross-env \
+  EXPO_PUBLIC_APP_MODE="${EXPO_PUBLIC_APP_MODE:-student}" \
+  EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}" \
+  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN="${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-}" \
+  EXPO_PUBLIC_APP_WEB_ORIGIN="${EXPO_PUBLIC_APP_WEB_ORIGIN:-}" \
+  EXPO_PUBLIC_SESSION_COOKIE_DOMAIN="${EXPO_PUBLIC_SESSION_COOKIE_DOMAIN:-}" \
+  EXPO_PUBLIC_ENVIRONMENT="${EXPO_PUBLIC_ENVIRONMENT:-}" \
   npx expo export --platform web --output-dir "$DIST_STUDENT" >> "$LOG_FILE" 2>&1
 
 [[ -f "$DIST_STUDENT/index.html" ]] || { log "❌ FATAL build student: falta dist-student/index.html"; exit 1; }
