@@ -101,7 +101,6 @@ const linking: LinkingOptions<RootPathParamList> = {
       },
       ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
       ActivateAccount: PUBLIC_SCREEN_PATHS.ActivateStudent,
-      ActivateStudent: PUBLIC_SCREEN_PATHS.ActivateStudent,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
       Home: PUBLIC_SCREEN_PATHS.Home,
