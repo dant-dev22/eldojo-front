@@ -1,5 +1,4 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -17,7 +16,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { AppModal } from "@/components/AppModal";
 import { AppSelect } from "@/components/AppSelect";
 import { BeltIndicator } from "@/components/BeltIndicator";
-import { BeltSelector, type BeltSelectorValue } from "@/components/BeltSelector";
+import { BeltSelector } from "@/components/BeltSelector";
 import { ConfirmActionModal } from "@/components/ConfirmActionModal";
 import { CredencialQRModal } from "@/components/CredencialQRModal";
 import { DashboardQuickActionsModal, type QuickActionItem } from "@/components/DashboardQuickActionsModal";
@@ -32,110 +31,38 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatPaymentStatus } from "@/utils/format";
 
-import type { AdminStackParamList } from "@/navigation/types";
 import type {
   PaymentStatus,
   Student,
   StudentCreatePayload,
   StudentPortalAccessStatus,
-  StudentPortalInvitationStatus,
   StudentStatus,
   StudentUpdatePayload,
 } from "@/types/api";
 
-type Props = NativeStackScreenProps<AdminStackParamList, "StudentsList">;
-
-type FormDialogMode = "create" | "edit";
-type FormDialogStep = "form" | "confirm";
-type FormPageId =
-  | "identity"
-  | "profile"
-  | "billing"
-  | "contact"
-  | "medical"
-  | "documents"
-  | "minors";
-
-type EmergencyContactFormState = {
-  fullName: string;
-  relationship: string;
-  phone: string;
-  secondaryPhone: string;
-  email: string;
-  notes: string;
-};
-
-type MedicalRecordFormState = {
-  bloodType: string;
-  allergies: string;
-  previousInjuries: string;
-  insuranceType: "public" | "private" | "none";
-  insuranceProvider: string;
-  insurancePolicyNumber: string;
-  chronicConditions: string;
-  medications: string;
-  physicianName: string;
-  physicianPhone: string;
-  additionalNotes: string;
-};
-
-type DocumentFormState = {
-  waiverFileUrl: string;
-  waiverSignedAt: string;
-  waiverSignedBy: string;
-  photoConsentGranted: boolean;
-  photoConsentSignedAt: string;
-  photoConsentSignedBy: string;
-};
-
-type AuthorizedPersonFormState = {
-  fullName: string;
-  relationship: string;
-  dniType: string;
-  dniNumber: string;
-  dniVerified: boolean;
-  phone: string;
-  secondaryPhone: string;
-  authorizationNotes: string;
-};
-
-type StudentFormState = {
-  branchId: string;
-  firstName: string;
-  lastName: string;
-  birthDate: string;
-  birthPlace: string;
-  heightCm: string;
-  enrollmentDate: string;
-  primaryClassId: string;
-  belt: BeltSelectorValue;
-  monthlyFee: string;
-  currency: string;
-  nextPaymentDate: string;
-  paymentStatus: PaymentStatus;
-  status: StudentStatus;
-  guardianName: string;
-  guardianPhone: string;
-  phone: string;
-  email: string;
-  isMinor: boolean;
-  notes: string;
-  emergencyContact: EmergencyContactFormState;
-  medical: MedicalRecordFormState;
-  documents: DocumentFormState;
-  authorizedPerson: AuthorizedPersonFormState;
-};
-
-type FormErrors = Partial<Record<keyof StudentFormState, string>>;
-type FeedbackTone = "success" | "danger";
-type StudentFormField = keyof StudentFormState;
-type FormPage = {
-  id: FormPageId;
-  title: string;
-  description: string;
-  fields: StudentFormField[];
-  conditional?: (form: StudentFormState) => boolean;
-};
+import type {
+  AuthorizedPersonFormState,
+  DashboardMetricCardProps,
+  DocumentFormState,
+  EmergencyContactFormState,
+  FeedbackTone,
+  FormDialogMode,
+  FormDialogStep,
+  FormErrors,
+  FormPage,
+  FormPageId,
+  MedicalRecordFormState,
+  MobileMetaItemProps,
+  Props,
+  ResolvedPortalInvitationStatus,
+  StudentAccountStatus,
+  StudentFormField,
+  StudentFormState,
+  StudentListRowProps,
+  StudentRowActionButtonProps,
+  SummaryRowProps,
+  ToggleRowProps,
+} from "./__types__/StudentsListScreen.types";
 
 const PAYMENT_STATUS_OPTIONS: Array<{ label: string; value: PaymentStatus }> = [
   { label: "Al corriente", value: "up_to_date" },
@@ -251,8 +178,6 @@ function getInvitationLink(student: Student | null, portalAccess?: StudentPortal
   return link && link.length > 0 ? link : null;
 }
 
-type ResolvedPortalInvitationStatus = Exclude<StudentPortalInvitationStatus, "used">;
-
 function resolvePortalInvitationStatus(
   portalAccess: StudentPortalAccessStatus | null | undefined,
 ): ResolvedPortalInvitationStatus {
@@ -273,8 +198,6 @@ function resolveStudentAssignedEmail(student: Student): string | null {
   if (fromStudent && fromStudent.length > 0) return fromStudent;
   return null;
 }
-
-type StudentAccountStatus = "activated" | "pending" | "missing_email";
 
 function getStudentAccountStatus(student: Student): {
   status: StudentAccountStatus;
@@ -2666,17 +2589,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
   );
 }
 
-function ToggleRow({
-  idPrefix,
-  label,
-  value,
-  onValueChange,
-}: {
-  idPrefix: string;
-  label: string;
-  value: boolean;
-  onValueChange: (next: boolean) => void;
-}) {
+function ToggleRow({ idPrefix, label, value, onValueChange }: ToggleRowProps) {
   return (
     <Pressable
       accessibilityRole="switch"
@@ -2785,7 +2698,7 @@ function QuickField({
   );
 }
 
-function SummaryRow({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
+function SummaryRow({ label, value, idPrefix }: SummaryRowProps) {
   const baseId = idPrefix ?? `screens-admin-students-list-summary-row-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
@@ -2803,14 +2716,7 @@ function DashboardMetricCard({
   icon,
   tone,
   idPrefix,
-}: {
-  title: string;
-  value: string;
-  description: string;
-  icon: keyof typeof Feather.glyphMap;
-  tone: "info" | "success" | "warning" | "neutral";
-  idPrefix: string;
-}) {
+}: DashboardMetricCardProps) {
   return (
     <View
       nativeID={idPrefix}
@@ -2854,23 +2760,7 @@ function StudentListRow({
   onCopyInvitationLink,
   isCopyingInvitationLink,
   copiedInvitationLink,
-}: {
-  student: Student;
-  branchName: string;
-  paymentLabel: string;
-  paymentTone: "success" | "warning" | "danger" | "neutral";
-  studentStatusLabel: string;
-  studentStatusTone: "success" | "warning" | "neutral";
-  isDesktop: boolean;
-  onViewDetail: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onContext?: () => void;
-  onOpenMedicalCard?: () => void;
-  onCopyInvitationLink?: () => void;
-  isCopyingInvitationLink?: boolean;
-  copiedInvitationLink?: boolean;
-}) {
+}: StudentListRowProps) {
   const isProfileIncomplete = Boolean(student.profile_completeness && !student.profile_completeness.is_complete);
   const portalAccess = student.portal_access;
   const assignedEmail = resolveStudentAssignedEmail(student);
@@ -3145,7 +3035,7 @@ function StudentListRow({
   );
 }
 
-function MobileMetaItem({ idPrefix, label, value }: { idPrefix: string; label: string; value: string }) {
+function MobileMetaItem({ idPrefix, label, value }: MobileMetaItemProps) {
   return (
     <View nativeID={idPrefix} style={styles.mobileMetaItem} testID={idPrefix}>
       <Text nativeID={`${idPrefix}-label`} style={styles.mobileMetaLabel} testID={`${idPrefix}-label`}>{label}</Text>
@@ -3159,12 +3049,7 @@ function StudentRowActionButton({
   label,
   onPress,
   tone = "neutral",
-}: {
-  nativeID: string;
-  label: string;
-  onPress: () => void;
-  tone?: "neutral" | "danger";
-}) {
+}: StudentRowActionButtonProps) {
   return (
     <Pressable
       accessibilityLabel={label}

@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Image, Linking, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
 
 import { attendanceApi } from "@/api/attendanceApi";
@@ -51,7 +50,7 @@ import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, format
 import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
 import { getDomainConfig } from "@/utils/domains";
 
-import type { AdminDashboardSection, AdminStackParamList } from "@/navigation/types";
+import type { AdminDashboardSection } from "@/navigation/types";
 import type {
   Attendance,
   AttendanceCreatePayload,
@@ -73,90 +72,43 @@ import type {
   Student,
 } from "@/types/api";
 
-type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
-
-type FeedbackTone = "success" | "danger";
-type AttendanceDialogMode = "create" | "edit";
-type BranchDialogMode = "create" | "edit";
-type ClassDialogMode = "create" | "edit";
-type BranchesDashboardView = "list" | "summary";
-type OperationsDashboardView = "attendance" | "classes" | null;
-type PaymentDialogMode = "create" | "edit";
-type DestructiveActionState = {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-};
-type OrganizationStatusValue = "active" | "inactive";
-type BranchStatusValue = "active" | "inactive";
-type ClassStatusValue = "active" | "inactive";
-
-type OrganizationFormState = {
-  name: string;
-  slug: string;
-  status: OrganizationStatusValue;
-};
-
-type BranchFormState = {
-  name: string;
-  country: string;
-  state: string;
-  city: string;
-  address: string;
-  timezone: string;
-  qrSecret: string;
-  status: BranchStatusValue;
-};
-
-type ClassFormState = {
-  branchId: string;
-  disciplineId: string;
-  name: string;
-  description: string;
-  instructorName: string;
-  capacity: string;
-  status: ClassStatusValue;
-};
-
-type PaymentFormState = {
-  studentId: string;
-  amount: string;
-  currency: string;
-  periodStart: string;
-  periodEnd: string;
-  paidDate: string;
-  method: PaymentMethod;
-  status: PaymentRecordStatus;
-  notes: string;
-};
-
-type AttendanceFormState = {
-  studentId: string;
-  branchId: string;
-  classId: string;
-  checkInDate: string;
-  checkInTime: string;
-  method: AttendanceMethod;
-};
-
-type OrganizationFormErrors = Partial<Record<keyof OrganizationFormState, string>>;
-type AttendanceFormErrors = Partial<Record<keyof AttendanceFormState, string>>;
-type BranchFormErrors = Partial<Record<keyof BranchFormState, string>>;
-type ClassFormErrors = Partial<Record<keyof ClassFormState, string>>;
-type PaymentFormErrors = Partial<Record<keyof PaymentFormState, string>>;
-type TutorialStepId = "hero" | "crud" | "branches" | "attendance";
-type TutorialStep = {
-  id: TutorialStepId;
-  title: string;
-  description: string;
-};
-type TutorialAnchorFrame = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+import type {
+  AnimatedSurfaceProps,
+  AttendanceDialogMode,
+  AttendanceFormErrors,
+  AttendanceFormState,
+  BranchDialogMode,
+  BranchFormErrors,
+  BranchFormState,
+  BranchStatusValue,
+  BranchesDashboardView,
+  CircularStatProps,
+  ClassDialogMode,
+  ClassFormErrors,
+  ClassFormState,
+  ClassStatusValue,
+  DestructiveActionState,
+  EditableDetailRowProps,
+  EntityFieldProps,
+  FeedbackTone,
+  FirstTimeTutorialBubbleProps,
+  MetricCardProps,
+  OperationsDashboardView,
+  OrganizationFormErrors,
+  OrganizationFormState,
+  OrganizationStatusValue,
+  OverviewCircularGraphCardProps,
+  OverviewGraphCardProps,
+  OverviewHybridGraphCardProps,
+  PaymentDialogMode,
+  PaymentFormErrors,
+  PaymentFormState,
+  Props,
+  QuickActionProps,
+  TutorialAnchorFrame,
+  TutorialStep,
+  TutorialStepId,
+} from "./__types__/AdminDashboardScreen.types";
 
 const STATUS_OPTIONS = [
   { label: "Activa", value: "active" },
@@ -5853,17 +5805,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   );
 }
 
-function MetricCard({
-  delay = 0,
-  label,
-  value,
-  tone,
-}: {
-  delay?: number;
-  label: string;
-  value: string;
-  tone: "neutral" | "success" | "danger" | "info";
-}) {
+function MetricCard({ delay = 0, label, value, tone }: MetricCardProps) {
   const baseId = `screens-admin-dashboard-metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const toneStyles =
     tone === "success"
@@ -5906,7 +5848,7 @@ function MetricCard({
   );
 }
 
-function EntityField({ label, value, idPrefix }: { label: string; value: string; idPrefix?: string }) {
+function EntityField({ label, value, idPrefix }: EntityFieldProps) {
   const baseId = idPrefix ?? `screens-admin-dashboard-entity-field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
   return (
@@ -5917,17 +5859,7 @@ function EntityField({ label, value, idPrefix }: { label: string; value: string;
   );
 }
 
-function EditableDetailRow({
-  label,
-  value,
-  onPress,
-  idPrefix,
-}: {
-  label: string;
-  value: string;
-  onPress?: (() => void) | undefined;
-  idPrefix: string;
-}) {
+function EditableDetailRow({ label, value, onPress, idPrefix }: EditableDetailRowProps) {
   return (
     <View nativeID={idPrefix} style={styles.editableDetailRow} testID={idPrefix}>
       <View nativeID={`${idPrefix}-copy`} style={styles.editableDetailCopy} testID={`${idPrefix}-copy`}>
@@ -5950,19 +5882,7 @@ function EditableDetailRow({
   );
 }
 
-function OverviewGraphCard({
-  delay,
-  idPrefix,
-  items,
-  subtitle,
-  title,
-}: {
-  delay: number;
-  idPrefix: string;
-  items: Array<{ key: string; label: string; value: number; tone: string }>;
-  subtitle: string;
-  title: string;
-}) {
+function OverviewGraphCard({ delay, idPrefix, items, subtitle, title }: OverviewGraphCardProps) {
   const maxValue = Math.max(...items.map((item) => item.value), 1);
 
   return (
@@ -6000,21 +5920,7 @@ function OverviewGraphCard({
   );
 }
 
-function CircularStat({
-  idPrefix,
-  label,
-  value,
-  total,
-  tone,
-  compact = false,
-}: {
-  idPrefix: string;
-  label: string;
-  value: number;
-  total: number;
-  tone: string;
-  compact?: boolean;
-}) {
+function CircularStat({ idPrefix, label, value, total, tone, compact = false }: CircularStatProps) {
   const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
@@ -6062,16 +5968,7 @@ function OverviewCircularGraphCard({
   compact = false,
   footerLink,
   circleLinks,
-}: {
-  delay: number;
-  idPrefix: string;
-  items: Array<{ key: string; label: string; value: number; tone: string }>;
-  subtitle: string;
-  title: string;
-  compact?: boolean;
-  footerLink?: { label: string; onPress: () => void };
-  circleLinks?: Record<string, { label: string; onPress: () => void }>;
-}) {
+}: OverviewCircularGraphCardProps) {
   const totalValue = Math.max(items.reduce((accumulator, item) => accumulator + item.value, 0), 1);
 
   return (
@@ -6150,17 +6047,7 @@ function OverviewHybridGraphCard({
   onCtaPress,
   summaryTiles,
   tileLinks,
-}: {
-  delay: number;
-  idPrefix: string;
-  items: Array<{ key: string; label: string; value: number; tone: string }>;
-  subtitle: string;
-  title: string;
-  ctaLabel?: string;
-  onCtaPress?: () => void;
-  summaryTiles?: Array<{ key: string; label: string; value: number; tone: string }>;
-  tileLinks?: Array<{ tileKey: string; onPress: () => void }>;
-}) {
+}: OverviewHybridGraphCardProps) {
   const maxValue = Math.max(items.reduce((acc, item) => acc + item.value, 0), 1);
   const tileLinkMap = useMemo(() => {
     const map = new Map<string, () => void>();
@@ -6273,21 +6160,7 @@ function OverviewHybridGraphCard({
   );
 }
 
-function QuickAction({
-  label,
-  description,
-  onPress,
-  disabled = false,
-  idPrefix,
-  tone = "neutral",
-}: {
-  label: string;
-  description: string;
-  onPress: () => void;
-  disabled?: boolean;
-  idPrefix?: string;
-  tone?: "neutral" | "primary" | "success";
-}) {
+function QuickAction({ label, description, onPress, disabled = false, idPrefix, tone = "neutral" }: QuickActionProps) {
   const toneStyles =
     tone === "primary"
       ? { icon: "plus-circle", iconColor: colors.info }
@@ -6341,16 +6214,7 @@ function FirstTimeTutorialBubble({
   style,
   title,
   totalSteps,
-}: {
-  currentStep: number;
-  description: string;
-  loading?: boolean;
-  onAdvance: () => void;
-  onDismiss: () => void;
-  style?: StyleProp<ViewStyle>;
-  title: string;
-  totalSteps: number;
-}) {
+}: FirstTimeTutorialBubbleProps) {
   return (
     <View
       nativeID={`screens-admin-dashboard-tutorial-step-${currentStep}`}
@@ -6387,19 +6251,7 @@ function FirstTimeTutorialBubble({
   );
 }
 
-function AnimatedSurface({
-  children,
-  delay = 0,
-  nativeID,
-  style,
-  testID,
-}: {
-  children: ReactNode;
-  delay?: number;
-  nativeID?: string;
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
-}) {
+function AnimatedSurface({ children, delay = 0, nativeID, style, testID }: AnimatedSurfaceProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(10)).current;
 
