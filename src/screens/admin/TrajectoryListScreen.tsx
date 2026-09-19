@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -34,7 +33,6 @@ import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
-import type { AdminStackParamList } from "@/navigation/types";
 import type {
   BeltLevel,
   FightRecordType,
@@ -46,7 +44,14 @@ import type {
 } from "@/types/api";
 import { formatCurrency, formatDate, formatPaymentStatus } from "@/utils/format";
 
-type Props = NativeStackScreenProps<AdminStackParamList, "TrajectoryList">;
+import type {
+  FightRecordFormBlockInlineProps,
+  FightRecordStatInlineProps,
+  FightStatTone,
+  FightTotals,
+  Props,
+  UnifiedModalTab,
+} from "./__types__/TrajectoryListScreen.types";
 const STUDENTS_PER_PAGE = 20;
 
 const MONTH_NAMES = [
@@ -169,10 +174,6 @@ function getStudentStatusColor(status: Student["status"]): string {
       return colors.textMuted;
   }
 }
-
-type UnifiedModalTab = "events" | "fight" | "belts";
-
-type FightTotals = { victoria: number; empate: number; derrota: number };
 
 export function TrajectoryListScreen({ navigation }: Props) {
   const { user } = useAuth();
@@ -2139,19 +2140,7 @@ export function TrajectoryListScreen({ navigation }: Props) {
 // Subcomponentes inline del modal unificado (sin dependencias)
 // ==========================================================
 
-type FightStatTone = FightRecordType;
-
-function FightRecordStatInline({
-  label,
-  value,
-  tone,
-  idPrefix,
-}: {
-  label: string;
-  value: number;
-  tone: FightStatTone;
-  idPrefix?: string;
-}) {
+function FightRecordStatInline({ label, value, tone, idPrefix }: FightRecordStatInlineProps) {
   const baseId = idPrefix ?? `screens-admin-trajectory-list-unified-fight-stat-${tone}`;
   const accent = getFightTypeColor(tone);
   const softBg = getFightTypeSoftColor(tone);
@@ -2193,16 +2182,7 @@ function FightRecordFormBlockInline({
   dateValue,
   onDateChange,
   opponentCounter = false,
-}: {
-  idPrefix: string;
-  typeValue: FightRecordType;
-  onTypeChange: (v: FightRecordType) => void;
-  opponentValue: string;
-  onOpponentChange: (v: string) => void;
-  dateValue: string;
-  onDateChange: (v: string) => void;
-  opponentCounter?: boolean;
-}) {
+}: FightRecordFormBlockInlineProps) {
   const options: Array<{ key: FightRecordType; label: string }> = [
     { key: "victoria", label: "Victoria" },
     { key: "empate", label: "Empate" },

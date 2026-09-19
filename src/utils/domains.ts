@@ -30,6 +30,14 @@ function resolveCurrentOrigin(): string {
 }
 
 function resolveApiBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const hostname = window.location.hostname.toLowerCase();
+    const isProductionHost =
+      hostname === "eldojo.tech" || hostname.endsWith(".eldojo.tech");
+    if (isProductionHost) {
+      return "/api/v1";
+    }
+  }
   const envValue = process.env.EXPO_PUBLIC_API_URL;
   if (envValue) return envValue.replace(/\/$/, "");
   const origin = resolveCurrentOrigin();

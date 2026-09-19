@@ -28,6 +28,15 @@ function resolveApiUrl(): string {
     return configuredUrl;
   }
 
+  const currentHostname = window.location.hostname?.toLowerCase() ?? "";
+  const isProductionHost =
+    currentHostname === "eldojo.tech" ||
+    currentHostname.endsWith(".eldojo.tech");
+
+  if (isProductionHost) {
+    return "/api/v1";
+  }
+
   try {
     const parsedUrl = new URL(configuredUrl);
     const usesLoopbackHost =

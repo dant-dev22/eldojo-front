@@ -82,10 +82,13 @@ export function ActivateAccountScreen() {
   const [activationSuccess, setActivationSuccess] = useState<LoginResponse | null>(null);
   const navigateStartedRef = useRef(false);
 
+  const previewTriedRef = useRef(false);
   useEffect(() => {
     if (!token) return;
+    if (previewTriedRef.current) return;
+    previewTriedRef.current = true;
     previewMutation.mutate(token);
-  }, [previewMutation, token]);
+  }, [previewMutation.mutate, token]);
 
   useEffect(() => {
     if (!previewMutation.data) return;
@@ -130,6 +133,12 @@ export function ActivateAccountScreen() {
 
   function navigateToPage(page: PublicPageKey) {
     navigation.navigate(PUBLIC_PAGE_TO_SCREEN[page]);
+  }
+
+  function handleRetryPreview() {
+    previewMutation.reset();
+    previewTriedRef.current = false;
+    previewMutation.mutate(token);
   }
 
   const canSubmit = Boolean(
@@ -315,9 +324,18 @@ export function ActivateAccountScreen() {
           </View>
 
           {!redeemable ? (
-            <Text style={styles.description}>
-              {previewError ?? "No pudimos cargar la invitación con ese enlace."}
-            </Text>
+            <View style={{ gap: spacing.md }}>
+              <Text style={styles.description}>
+                {previewError ?? "No pudimos cargar la invitación con ese enlace."}
+              </Text>
+              {previewMutation.isError ? (
+                <AppButton
+                  label="Reintentar validación"
+                  onPress={handleRetryPreview}
+                  variant="secondary"
+                />
+              ) : null}
+            </View>
           ) : null}
 
           {redeemable ? (
