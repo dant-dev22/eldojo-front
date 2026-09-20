@@ -104,8 +104,8 @@ const FORM_PAGES: FormPage[] = [
   {
     id: "profile",
     title: "Perfil",
-    description: "Captura contexto deportivo, grado actual y datos generales del ingreso.",
-    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId", "belt"],
+    description: "Captura contexto deportivo, grado actual, teléfono, email y datos generales del ingreso.",
+    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId", "belt", "phone", "email"],
   },
   {
     id: "billing",
@@ -116,8 +116,8 @@ const FORM_PAGES: FormPage[] = [
   {
     id: "contact",
     title: "Contacto",
-    description: "Teléfono, email, contacto de emergencia y responsable.",
-    fields: ["phone", "email", "nextPaymentDate", "guardianName", "guardianPhone", "notes", "emergencyContact"],
+    description: "Próximo pago, contacto de emergencia y responsable.",
+    fields: ["nextPaymentDate", "guardianName", "guardianPhone", "notes", "emergencyContact"],
   },
   {
     id: "medical",
@@ -1651,6 +1651,36 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   />
                 </View>
 
+                <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
+                  <AppInput
+                    autoCapitalize="none"
+                    error={formErrors.phone}
+                    keyboardType="phone-pad"
+                    label="Teléfono del alumno"
+                    nativeID="screens-admin-students-list-form-phone-input"
+                    onChangeText={(value) => handleUpdateField("phone", value)}
+                    placeholder="8112345678"
+                    testID="screens-admin-students-list-form-phone-input"
+                    value={form.phone}
+                  />
+                  <View
+                    nativeID="screens-admin-students-list-form-email-input-container"
+                    testID="screens-admin-students-list-form-email-input-container"
+                  >
+                    <AppInput
+                      autoCapitalize="none"
+                      error={formErrors.email}
+                      keyboardType="email-address"
+                      label="Email del alumno"
+                      nativeID="screens-admin-students-list-form-email-input"
+                      onChangeText={(value) => handleUpdateField("email", value)}
+                      placeholder="alumno@correo.com"
+                      testID="screens-admin-students-list-form-email-input"
+                      value={form.email}
+                    />
+                  </View>
+                </View>
+
                 <View style={styles.formBeltBlock}>
                   <BeltSelector
                     enabled={Boolean(organizationId)}
@@ -1733,31 +1763,6 @@ export function StudentsListScreen({ navigation, route }: Props) {
 
             {currentPage.id === "contact" ? (
               <>
-                <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
-                  <AppInput
-                    autoCapitalize="none"
-                    error={formErrors.phone}
-                    keyboardType="phone-pad"
-                    label="Teléfono del alumno"
-                    nativeID="screens-admin-students-list-form-phone-input"
-                    onChangeText={(value) => handleUpdateField("phone", value)}
-                    placeholder="8112345678"
-                    testID="screens-admin-students-list-form-phone-input"
-                    value={form.phone}
-                  />
-                  <AppInput
-                    autoCapitalize="none"
-                    error={formErrors.email}
-                    keyboardType="email-address"
-                    label="Email del alumno"
-                    nativeID="screens-admin-students-list-form-email-input"
-                    onChangeText={(value) => handleUpdateField("email", value)}
-                    placeholder="alumno@correo.com"
-                    testID="screens-admin-students-list-form-email-input"
-                    value={form.email}
-                  />
-                </View>
-
                 <View style={[styles.formGrid, isDesktop ? desktopStyles.formGrid : mobileStyles.formGrid]}>
                   <AppDateInput
                     error={formErrors.nextPaymentDate}
