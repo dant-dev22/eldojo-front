@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -42,15 +41,19 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatDate, formatPaymentStatus } from "@/utils/format";
 
-import type { AdminStackParamList } from "@/navigation/types";
 import type { Student } from "@/types/api";
 
-type Props = NativeStackScreenProps<AdminStackParamList, "QrCodesList">;
+import type {
+  AttendanceFeedbackState,
+  LastScanContext,
+  PaymentStatusTone,
+  Props,
+} from "./__types__/QrCodesListScreen.types";
 
 const STUDENTS_PER_PAGE = 10;
 const PROCESS_TIMEOUT_MS = 15000;
 
-function getPaymentTone(status: string): "success" | "warning" | "danger" | "neutral" {
+function getPaymentTone(status: string): PaymentStatusTone {
   switch (status) {
     case "up_to_date":
       return "success";
@@ -95,16 +98,12 @@ export function QrCodesListScreen({ navigation }: Props) {
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
 
   const [scannerVisible, setScannerVisible] = useState(false);
-  const [attendanceFeedback, setAttendanceFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+  const [attendanceFeedback, setAttendanceFeedback] = useState<AttendanceFeedbackState | null>(null);
 
   const [scannerProcessState, setScannerProcessState] = useState<QrScannerAttendanceProcessState | null>(null);
   const scannerProcessTimeoutRef = useRef<number | null>(null);
   const scannerProcessStartedAtRef = useRef<number | null>(null);
-  const lastScanContextRef = useRef<{
-    student_name: string;
-    class_name: string | null;
-    check_in_at: string | null;
-  } | null>(null);
+  const lastScanContextRef = useRef<LastScanContext | null>(null);
 
   const classesQuery = useQuery({
     queryKey: ["dashboard-classes", organizationId, fixedBranchId],

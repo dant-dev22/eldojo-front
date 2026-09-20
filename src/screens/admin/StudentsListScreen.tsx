@@ -1163,6 +1163,10 @@ export function StudentsListScreen({ navigation, route }: Props) {
     setCurrentFormPage((current) => Math.max(current - 1, 0));
   }
 
+  function handleSkipToLastStep() {
+    setCurrentFormPage(FORM_PAGES.length - 1);
+  }
+
   function handleConfirmCreate() {
     if (!organizationId) {
       setModalError("No se encontró el alcance administrativo del usuario.");
@@ -1700,6 +1704,29 @@ export function StudentsListScreen({ navigation, route }: Props) {
                     testID="screens-admin-students-list-form-currency-input"
                     value={form.currency}
                   />
+                </View>
+
+                <View style={styles.skipToEndWrap}>
+                  <Pressable
+                    accessibilityRole="link"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    nativeID="screens-admin-students-list-form-skip-to-end-link"
+                    onPress={handleSkipToLastStep}
+                    style={(state) => {
+                      const hovered = (state as typeof state & { hovered?: boolean }).hovered;
+                      return [
+                        styles.skipToEndLink,
+                        hovered ? styles.skipToEndLinkHovered : null,
+                        state.pressed ? styles.skipToEndLinkPressed : null,
+                      ];
+                    }}
+                    testID="screens-admin-students-list-form-skip-to-end-link"
+                  >
+                    <Feather color={colors.primary} name="skip-forward" size={14} />
+                    <Text nativeID="screens-admin-students-list-form-skip-to-end-link-label" style={styles.skipToEndLinkLabel} testID="screens-admin-students-list-form-skip-to-end-link-label">
+                      Terminar ahora y editar más tarde
+                    </Text>
+                  </Pressable>
                 </View>
               </>
             ) : null}
@@ -4083,6 +4110,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  skipToEndWrap: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    marginTop: spacing.md,
+    width: "100%",
+  },
+  skipToEndLink: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  skipToEndLinkHovered: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+  },
+  skipToEndLinkPressed: {
+    opacity: 0.8,
+  },
+  skipToEndLinkLabel: {
+    color: colors.primary,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
 
