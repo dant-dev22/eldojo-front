@@ -106,7 +106,7 @@ export type FormPage = {
 
 export type ResolvedPortalInvitationStatus = Exclude<StudentPortalInvitationStatus, "used">;
 
-export type StudentAccountStatus = "activated" | "pending" | "missing_email";
+export type StudentAccountStatus = "activated" | "pending" | "missing_email" | "password_pending";
 
 export type ToggleRowProps = {
   idPrefix: string;

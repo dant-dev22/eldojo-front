@@ -12,6 +12,9 @@ import type {
   StudentInvitationRedeemPayload,
   StudentInvitationVerifyCodePayload,
   StudentInvitationVerifyCodeResponse,
+  StudentPasswordResetConfirmPayload,
+  StudentPasswordResetConfirmResponse,
+  StudentPasswordResetPreviewResponse,
   StudentRegisterPayload,
   User,
 } from "@/types/api";
@@ -375,6 +378,46 @@ export const authApi = {
     const { data } = await http.post<LoginResponse>(
       "/auth/student-invitation/redeem",
       backendPayload,
+    );
+    return data;
+  },
+
+  async getStudentPasswordResetPreview(
+    token: string,
+  ): Promise<StudentPasswordResetPreviewResponse> {
+    const qs = new URLSearchParams({ token });
+    if (shouldUseWebFetch()) {
+      return requestJson<StudentPasswordResetPreviewResponse>(
+        `/auth/student-password-reset?${qs.toString()}`,
+      );
+    }
+
+    const { data } = await http.get<StudentPasswordResetPreviewResponse>(
+      "/auth/student-password-reset",
+      { params: { token } },
+    );
+    return data;
+  },
+
+  async confirmStudentPasswordReset(
+    payload: StudentPasswordResetConfirmPayload,
+  ): Promise<StudentPasswordResetConfirmResponse> {
+    if (shouldUseWebFetch()) {
+      return requestJson<StudentPasswordResetConfirmResponse>(
+        "/auth/student-password-reset/confirm",
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        },
+      );
+    }
+
+    const { data } = await http.post<StudentPasswordResetConfirmResponse>(
+      "/auth/student-password-reset/confirm",
+      payload,
     );
     return data;
   },

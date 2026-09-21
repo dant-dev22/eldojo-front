@@ -133,6 +133,12 @@ export const studentsApi = {
     const { data } = await http.post<Student>(`/students/${studentId}/resend-invitation`);
     return data;
   },
+  async generatePasswordResetLink(studentId: number): Promise<Student> {
+    const { data } = await http.post<Student>(
+      `/students/${studentId}/generate-password-reset-link`,
+    );
+    return data;
+  },
   /**
    * Semántica ensure-and-get del link de invitación.
    *

@@ -16,6 +16,7 @@ import { AccountConfirmedScreen } from "@/screens/auth/AccountConfirmedScreen";
 import { ActivateAccountScreen } from "@/screens/auth/ActivateAccountScreen";
 import { ConfirmAccountScreen } from "@/screens/auth/ConfirmAccountScreen";
 import { StudentActivateScreen } from "@/screens/auth/StudentActivateScreen";
+import { StudentPasswordResetScreen } from "@/screens/auth/StudentPasswordResetScreen";
 import {
   AboutScreen,
   CreateAccountScreen,
@@ -101,6 +102,7 @@ const linking: LinkingOptions<RootPathParamList> = {
       },
       ConfirmAccount: PUBLIC_SCREEN_PATHS.ConfirmAccount,
       ActivateAccount: PUBLIC_SCREEN_PATHS.ActivateStudent,
+      ResetStudentPassword: PUBLIC_SCREEN_PATHS.ResetStudentPassword,
       CreateAccount: PUBLIC_SCREEN_PATHS.CreateAccount,
       Events: PUBLIC_SCREEN_PATHS.Events,
       Home: PUBLIC_SCREEN_PATHS.Home,
@@ -185,6 +187,10 @@ function AuthFlow() {
       <AuthStack.Screen
         component={ActivateAccountScreen}
         name="ActivateAccount"
+      />
+      <AuthStack.Screen
+        component={StudentPasswordResetScreen}
+        name="ResetStudentPassword"
       />
     </AuthStack.Navigator>
   );

@@ -20,6 +20,7 @@ export const PUBLIC_ROUTE_SEGMENTS = {
   signIn: slugifyRouteSegment("iniciar sesion"),
   confirmAccount: slugifyRouteSegment("confirmar cuenta"),
   activateStudent: slugifyRouteSegment("activar"),
+  resetStudentPassword: slugifyRouteSegment("restablecer contrasena alumno"),
 } as const;
 
 export const ADMIN_ROUTE_SEGMENTS = {
@@ -59,6 +60,7 @@ export const PUBLIC_SCREEN_PATHS = {
   SignIn: PUBLIC_ROUTE_SEGMENTS.signIn,
   ConfirmAccount: PUBLIC_ROUTE_SEGMENTS.confirmAccount,
   ActivateStudent: PUBLIC_ROUTE_SEGMENTS.activateStudent,
+  ResetStudentPassword: PUBLIC_ROUTE_SEGMENTS.resetStudentPassword,
 } as const;
 
 export const PUBLIC_HOME_ALIAS_PATHS: readonly string[] = [

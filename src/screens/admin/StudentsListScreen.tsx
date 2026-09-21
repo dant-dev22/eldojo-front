@@ -184,7 +184,7 @@ function resolvePortalInvitationStatus(
   if (!portalAccess) return "none";
   const raw = portalAccess.invitation_status;
   if (raw === "used") return "none";
-  if (raw === "linked" || raw === "pending" || raw === "expired" || raw === "none") return raw;
+  if (raw === "linked" || raw === "pending" || raw === "expired" || raw === "none" || raw === "password_pending") return raw;
   if (portalAccess.has_linked_user && portalAccess.user_is_active && portalAccess.user_email_verified) return "linked";
   if (portalAccess.pending_invitation_exists) return "pending";
   if ((portalAccess.invitation_sent_count ?? 0) > 0) return "expired";
@@ -208,11 +208,24 @@ function getStudentAccountStatus(student: Student): {
 } {
   const portal = student.portal_access;
   const hasEmail = Boolean(resolveStudentAssignedEmail(student));
+  const email = resolveStudentAssignedEmail(student);
+
   if (portal && (portal.has_linked_user && portal.user_is_active && portal.user_email_verified)) {
+    if (portal.invitation_status === "password_pending") {
+      return {
+        status: "password_pending",
+        label: "Aprobado · Pendiente contraseña",
+        description: email
+          ? `Usuario aprobado · ${email} debe establecer su contraseña.`
+          : "Usuario aprobado. Falta que el alumno establezca su contraseña.",
+        tone: "warning",
+        color: colors.warning,
+      };
+    }
     return {
       status: "activated",
       label: "Cuenta activada",
-      description: `Inicio de sesión listo${hasEmail ? ` · ${resolveStudentAssignedEmail(student)!}` : ""}`,
+      description: `Inicio de sesión listo${hasEmail ? ` · ${email}` : ""}`,
       tone: "success",
       color: colors.success,
     };
@@ -231,7 +244,18 @@ function getStudentAccountStatus(student: Student): {
     return {
       status: "pending",
       label: "Pendiente de activar",
-      description: `Link vigente enviado a ${resolveStudentAssignedEmail(student)!}. Esperando que el alumno active su cuenta.`,
+      description: `Link vigente enviado a ${email!}. Esperando que el alumno active su cuenta.`,
+      tone: "warning",
+      color: colors.warning,
+    };
+  }
+  if (resolved === "password_pending") {
+    return {
+      status: "password_pending",
+      label: "Aprobado · Pendiente contraseña",
+      description: email
+        ? `Usuario aprobado · ${email} debe establecer su contraseña.`
+        : "Usuario aprobado. Falta que el alumno establezca su contraseña.",
       tone: "warning",
       color: colors.warning,
     };
@@ -240,7 +264,7 @@ function getStudentAccountStatus(student: Student): {
     return {
       status: "pending",
       label: "Pendiente de activar",
-      description: `Link anterior vencido · Genera uno nuevo para ${resolveStudentAssignedEmail(student)!}.`,
+      description: `Link anterior vencido · Genera uno nuevo para ${email!}.`,
       tone: "warning",
       color: colors.warning,
     };
@@ -248,7 +272,7 @@ function getStudentAccountStatus(student: Student): {
   return {
     status: "pending",
     label: "Pendiente de activar",
-    description: `Genera un link de activación para ${resolveStudentAssignedEmail(student)!}.`,
+    description: `Genera un link de activación para ${email!}.`,
     tone: "warning",
     color: colors.warning,
   };
@@ -273,6 +297,16 @@ function getPortalUiState(status: ResolvedPortalInvitationStatus, studentEmail: 
         badgeTone: "success",
         badgeColor: colors.success,
         disabled: true,
+      };
+    case "password_pending":
+      return {
+        statusLabel: "Aprobado · Pendiente contraseña",
+        buttonLabel: missingEmail ? "Sin correo" : "Generar link",
+        buttonIcon: "refresh-cw",
+        badgeTone: "warning",
+        badgeColor: colors.warning,
+        disabled: missingEmail ? true : false,
+        disabledReason: missingEmail ? "Agrega un correo al alumno para poder generar el link." : undefined,
       };
     case "pending":
       return {
@@ -835,17 +869,48 @@ export function StudentsListScreen({ navigation, route }: Props) {
     },
   });
 
+  const generatePasswordResetLinkMutation = useMutation({
+    mutationFn: (studentId: number) => studentsApi.generatePasswordResetLink(studentId),
+    onSuccess: async (_, studentId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["students"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-students"] }),
+        queryClient.invalidateQueries({ queryKey: ["student", String(studentId)] }),
+      ]);
+      setPortalResendButtonState("sent");
+      setFeedbackTone("success");
+      setFeedbackMessage(
+        studentForPortalResendModal
+          ? `Link para cambiar contraseña GENERADO para ${studentForPortalResendModal.first_name} ${studentForPortalResendModal.last_name}.`
+          : "Link de activación generado correctamente.",
+      );
+      setTimeout(() => {
+        setStudentForPortalResendModal(null);
+        setPortalResendButtonState("idle");
+      }, 1000);
+    },
+    onError: (error) => {
+      setPortalResendButtonState("idle");
+      setFeedbackTone("danger");
+      setFeedbackMessage(getErrorMessage(error));
+    },
+  });
+
+  function usePasswordResetFlowForStatus(status: ResolvedPortalInvitationStatus): boolean {
+    return status === "password_pending" || status === "expired" || status === "none";
+  }
+
   function handlePortalButtonPress(student: Student): void {
     const assignedEmail = resolveStudentAssignedEmail(student);
     const status = resolvePortalInvitationStatus(student.portal_access);
     if (!assignedEmail) {
       setFeedbackTone("danger");
       setFeedbackMessage(
-        `No se puede generar un link de activación para ${student.first_name} ${student.last_name} porque no tiene un correo asignado. Agrega un correo desde la ficha del alumno.`,
+        `No se puede generar un link para ${student.first_name} ${student.last_name} porque no tiene un correo asignado. Agrega un correo desde la ficha del alumno.`,
       );
       return;
     }
-    if (status === "expired" || status === "none") {
+    if (usePasswordResetFlowForStatus(status)) {
       setPortalResendButtonState("idle");
       setStudentForPortalResendModal(student);
       return;
@@ -865,8 +930,13 @@ export function StudentsListScreen({ navigation, route }: Props) {
       );
       return;
     }
+    const status = resolvePortalInvitationStatus(studentForPortalResendModal.portal_access);
     setPortalResendButtonState("loading");
-    resendInvitationMutation.mutate(studentForPortalResendModal.id);
+    if (usePasswordResetFlowForStatus(status)) {
+      generatePasswordResetLinkMutation.mutate(studentForPortalResendModal.id);
+    } else {
+      resendInvitationMutation.mutate(studentForPortalResendModal.id);
+    }
   }
 
   async function handleCopyInvitationLink(student: Student): Promise<void> {

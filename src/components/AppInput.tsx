@@ -1,5 +1,15 @@
-import { ReactNode } from "react";
-import { Platform, StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
+import { ReactNode, useMemo, useState } from "react";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  View,
+} from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
 
 import { colors, radius, spacing, typography } from "@/constants/theme";
 
@@ -36,10 +46,54 @@ export function AppInput({
   inputClassName,
   adornmentClassName,
   errorClassName,
+  secureTextEntry,
+  autoComplete,
   ...props
 }: AppInputProps) {
   const baseId =
     nativeID ?? testID ?? `components-app-input-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  const isPasswordField = Boolean(secureTextEntry);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const derivedSecureTextEntry = isPasswordField ? !passwordVisible : undefined;
+
+  const derivedAutoComplete = useMemo(() => {
+    if (autoComplete !== undefined) {
+      return autoComplete;
+    }
+    if (isPasswordField) {
+      return Platform.OS === "web"
+        ? ("new-password" as TextInputProps["autoComplete"])
+        : undefined;
+    }
+    return undefined;
+  }, [autoComplete, isPasswordField]);
+
+  const showEyeToggle = isPasswordField;
+
+  const resolvedRightAdornment: ReactNode = rightAdornment ?? (
+    showEyeToggle ? (
+      <Pressable
+        nativeID={`${baseId}-eye-toggle`}
+        testID={`${baseId}-eye-toggle`}
+        onPress={() => setPasswordVisible((v) => !v)}
+        android_ripple={{ borderless: true, color: colors.textMuted, radius: 18 }}
+        hitSlop={8}
+        aria-label={passwordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        style={({ pressed }) => [
+          styles.eyeButton,
+          pressed && Platform.OS !== "android" ? styles.eyeButtonPressed : null,
+        ]}
+      >
+        <Ionicons
+          name={passwordVisible ? "eye-off" : "eye"}
+          size={18}
+          color={colors.textMuted}
+        />
+      </Pressable>
+    ) : null
+  );
 
   return (
     <View
@@ -89,9 +143,11 @@ export function AppInput({
               inputClassName ?? baseId
             )
           )}
+          secureTextEntry={derivedSecureTextEntry}
+          autoComplete={derivedAutoComplete}
           {...props}
         />
-        {rightAdornment ? (
+        {resolvedRightAdornment ? (
           <View
             nativeID={`${baseId}-adornment`}
             style={styles.adornment}
@@ -103,7 +159,7 @@ export function AppInput({
               )
             )}
           >
-            {rightAdornment}
+            {resolvedRightAdornment}
           </View>
         ) : null}
       </View>
@@ -161,6 +217,18 @@ const styles = StyleSheet.create({
   },
   adornment: {
     paddingRight: spacing.md,
+  },
+  eyeButton: {
+    alignItems: "center",
+    height: 36,
+    justifyContent: "center",
+    minWidth: 36,
+    paddingHorizontal: 6,
+    borderRadius: radius.md,
+  },
+  eyeButtonPressed: {
+    backgroundColor: colors.border,
+    opacity: 0.8,
   },
   error: {
     color: colors.danger,

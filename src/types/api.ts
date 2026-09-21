@@ -93,6 +93,40 @@ export function isStudentInvitationRedeemableStatus(
   return STUDENT_INVITATION_REDEEMABLE_STATUSES.includes(status);
 }
 
+export type StudentPasswordResetStatus = "valid" | "invalid" | "expired" | "used";
+
+export interface StudentPasswordResetPreviewResponse {
+  status: StudentPasswordResetStatus;
+  message?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  photo_url?: string | null;
+  suggested_email?: string | null;
+  dojo_name?: string | null;
+  expires_at?: string | null;
+}
+
+export const STUDENT_PASSWORD_RESET_REDEEMABLE_STATUSES: StudentPasswordResetStatus[] = ["valid"];
+
+export function isStudentPasswordResetRedeemableStatus(
+  status: StudentPasswordResetStatus
+): status is (typeof STUDENT_PASSWORD_RESET_REDEEMABLE_STATUSES)[number] {
+  return STUDENT_PASSWORD_RESET_REDEEMABLE_STATUSES.includes(status);
+}
+
+export interface StudentPasswordResetConfirmPayload {
+  token: string;
+  new_password: string;
+  confirm_password: string;
+  accept_terms: boolean;
+}
+
+export interface StudentPasswordResetConfirmResponse {
+  status: "ok" | string;
+  user_email: string;
+  message?: string;
+}
+
 export interface MyPasswordChangePayload {
   current_password: string;
   new_password: string;
@@ -293,6 +327,7 @@ export type StudentPortalInvitationStatus =
   | "pending"
   | "expired"
   | "used"
+  | "password_pending"
   | "linked";
 
 export interface StudentPortalAccessStatus {

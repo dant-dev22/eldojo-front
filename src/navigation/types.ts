@@ -12,6 +12,7 @@ export type AuthStackParamList = {
   ConfirmAccount: undefined;
   ActivateStudent: undefined;
   ActivateAccount: undefined;
+  ResetStudentPassword: undefined;
 };
 
 export type AdminStackParamList = {
