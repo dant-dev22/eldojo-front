@@ -21,29 +21,19 @@ log "Limpiando $DIST_ADMIN..."
 rm -rf "$DIST_ADMIN"
 mkdir -p "$DIST_ADMIN"
 
-# Build condicional admin (usa cross-env del package.json + expo export web --output-dir)
-# Importante: SOURCE .env para exportar EXPO_PUBLIC_* vars a npx expo export
-# cross-env NO lee archivos .env, solo pasa vars; por eso cargamos .env + heredamos + lo re-declaramosen cross-env
+# Build admin: usa script package.json build:web:admin (cross-env + expo export --output-dir dist-admin/)
 log "Cargando $PROJECT_ROOT/.env y exportando EXPO_PUBLIC_* ..."
 set -a
 # shellcheck disable=SC1091
 [[ -f "$PROJECT_ROOT/.env" ]] && source "$PROJECT_ROOT/.env"
 set +a
-# Asegurar EXPO_PUBLIC_APP_MODE=admin (override si el .env lo tuviera diferente)
 export EXPO_PUBLIC_APP_MODE=admin
 log "  EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-<not set>}"
 log "  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN=${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-<not set>}"
 log "  EXPO_PUBLIC_APP_WEB_ORIGIN=${EXPO_PUBLIC_APP_WEB_ORIGIN:-<not set>}"
 log "  EXPO_PUBLIC_APP_MODE=${EXPO_PUBLIC_APP_MODE:-<not set>}"
-log "Build EXPO_PUBLIC_APP_MODE=admin..."
-npx cross-env \
-  EXPO_PUBLIC_APP_MODE="${EXPO_PUBLIC_APP_MODE:-admin}" \
-  EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-}" \
-  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN="${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-}" \
-  EXPO_PUBLIC_APP_WEB_ORIGIN="${EXPO_PUBLIC_APP_WEB_ORIGIN:-}" \
-  EXPO_PUBLIC_SESSION_COOKIE_DOMAIN="${EXPO_PUBLIC_SESSION_COOKIE_DOMAIN:-}" \
-  EXPO_PUBLIC_ENVIRONMENT="${EXPO_PUBLIC_ENVIRONMENT:-}" \
-  npx expo export --platform web --output-dir "$DIST_ADMIN" >> "$LOG_FILE" 2>&1
+log "Build admin via npm run build:web:admin → $DIST_ADMIN ..."
+npm run --silent build:web:admin >> "$LOG_FILE" 2>&1
 
 [[ -f "$DIST_ADMIN/index.html" ]] || { log "❌ FATAL build admin: falta dist-admin/index.html"; exit 1; }
 SIZE_INDEX=$(stat -c%s "$DIST_ADMIN/index.html" 2>/dev/null || echo 0)

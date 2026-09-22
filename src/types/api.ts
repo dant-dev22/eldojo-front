@@ -411,6 +411,7 @@ export interface StudentCreatePayload {
   guardian_phone?: string | null;
   phone?: string | null;
   email?: string | null;
+  password?: string | null;
   is_minor?: boolean;
   notes?: string | null;
   rd_victorias?: number;
@@ -441,6 +442,7 @@ export interface StudentUpdatePayload {
   guardian_phone?: string | null;
   phone?: string | null;
   email?: string | null;
+  password?: string | null;
   is_minor?: boolean;
   notes?: string | null;
   rd_victorias?: number;

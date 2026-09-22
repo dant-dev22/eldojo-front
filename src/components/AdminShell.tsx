@@ -411,7 +411,17 @@ export function AdminShell({
             </Pressable>
           ) : null}
           <AdminUserMenu
-            actions={[{ label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" }]}
+            actions={[
+              {
+                label: "Ver sitio público",
+                onPress: () => {
+                  if (typeof window !== "undefined") {
+                    window.location.assign("https://eldojo.tech");
+                  }
+                },
+              },
+              { label: "Cerrar sesion", onPress: requestSignOut, tone: "danger" },
+            ]}
             user={user}
           />
           {headerActions}

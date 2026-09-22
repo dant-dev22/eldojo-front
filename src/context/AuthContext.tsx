@@ -14,6 +14,13 @@ import type {
 } from "@/types/api";
 import { buildAppUrl, buildPublicUrl, getDomainConfig } from "@/utils/domains";
 import {
+  redirectAfterLoginByRole,
+  redirectToPublicLogin as redirectHelperToPublicLogin,
+  redirectToAdminDashboard,
+  redirectToStudentPortal,
+  readUrlQueryParam,
+} from "@/utils/redirectByRole";
+import {
   clearSessionAuthenticated,
   hardClearSessionHint,
   writeSessionAuthenticated,
@@ -309,19 +316,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
+        if (cfg.isAppHostname && !cfg.isPublicHostname && !cfg.isStudentHostname) {
           return { redirectedToApp: false };
         }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("", appendCacheBuster({
-          session_ticket: ticketResponse.ticket,
-          login_fresh: "1",
-        }));
-        if (typeof window !== "undefined") {
-          navigateWithBypass(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
+        redirectAfterLoginByRole(response.user.role, { fresh: true });
+        return { redirectedToApp: true };
       },
       devSignInByEmail: async (email: string) => {
         const response = await authApi.devLoginByEmail(email);
@@ -359,20 +359,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
+        if (cfg.isAppHostname && !cfg.isPublicHostname) {
           return { redirectedToApp: false };
         }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", appendCacheBuster({
-          session_ticket: ticketResponse.ticket,
-          welcome: "1",
-          login_fresh: "1",
-        }));
-        if (typeof window !== "undefined") {
-          navigateWithBypass(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
+        redirectAfterLoginByRole(response.user.role, { fresh: true, welcome: true });
+        return { redirectedToApp: true };
       },
       redeemPendingAcademySession: async (pendingRegistration) => {
         const cfg = getDomainConfig();
@@ -395,19 +387,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname) {
+        if (cfg.isAppHostname && !cfg.isPublicHostname) {
           return { redirectedToApp: false };
         }
 
-        const ticketResponse = await authApi.createSessionSyncTicket();
-        const appRedirectUrl = buildAppUrl("admin", appendCacheBuster({
-          session_ticket: ticketResponse.ticket,
-          login_fresh: "1",
-        }));
-        if (typeof window !== "undefined") {
-          navigateWithBypass(appRedirectUrl);
-        }
-        return { redirectedToApp: true, appRedirectUrl };
+        redirectToAdminDashboard({ fresh: true });
+        return { redirectedToApp: true };
       },
       resendAcademyConfirmation: async (email) =>
         authApi.resendAcademyConfirmation({ email: email.trim().toLowerCase() }),
@@ -429,17 +414,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("unauthenticated");
         setJustLoggedIn(false);
 
-        if (redirectToPublic && typeof window !== "undefined") {
-          if (cfg.isAppHostname) {
-            navigateWithBypass(
-              buildPublicUrl("iniciar-sesion", appendCacheBuster({
-                clear_session: "1",
-                signed_out: "1",
-              }))
-            );
-          } else {
-            redirectToPublicLogin(undefined, { clear_session: "1", signed_out: "1" });
-          }
+        if (redirectToPublic) {
+          redirectHelperToPublicLogin({ signedOut: true });
         }
       },
       completeFirstTimeTutorial: async () => {
@@ -506,15 +482,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname && !cfg.isPublicHostname) {
+        if (cfg.isStudentHostname || (cfg.isAppHostname && !cfg.isPublicHostname)) {
           return { redirectedToApp: false };
         }
 
-        if (typeof window !== "undefined") {
-          const homePath = "/";
-          navigateWithBypass(homePath);
-        }
-        return { redirectedToApp: false };
+        redirectToStudentPortal({ fresh: true, welcome: true });
+        return { redirectedToApp: true };
       },
       finalizeStudentActivation: async (response) => {
         const cfg = getDomainConfig();
@@ -533,6 +506,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
         setJustLoggedIn(true);
         updateHintForUser(response.user);
+        redirectToStudentPortal({ fresh: true, welcome: true });
       },
       redirectToPublicLogin,
       redirectToPublicHome,

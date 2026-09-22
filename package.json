@@ -9,9 +9,14 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "clean:web": "rimraf dist",
-    "build:web:admin": "cross-env EXPO_PUBLIC_APP_MODE=admin expo export --platform web",
-    "build:web:student": "cross-env EXPO_PUBLIC_APP_MODE=student expo export --platform web",
+    "clean:web": "rimraf dist dist-admin dist-student",
+    "build:web:public": "cross-env EXPO_PUBLIC_APP_MODE=public expo export --platform web --output-dir dist",
+    "build:web:admin": "cross-env EXPO_PUBLIC_APP_MODE=admin expo export --platform web --output-dir dist-admin",
+    "build:web:student": "cross-env EXPO_PUBLIC_APP_MODE=student expo export --platform web --output-dir dist-student",
+    "dev:public": "cross-env EXPO_PUBLIC_APP_MODE=public expo start --web",
+    "dev:admin": "cross-env EXPO_PUBLIC_APP_MODE=admin expo start --web",
+    "dev:student": "cross-env EXPO_PUBLIC_APP_MODE=student expo start --web",
+    "dev:all": "npx concurrently -k -n PUB,ADM,STU -c red,blue,green \"npm:dev:public\" \"npm:dev:admin\" \"npm:dev:student\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

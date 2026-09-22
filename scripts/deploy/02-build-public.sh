@@ -27,22 +27,24 @@ else
   npm install --no-audit --no-fund --loglevel=error >> "$LOG_FILE" 2>&1
 fi
 
-# 2.2 Clean + build público (usando scripts package.json)
+# 2.2 Clean + build público (usando scripts package.json build:web:public → guarda en dist/ )
 log "Limpiando $DIST_PUBLIC..."
 npm run --silent clean:web 2>/dev/null || rm -rf "$DIST_PUBLIC"
 
-# Importante: SOURCE .env para exportar EXPO_PUBLIC_* vars a npm run build:web
+# Importante: SOURCE .env para exportar EXPO_PUBLIC_* vars a npm run build
 log "Cargando $PROJECT_ROOT/.env y exportando EXPO_PUBLIC_* ..."
 set -a
 # shellcheck disable=SC1091
 [[ -f "$PROJECT_ROOT/.env" ]] && source "$PROJECT_ROOT/.env"
 set +a
+export EXPO_PUBLIC_APP_MODE=public
 log "  EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-<not set>}"
 log "  EXPO_PUBLIC_PUBLIC_WEB_ORIGIN=${EXPO_PUBLIC_PUBLIC_WEB_ORIGIN:-<not set>}"
 log "  EXPO_PUBLIC_APP_WEB_ORIGIN=${EXPO_PUBLIC_APP_WEB_ORIGIN:-<not set>}"
+log "  EXPO_PUBLIC_APP_MODE=${EXPO_PUBLIC_APP_MODE:-<not set>}"
 
-log "Build web público (build:web)..."
-npm run --silent build:web >> "$LOG_FILE" 2>&1
+log "Build web público (build:web:public → dist/)..."
+npm run --silent build:web:public >> "$LOG_FILE" 2>&1
 
 # 2.3 Sanity check build
 [[ -f "$DIST_PUBLIC/index.html" ]] || { log "❌ FATAL build público: falta dist/index.html"; exit 1; }

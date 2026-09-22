@@ -104,8 +104,8 @@ const FORM_PAGES: FormPage[] = [
   {
     id: "profile",
     title: "Perfil",
-    description: "Captura contexto deportivo, grado actual, teléfono, email y datos generales del ingreso.",
-    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId", "belt", "phone", "email"],
+    description: "Captura contexto deportivo, grado actual, teléfono, email, contraseña y datos generales del ingreso.",
+    fields: ["birthPlace", "enrollmentDate", "heightCm", "primaryClassId", "belt", "phone", "email", "password"],
   },
   {
     id: "billing",
@@ -412,6 +412,7 @@ function createEmptyForm(defaultBranchId?: number | null): StudentFormState {
     guardianPhone: "",
     phone: "",
     email: "",
+    password: "",
     isMinor: false,
     notes: "",
     emergencyContact: createEmptyEmergencyContact(),
@@ -451,6 +452,7 @@ function toFormState(student: Student): StudentFormState {
     guardianPhone: student.guardian_phone ?? "",
     phone: student.phone ?? "",
     email: student.email ?? "",
+    password: "",
     isMinor: Boolean(student.is_minor),
     notes: student.notes ?? "",
     emergencyContact: {
@@ -570,13 +572,14 @@ function buildStudentPayload(
     guardian_phone: form.guardianPhone.trim() || null,
     phone: form.phone.trim() || null,
     email: form.email.trim() || null,
+    password: form.password.trim() || null,
     is_minor: form.isMinor,
     notes: form.notes.trim() || null,
   };
 }
 
 function buildStudentUpdatePayload(form: StudentFormState): StudentUpdatePayload {
-  return {
+  const payload: StudentUpdatePayload = {
     branch_id: Number(form.branchId),
     first_name: form.firstName.trim(),
     last_name: form.lastName.trim(),
@@ -599,6 +602,10 @@ function buildStudentUpdatePayload(form: StudentFormState): StudentUpdatePayload
     is_minor: form.isMinor,
     notes: form.notes.trim() || null,
   };
+  if (form.password && form.password.trim().length >= 8) {
+    payload.password = form.password.trim();
+  }
+  return payload;
 }
 
 function validateStudentForm(form: StudentFormState): FormErrors {
@@ -636,6 +643,9 @@ function validateStudentForm(form: StudentFormState): FormErrors {
   }
   if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = "Ingresa un email válido.";
+  }
+  if (form.password.trim() && form.password.trim().length < 8) {
+    errors.password = "La contraseña debe tener al menos 8 caracteres.";
   }
 
   return errors;
@@ -1751,6 +1761,20 @@ export function StudentsListScreen({ navigation, route }: Props) {
                   </View>
                 </View>
 
+                <View nativeID="screens-admin-students-list-form-password-block" style={styles.passwordBlock} testID="screens-admin-students-list-form-password-block">
+                  <AppInput
+                    autoCapitalize="none"
+                    error={formErrors.password}
+                    label="Contraseña del alumno"
+                    nativeID="screens-admin-students-list-form-password-input"
+                    onChangeText={(value) => handleUpdateField("password", value)}
+                    placeholder="Si la dejas vacía, el alumno recibirá un link para crearla"
+                    secureTextEntry
+                    testID="screens-admin-students-list-form-password-input"
+                    value={form.password}
+                  />
+                </View>
+
                 <View style={styles.formBeltBlock}>
                   <BeltSelector
                     enabled={Boolean(organizationId)}
@@ -2282,6 +2306,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
               <SummaryRow idPrefix="screens-admin-students-list-summary-birth" label="Nacimiento" value={`${form.birthDate} · ${form.birthPlace}`} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-phone" label="Teléfono" value={form.phone || "Sin capturar"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-email" label="Email" value={form.email || "Sin capturar"} />
+              <SummaryRow idPrefix="screens-admin-students-list-summary-password" label="Contraseña" value={form.password && form.password.trim().length >= 8 ? "Establecida" : "Sin capturar (se envía link)"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-minor" label="Menor de edad" value={form.isMinor ? "Sí" : "No"} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-enrollment" label="Inscripción" value={form.enrollmentDate} />
               <SummaryRow idPrefix="screens-admin-students-list-summary-class" label="Clase principal" value={selectedClass?.name ?? "Sin clase"} />
@@ -3974,6 +3999,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: "600",
+  },
+  passwordBlock: {
+    marginTop: spacing.md,
+    width: "100%",
   },
   formBeltBlock: {
     marginTop: spacing.lg,

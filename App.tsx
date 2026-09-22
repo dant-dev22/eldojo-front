@@ -7,6 +7,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Platform } from "react-native";
 
 import { AppNavigator } from "./src/navigation/AppNavigator";
+import { PublicNavigator } from "./src/navigation/PublicNavigator";
+import { AdminNavigator } from "./src/navigation/AdminNavigator";
+import { StudentNavigator } from "./src/navigation/StudentNavigator";
+import { SimpleAuthProvider, getAppMode } from "./src/context/SimpleAuthProvider";
+import { SimpleAuthGate } from "./src/components/SimpleAuthGate";
 import { AuthProvider } from "./src/context/AuthContext";
 import { initEruda } from "./src/utils/debug";
 
@@ -51,6 +56,14 @@ const queryClient = new QueryClient({
   },
 });
 
+function resolveSelectedMode(): "public" | "admin" | "student" | "native" {
+  const envMode = String(process.env.EXPO_PUBLIC_APP_MODE ?? "").trim().toLowerCase();
+  if (envMode === "admin" || envMode === "student") return envMode;
+  if (envMode === "public") return "public";
+  if (Platform.OS !== "web") return "native";
+  return getAppMode();
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -62,13 +75,64 @@ export default function App() {
     return null;
   }
 
+  const selectedMode = resolveSelectedMode();
+
+  if (selectedMode === "native") {
+    return (
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <StatusBar style="dark" />
+            <AppNavigator />
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (selectedMode === "public") {
+    return (
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <SimpleAuthProvider forceAppMode="public">
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <PublicNavigator />
+            </AuthProvider>
+          </SimpleAuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (selectedMode === "admin") {
+    return (
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <SimpleAuthProvider forceAppMode="admin">
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <SimpleAuthGate requiredRole="gym_admin">
+                <AdminNavigator />
+              </SimpleAuthGate>
+            </AuthProvider>
+          </SimpleAuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <StatusBar style="dark" />
-          <AppNavigator />
-        </AuthProvider>
+        <SimpleAuthProvider forceAppMode="student">
+          <AuthProvider>
+            <StatusBar style="dark" />
+            <SimpleAuthGate requiredRole="student">
+              <StudentNavigator />
+            </SimpleAuthGate>
+          </AuthProvider>
+        </SimpleAuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

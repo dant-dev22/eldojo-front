@@ -1,0 +1,253 @@
+# =============================================================
+# ElDojo Multi-App Nginx Config Template
+# 3 server blocks: eldojo.tech (public) | app.eldojo.tech (admin) | mi.eldojo.tech (student)
+#
+# Aplicar en /etc/nginx/sites-available/eldojo-multiapp.conf
+# Habilitar: ln -sf /etc/nginx/sites-available/eldojo-multiapp.conf /etc/nginx/sites-enabled/
+# Validar:  nginx -t
+# Aplicar:   systemctl reload nginx
+# =============================================================
+
+upstream api_backend {
+    server 127.0.0.1:5000;
+    keepalive 32;
+}
+
+# ===================== ELDJOJO.TECH (PÚBLICO + LOGIN) =====================
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name eldojo.tech www.eldojo.tech;
+
+    # ===== Reemplazar por rutas reales Certbot =====
+    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
+    # include             /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /var/www/eldojo/dist;
+    index index.html;
+
+    client_max_body_size 20M;
+    charset utf-8;
+
+    # ================= Logs =================
+    access_log /var/log/nginx/eldojo.public.access.log;
+    error_log  /var/log/nginx/eldojo.public.error.log warn;
+
+    # ================= Headers globales =================
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=()" always;
+
+    # ================= API / Backend (FastAPI :5000) =================
+    location /api/ {
+        proxy_pass         http://api_backend/api/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Real-IP          $remote_addr;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+        proxy_set_header   X-Forwarded-Host   $host;
+        proxy_set_header   Upgrade            $http_upgrade;
+        proxy_set_header   Connection         "upgrade";
+        proxy_connect_timeout 30s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+        # CORS permitido para los 3 dominios
+        set $cors_origin "";
+        if ($http_origin ~* ^https?://(eldojo\.tech|www\.eldojo\.tech|app\.eldojo\.tech|admin\.eldojo\.tech|mi\.eldojo\.tech)$) {
+            set $cors_origin $http_origin;
+        }
+        add_header Access-Control-Allow-Origin  $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET,POST,PUT,PATCH,DELETE,OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,X-Requested-With" always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        if ($request_method = OPTIONS) { return 204; }
+    }
+
+    location /docs {
+        proxy_pass         http://api_backend/docs;
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Real-IP          $remote_addr;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+    }
+    location /redoc        { proxy_pass http://api_backend/redoc; }
+    location /openapi.json { proxy_pass http://api_backend/openapi.json; }
+
+    location /uploads/ {
+        proxy_pass         http://api_backend/uploads/;
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+    }
+
+    # ================= Attendance pública (ruta sin login) =================
+    location ~ ^/(asistencia|aforo|marcar) {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ================= Activaciones / confirmaciones =================
+    location ~ ^/(confirmar|activar|restablecer) {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ================= Archivos estáticos =================
+    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # ================= SPA fallback PÚBLICO =================
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# ================= APP.ELDOJO.TECH (ADMIN DASHBOARD) =================
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name app.eldojo.tech admin.eldojo.tech;
+
+    # ===== Reemplazar por rutas reales Certbot =====
+    # ssl_certificate     /etc/letsencrypt/live/app.eldojo.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/app.eldojo.tech/privkey.pem;
+    # include             /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /var/www/eldojo/dist-admin;
+    index index.html;
+
+    client_max_body_size 20M;
+    charset utf-8;
+
+    access_log /var/log/nginx/eldojo.admin.access.log;
+    error_log  /var/log/nginx/eldojo.admin.error.log warn;
+
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=()" always;
+
+    # ================= API / Backend (mismo upstream) =================
+    location /api/ {
+        proxy_pass         http://api_backend/api/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Real-IP          $remote_addr;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+        proxy_set_header   X-Forwarded-Host   $host;
+        proxy_set_header   Upgrade            $http_upgrade;
+        proxy_set_header   Connection         "upgrade";
+        set $cors_origin "";
+        if ($http_origin ~* ^https?://(eldojo\.tech|www\.eldojo\.tech|app\.eldojo\.tech|admin\.eldojo\.tech|mi\.eldojo\.tech)$) {
+            set $cors_origin $http_origin;
+        }
+        add_header Access-Control-Allow-Origin  $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET,POST,PUT,PATCH,DELETE,OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,X-Requested-With" always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        if ($request_method = OPTIONS) { return 204; }
+    }
+
+    location /docs         { proxy_pass http://api_backend/docs; }
+    location /redoc        { proxy_pass http://api_backend/redoc; }
+    location /openapi.json { proxy_pass http://api_backend/openapi.json; }
+    location /uploads/     { proxy_pass http://api_backend/uploads/; }
+
+    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # ================= SPA fallback ADMIN =================
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# ================= MI.ELDOJO.TECH (PORTAL ALUMNO) =================
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name mi.eldojo.tech;
+
+    # ===== Reemplazar por rutas reales Certbot =====
+    # ssl_certificate     /etc/letsencrypt/live/mi.eldojo.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/mi.eldojo.tech/privkey.pem;
+    # include             /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /var/www/eldojo/dist-student;
+    index index.html;
+
+    client_max_body_size 20M;
+    charset utf-8;
+
+    access_log /var/log/nginx/eldojo.student.access.log;
+    error_log  /var/log/nginx/eldojo.student.error.log warn;
+
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=()" always;
+
+    # ================= API / Backend =================
+    location /api/ {
+        proxy_pass         http://api_backend/api/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Real-IP          $remote_addr;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+        proxy_set_header   X-Forwarded-Host   $host;
+        proxy_set_header   Upgrade            $http_upgrade;
+        proxy_set_header   Connection         "upgrade";
+        set $cors_origin "";
+        if ($http_origin ~* ^https?://(eldojo\.tech|www\.eldojo\.tech|app\.eldojo\.tech|admin\.eldojo\.tech|mi\.eldojo\.tech)$) {
+            set $cors_origin $http_origin;
+        }
+        add_header Access-Control-Allow-Origin  $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET,POST,PUT,PATCH,DELETE,OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization,Content-Type,Accept,X-Requested-With" always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        if ($request_method = OPTIONS) { return 204; }
+    }
+
+    location /docs         { proxy_pass http://api_backend/docs; }
+    location /redoc        { proxy_pass http://api_backend/redoc; }
+    location /openapi.json { proxy_pass http://api_backend/openapi.json; }
+    location /uploads/     { proxy_pass http://api_backend/uploads/; }
+
+    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # ================= SPA fallback STUDENT =================
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+# ================= Redirect HTTP → HTTPS para los 3 dominios =================
+server {
+    listen 80;
+    listen [::]:80;
+    server_name eldojo.tech www.eldojo.tech app.eldojo.tech admin.eldojo.tech mi.eldojo.tech;
+
+    # ===== Certbot http challenge =====
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

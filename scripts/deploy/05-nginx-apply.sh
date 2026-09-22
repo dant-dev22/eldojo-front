@@ -25,6 +25,29 @@ for d in "${DIRS[@]}"; do
   find "$full" -type f -exec chmod 644 {} \;
 done
 
+# Aplicar plantilla nginx multiapp a sites-enabled (backup primero + dry-run)
+NGINX_TEMPLATE="$SCRIPT_DIR/nginx-eldojo-multiapp.conf.template"
+NGINX_AVAILABLE="/etc/nginx/sites-available/eldojo-multiapp.conf"
+NGINX_ENABLED="/etc/nginx/sites-enabled/eldojo-multiapp.conf"
+NGINX_BACKUP_DIR="/etc/nginx/sites-enabled.bak.$(date +%Y%m%d-%H%M%S)"
+
+if [[ -f "$NGINX_TEMPLATE" ]]; then
+  log "📄 Plantilla nginx detectada: $NGINX_TEMPLATE"
+  if [[ -d "/etc/nginx/sites-enabled" ]]; then
+    log "💾 Backup sites-enabled actual → $NGINX_BACKUP_DIR"
+    mkdir -p "$NGINX_BACKUP_DIR"
+    cp -a /etc/nginx/sites-enabled/* "$NGINX_BACKUP_DIR/" 2>/dev/null || true
+    log "📝 Copiar plantilla a sites-available y activar symlink"
+    cp "$NGINX_TEMPLATE" "$NGINX_AVAILABLE"
+    ln -sf "$NGINX_AVAILABLE" "$NGINX_ENABLED"
+    log "⚠️  Comprueba manualmente server_names y cert paths SSL en $NGINX_AVAILABLE antes de nginx -t si usaste la plantilla por primera vez."
+  else
+    log "ℹ️  /etc/nginx/sites-enabled no existe en este host — se omite aplicar plantilla nginx (modo local?)"
+  fi
+else
+  log "ℹ️  Sin plantilla nginx en scripts/deploy/nginx-eldojo-multiapp.conf.template — se asume que la conf ya está deployada."
+fi
+
 # Sync filesystem para no tener writes pendientes antes de reload
 sync; sleep 0.3
 

@@ -17,6 +17,7 @@ import { Screen } from "@/components/Screen";
 import { StatusView } from "@/components/StatusView";
 import { authApi } from "@/api/authApi";
 import { getErrorMessage } from "@/api/http";
+import { redirectToPublicLogin } from "@/utils/redirectByRole";
 import {
   agedWood,
   colors,
@@ -165,14 +166,13 @@ export function StudentPasswordResetScreen() {
   }
 
   async function handleGoHome() {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      window.location.assign(HOME_URL);
-      return;
-    }
-    try {
-      await Linking.openURL(HOME_URL);
-    } catch {
-      /* noop */
+    redirectToPublicLogin({ passwordReset: true });
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      try {
+        await Linking.openURL(HOME_URL);
+      } catch {
+        /* noop */
+      }
     }
   }
 
@@ -260,11 +260,17 @@ export function StudentPasswordResetScreen() {
                   hitSlop={8}
                   nativeID={`${SCREEN_ID}-go-home-link`}
                   onPress={handleGoHome}
-                  style={({ pressed, hovered }) => [
-                    styles.goHomeLink,
-                    pressed ? styles.goHomeLinkPressed : null,
-                    hovered ? styles.goHomeLinkHovered : null,
-                  ]}
+                  style={(state) => {
+                    const pressed = Boolean((state as { pressed?: boolean }).pressed);
+                    const hovered = Boolean(
+                      (state as { hovered?: boolean }).hovered
+                    );
+                    return [
+                      styles.goHomeLink,
+                      pressed ? styles.goHomeLinkPressed : null,
+                      hovered ? styles.goHomeLinkHovered : null,
+                    ];
+                  }}
                   testID={`${SCREEN_ID}-go-home-link`}
                 >
                   <Text style={styles.goHomeLinkText}>

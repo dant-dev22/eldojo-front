@@ -84,6 +84,7 @@ export type StudentFormState = {
   guardianPhone: string;
   phone: string;
   email: string;
+  password: string;
   isMinor: boolean;
   notes: string;
   emergencyContact: EmergencyContactFormState;
