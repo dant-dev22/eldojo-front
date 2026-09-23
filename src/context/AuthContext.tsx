@@ -1,5 +1,6 @@
 import axios from "axios";
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
 
 import { authApi } from "@/api/authApi";
 import { handleUnauthorized, registerUnauthorizedHandler } from "@/api/sessionManager";
@@ -265,6 +266,71 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     void restoreSession();
   }, []);
+
+  const extraResyncStarted = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    if (status === "loading") return;
+    if (status === "authenticated" && user) return;
+    if (extraResyncStarted.current) return;
+    extraResyncStarted.current = true;
+
+    let cancelled = false;
+    let attempt = 0;
+    const maxAttempts = 8;
+    const eachMs = 250;
+
+    const trySync = async () => {
+      const [token, storedUser] = await Promise.all([getAccessToken(), getStoredUser()]);
+      if (!token || !storedUser) return false;
+
+      setShowPostConfirmation(false);
+      setUser(storedUser);
+      setJustLoggedIn(true);
+      try {
+        const freshUser = await authApi.getCurrentUser();
+        if (isValidAuthenticatedRole(freshUser)) {
+          const [accessToken, storedRefreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
+          if (accessToken && storedRefreshToken) {
+            const tok = {
+              accessToken,
+              refreshToken: storedRefreshToken,
+              expiresIn: 0,
+              refreshExpiresIn: 0,
+            };
+            await saveSession(tok, freshUser);
+          }
+          updateHintForUser(freshUser);
+          setUser(freshUser);
+          setStatus("authenticated");
+          return true;
+        }
+      } catch {
+        /* fallthrough: keep stored user */
+      }
+      if (isValidAuthenticatedRole(storedUser)) {
+        setStatus("authenticated");
+        updateHintForUser(storedUser);
+        return true;
+      }
+      return false;
+    };
+
+    const run = async () => {
+      while (!cancelled && attempt < maxAttempts) {
+        attempt += 1;
+        const ok = await trySync();
+        if (ok || cancelled) return;
+        await new Promise((r) => setTimeout(r, eachMs));
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, user]);
 
   function appendCacheBuster(query: Record<string, string | undefined> | undefined): Record<string, string | undefined> {
     const out: Record<string, string | undefined> = { ...(query || {}) };

@@ -137,6 +137,7 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const restoreStarted = useRef<boolean>(false);
+  const restoreStartedExtraSync = useRef<boolean>(false);
 
   const appMode = appModeFromEnv;
 
@@ -311,6 +312,52 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
     void restoreSession();
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    if (!ready || user !== null) return;
+    if (restoreStartedExtraSync.current) return;
+    restoreStartedExtraSync.current = true;
+
+    let cancelled = false;
+    let attempt = 0;
+    const maxAttempts = 6;
+    const intervalMs = 300;
+
+    const tryResyncFromStorage = async () => {
+      attempt += 1;
+      const [token, storedUser] = await Promise.all([
+        storageGetAccessToken(),
+        storageGetStoredUser(),
+      ]);
+      if (token && storedUser) {
+        setAccessToken(token);
+        setUser(storedUser);
+        setError(null);
+        try {
+          const refreshed = await authApi.getCurrentUser();
+          if (refreshed) setUser(refreshed);
+        } catch {
+          /* keep cached */
+        }
+        return true;
+      }
+      return false;
+    };
+
+    const run = async () => {
+      while (!cancelled && attempt < maxAttempts) {
+        const ok = await tryResyncFromStorage();
+        if (ok || cancelled) return;
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, user]);
 
   const value: SimpleAuthContextValue = useMemo<SimpleAuthContextValue>(
     () => ({
