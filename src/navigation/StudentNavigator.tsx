@@ -16,7 +16,7 @@ function buildStudentLinkingPrefixes(): string[] {
   const prefixes: string[] = [];
   try {
     const cfg = getDomainConfig();
-    if (cfg.publicWebOrigin) prefixes.push(cfg.publicWebOrigin);
+    if (cfg.studentWebOrigin) prefixes.push(cfg.studentWebOrigin);
   } catch {
     /* noop */
   }

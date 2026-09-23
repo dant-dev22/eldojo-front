@@ -23,6 +23,7 @@ import {
   getAppRoleFromHostname,
   PUBLIC_WEB_ORIGIN,
   APP_WEB_ORIGIN,
+  STUDENT_WEB_ORIGIN,
 } from "@/utils/domains";
 import { isGymAdminRole, isStudentRole } from "@/utils/roles";
 
@@ -41,7 +42,7 @@ export interface SimpleAuthContextValue {
   logout: (redirectToPublic?: boolean) => Promise<void>;
   refreshUser: () => Promise<User | null>;
   navigateToPublicOrigin: (path?: string, queryParams?: Record<string, string>) => void;
-  redirectAfterLoginByRole: (role: UserRole, options?: { fresh?: boolean; welcome?: boolean }) => void;
+  redirectAfterLoginByRole: (role: UserRole, options?: { fresh?: boolean; welcome?: boolean }) => Promise<void>;
 }
 
 const SimpleAuthContext = createContext<SimpleAuthContextValue | null>(null);
@@ -77,6 +78,18 @@ function buildPublicOriginUrl(path: string = "/", queryParams?: Record<string, s
 
 function buildAppOriginUrl(path: string = "/", queryParams?: Record<string, string>): string {
   const base = APP_WEB_ORIGIN ?? PUBLIC_WEB_ORIGIN ?? "/";
+  const qs = queryParams && Object.keys(queryParams).length
+    ? "?" + new URLSearchParams(queryParams).toString()
+    : "";
+  const normalizedPath = path.startsWith("/") ? path : "/" + path;
+  if (base.startsWith("http")) {
+    return base + normalizedPath + qs;
+  }
+  return normalizedPath + qs;
+}
+
+function buildStudentOriginUrl(path: string = "/", queryParams?: Record<string, string>): string {
+  const base = STUDENT_WEB_ORIGIN ?? PUBLIC_WEB_ORIGIN ?? "/";
   const qs = queryParams && Object.keys(queryParams).length
     ? "?" + new URLSearchParams(queryParams).toString()
     : "";
@@ -138,6 +151,37 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
   const restoreSession = useCallback(async (): Promise<User | null> => {
     setLoading(true);
     try {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const ticket = params.get("ticket");
+        if (ticket) {
+          try {
+            const redeemed = await authApi.redeemSessionSyncTicket(ticket);
+            const tokens = responseToTokens(redeemed);
+            await storageSaveSession(tokens, redeemed.user);
+            setAccessToken(tokens.accessToken);
+            setUser(redeemed.user);
+            setError(null);
+            params.delete("ticket");
+            const cleanSearch = params.toString();
+            const newUrl = cleanSearch
+              ? `${window.location.pathname}?${cleanSearch}${window.location.hash}`
+              : `${window.location.pathname}${window.location.hash}`;
+            window.history.replaceState({}, "", newUrl);
+            setReady(true);
+            return redeemed.user;
+          } catch (err) {
+            console.warn("[session-ticket] No se pudo canjear ticket:", err instanceof Error ? err.message : err);
+          }
+          params.delete("ticket");
+          const cleanSearch = params.toString();
+          const newUrl = cleanSearch
+            ? `${window.location.pathname}?${cleanSearch}${window.location.hash}`
+            : `${window.location.pathname}${window.location.hash}`;
+          window.history.replaceState({}, "", newUrl);
+        }
+      }
+
       const [token, storedUser] = await Promise.all([
         storageGetAccessToken(),
         storageGetStoredUser(),
@@ -149,19 +193,22 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
         return null;
       }
       setAccessToken(token);
+      let lastUser: User | null = null;
       if (storedUser) {
         setUser(storedUser);
+        lastUser = storedUser;
       }
       try {
         const refreshed = await authApi.getCurrentUser();
         if (refreshed) {
           setUser(refreshed);
+          lastUser = refreshed;
         }
       } catch {
         /* keep cached user if /me fails transiently; auth gate will enforce later */
       }
       setReady(true);
-      return user ?? storedUser;
+      return lastUser;
     } catch (err) {
       setError(err instanceof Error ? err.message : "restore_session_failed");
       setReady(true);
@@ -169,7 +216,7 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const loginWithCredentials = useCallback(
     async (payload: { email: string; password: string }): Promise<LoginResponse> => {
@@ -227,10 +274,16 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
   }, []);
 
   const redirectAfterLoginByRole = useCallback(
-    (role: UserRole, options: { fresh?: boolean; welcome?: boolean } = {}) => {
+    async (role: UserRole, options: { fresh?: boolean; welcome?: boolean } = {}) => {
       const query: Record<string, string> = {};
       if (options?.fresh) query.login_fresh = "1";
       if (options?.welcome) query.welcome = "1";
+      try {
+        const ticketResult = await authApi.createSessionSyncTicket();
+        if (ticketResult?.ticket) query.ticket = ticketResult.ticket;
+      } catch {
+        // fall through sin ticket
+      }
 
       if (isGymAdminRole(role)) {
         const url = buildAppOriginUrl("/admin/overview", query);
@@ -238,7 +291,7 @@ export function SimpleAuthProvider({ children, forceAppMode }: SimpleAuthProvide
         return;
       }
       if (isStudentRole(role)) {
-        const url = buildPublicOriginUrl("/alumno", query);
+        const url = buildStudentOriginUrl("/alumno", query);
         redirectBrowserTo(url);
         return;
       }

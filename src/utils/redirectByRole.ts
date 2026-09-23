@@ -13,6 +13,7 @@ export interface RedirectOptions {
   fromApp?: boolean;
   fromStudent?: boolean;
   fromSite?: boolean;
+  sessionTicket?: string;
   extra?: Record<string, string>;
 }
 
@@ -26,6 +27,7 @@ function buildQuery(options: RedirectOptions = {}): Record<string, string> {
   if (options.fromApp) query.from_app = "1";
   if (options.fromStudent) query.from_student = "1";
   if (options.fromSite) query.from_site = "1";
+  if (options.sessionTicket) query.ticket = options.sessionTicket;
   if (options.extra) {
     Object.entries(options.extra).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") query[k] = String(v);

@@ -85,7 +85,8 @@ interface AuthContextValue {
 }
 
 function isValidAuthenticatedRole(user: User | null | undefined): user is User {
-  return isGymAdminUser(user) || isStudentUser(user);
+  const role = user?.role;
+  return isGymAdminUser(user) || isStudentUser(user) || role === "super_admin";
 }
 
 function getAccessMessageForRole(user: User | null): string {
@@ -162,6 +163,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const restoreSession = async () => {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const ticket = params.get("ticket");
+        if (ticket) {
+          try {
+            const response = await authApi.redeemSessionSyncTicket(ticket);
+            if (isValidAuthenticatedRole(response.user)) {
+              hardClearAllEldojoItems();
+              const cfg = getDomainConfig();
+              hardClearSessionHint(cfg.sessionCookieDomain);
+              await clearPendingAcademyRegistration();
+              await saveSession(mapTokens(response), response.user);
+              updateHintForUser(response.user);
+              setUser(response.user);
+              setShowPostConfirmation(false);
+              setStatus("authenticated");
+              setJustLoggedIn(true);
+              params.delete("ticket");
+              const cleanSearch = params.toString();
+              const newUrl = cleanSearch
+                ? `${window.location.pathname}?${cleanSearch}${window.location.hash}`
+                : `${window.location.pathname}${window.location.hash}`;
+              window.history.replaceState({}, "", newUrl);
+              return;
+            }
+          } catch (err) {
+            console.warn("[session-ticket] No se pudo canjear ticket de sesión:", err instanceof Error ? err.message : err);
+          }
+          params.delete("ticket");
+          const cleanSearch = params.toString();
+          const newUrl = cleanSearch
+            ? `${window.location.pathname}?${cleanSearch}${window.location.hash}`
+            : `${window.location.pathname}${window.location.hash}`;
+          window.history.replaceState({}, "", newUrl);
+        }
+      }
+
       const [token, storedUser] = await Promise.all([getAccessToken(), getStoredUser()]);
 
       if (!token || !storedUser) {
@@ -320,7 +358,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return { redirectedToApp: false };
         }
 
-        redirectAfterLoginByRole(response.user.role, { fresh: true });
+        let sessionTicket: string | undefined;
+        try {
+          const ticketResult = await authApi.createSessionSyncTicket();
+          sessionTicket = ticketResult.ticket;
+        } catch {
+          // fall through sin ticket
+        }
+
+        redirectAfterLoginByRole(response.user.role, { fresh: true, sessionTicket });
         return { redirectedToApp: true };
       },
       devSignInByEmail: async (email: string) => {
@@ -363,7 +409,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return { redirectedToApp: false };
         }
 
-        redirectAfterLoginByRole(response.user.role, { fresh: true, welcome: true });
+        let sessionTicket: string | undefined;
+        try {
+          const ticketResult = await authApi.createSessionSyncTicket();
+          sessionTicket = ticketResult.ticket;
+        } catch {
+          // fall through sin ticket
+        }
+
+        redirectAfterLoginByRole(response.user.role, { fresh: true, welcome: true, sessionTicket });
         return { redirectedToApp: true };
       },
       redeemPendingAcademySession: async (pendingRegistration) => {
@@ -391,7 +445,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return { redirectedToApp: false };
         }
 
-        redirectToAdminDashboard({ fresh: true });
+        let sessionTicket: string | undefined;
+        try {
+          const ticketResult = await authApi.createSessionSyncTicket();
+          sessionTicket = ticketResult.ticket;
+        } catch {
+          // fall through sin ticket
+        }
+
+        redirectToAdminDashboard({ fresh: true, sessionTicket });
         return { redirectedToApp: true };
       },
       resendAcademyConfirmation: async (email) =>
@@ -486,7 +548,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return { redirectedToApp: false };
         }
 
-        redirectToStudentPortal({ fresh: true, welcome: true });
+        let sessionTicket: string | undefined;
+        try {
+          const ticketResult = await authApi.createSessionSyncTicket();
+          sessionTicket = ticketResult.ticket;
+        } catch {
+          // fall through sin ticket
+        }
+
+        redirectToStudentPortal({ fresh: true, welcome: true, sessionTicket });
         return { redirectedToApp: true };
       },
       finalizeStudentActivation: async (response) => {
@@ -506,7 +576,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
         setJustLoggedIn(true);
         updateHintForUser(response.user);
-        redirectToStudentPortal({ fresh: true, welcome: true });
+
+        let sessionTicket: string | undefined;
+        try {
+          const ticketResult = await authApi.createSessionSyncTicket();
+          sessionTicket = ticketResult.ticket;
+        } catch {
+          // fall through sin ticket
+        }
+
+        redirectToStudentPortal({ fresh: true, welcome: true, sessionTicket });
       },
       redirectToPublicLogin,
       redirectToPublicHome,

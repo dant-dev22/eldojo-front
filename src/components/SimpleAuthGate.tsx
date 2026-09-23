@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 
 import { useSimpleAuth } from "@/context/SimpleAuthProvider";
 import { judogiRed } from "@/constants/theme";
-import { PUBLIC_WEB_ORIGIN, STUDENT_WEB_ORIGIN, buildStudentUrl, buildPublicUrl } from "@/utils/domains";
+import { PUBLIC_WEB_ORIGIN, STUDENT_WEB_ORIGIN, buildStudentUrl, buildPublicUrl, buildAppUrl } from "@/utils/domains";
 import { isGymAdminRole, isStudentRole } from "@/utils/roles";
 import type { UserRole } from "@/types/api";
 
@@ -43,7 +43,7 @@ export function SimpleAuthGate({ children, requiredRole, loadingComponent }: Aut
       return;
     }
 
-    const userIsAdmin = isGymAdminRole(user.role);
+    const userIsAdmin = isGymAdminRole(user.role) || user.role === "super_admin";
     const userIsStudent = isStudentRole(user.role);
 
     if (requiredRole === "gym_admin" && !userIsAdmin) {
@@ -62,7 +62,7 @@ export function SimpleAuthGate({ children, requiredRole, loadingComponent }: Aut
 
     if (requiredRole === "student" && !userIsStudent) {
       if (userIsAdmin) {
-        const redirectTo = (PUBLIC_WEB_ORIGIN ?? "") + "/admin/overview?redirect_reason=student_gate_admin_role";
+        const redirectTo = buildAppUrl("/admin/overview", { redirect_reason: "student_gate_admin_role" });
         void logout(false);
         window.location.replace(redirectTo);
         return;
