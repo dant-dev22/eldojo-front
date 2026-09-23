@@ -165,14 +165,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const restoreSession = async () => {
       if (typeof window !== "undefined") {
+        const cfg = getDomainConfig();
+        const appOrStudent = cfg.isAppHostname || cfg.isStudentHostname;
         const params = new URLSearchParams(window.location.search);
         const ticket = params.get("ticket");
-        if (ticket) {
+        const shouldRedeemTicket = ticket && !appOrStudent;
+        if (shouldRedeemTicket) {
           try {
             const response = await authApi.redeemSessionSyncTicket(ticket);
             if (isValidAuthenticatedRole(response.user)) {
               hardClearAllEldojoItems();
-              const cfg = getDomainConfig();
               hardClearSessionHint(cfg.sessionCookieDomain);
               await clearPendingAcademyRegistration();
               await saveSession(mapTokens(response), response.user);
@@ -420,10 +422,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname && !cfg.isPublicHostname && !cfg.isStudentHostname) {
-          return { redirectedToApp: false };
-        }
-
         let sessionTicket: string | undefined;
         try {
           const ticketResult = await authApi.createSessionSyncTicket();
@@ -471,10 +469,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setJustLoggedIn(true);
         updateHintForUser(response.user);
 
-        if (cfg.isAppHostname && !cfg.isPublicHostname) {
-          return { redirectedToApp: false };
-        }
-
         let sessionTicket: string | undefined;
         try {
           const ticketResult = await authApi.createSessionSyncTicket();
@@ -506,10 +500,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("authenticated");
         setJustLoggedIn(true);
         updateHintForUser(response.user);
-
-        if (cfg.isAppHostname && !cfg.isPublicHostname) {
-          return { redirectedToApp: false };
-        }
 
         let sessionTicket: string | undefined;
         try {
