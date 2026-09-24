@@ -8,22 +8,32 @@
 # Aplicar:   systemctl reload nginx
 # =============================================================
 
-upstream api_backend {
-    server 127.0.0.1:5001;
-    keepalive 32;
-}
+# =============================================================
+# ⚠️  IMPORTANTE: upstream "api_backend" NO se declara AQUÍ.
+#     Nginx solo permite UN upstream global por nombre en
+#     contexto http{} (duplicado = nginx -t aborta).
+#     Está declarado EN:
+#       /etc/nginx/nginx.conf                     (definición global)
+#       o bien /etc/nginx/conf.d/api-upstream.conf (alternativa)
+#     Contenido:
+#       upstream api_backend {
+#           server 127.0.0.1:5001;   # FastAPI /eldojo-backend-api
+#           keepalive 32;
+#       }
+#     Si editas el puerto, cambia SOLAMENTE ese archivo GLOBAL.
+# =============================================================
 
 # ===================== ELDJOJO.TECH (PÚBLICO + LOGIN) =====================
 server {
     listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    # listen [::]:443 ssl http2;  # IPv6 DESHABILITADO — VPS sin stack IPv6 (comenta si hay IPv6)
     server_name eldojo.tech www.eldojo.tech;
 
-    # ===== Certbot (bundle multi-subdominio) =====
-    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
-    # include             /etc/letsencrypt/options-ssl-nginx.conf;
-    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+    # ===== Certbot (wildcard multi-subdominio — 1 bundle cubre los 5 dominios) =====
+    ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
     root /eldojo/eldojo-front/dist;
     index index.html;
@@ -146,14 +156,14 @@ server {
 # ================= APP.ELDOJO.TECH (ADMIN DASHBOARD) =================
 server {
     listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    # listen [::]:443 ssl http2;  # IPv6 DESHABILITADO — VPS sin stack IPv6
     server_name app.eldojo.tech admin.eldojo.tech;
 
-    # ===== Certbot (bundle multi-subdominio compartido) =====
-    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
-    # include             /etc/letsencrypt/options-ssl-nginx.conf;
-    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+    # ===== Certbot (bundle multi-subdominio compartido con eldojo.tech) =====
+    ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
     root /eldojo/eldojo-front/dist-admin;
     index index.html;
@@ -248,14 +258,14 @@ server {
 # ================= MI.ELDOJO.TECH (PORTAL ALUMNO) =================
 server {
     listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    # listen [::]:443 ssl http2;  # IPv6 DESHABILITADO — VPS sin stack IPv6
     server_name mi.eldojo.tech;
 
     # ===== Certbot (bundle multi-subdominio compartido) =====
-    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
-    # include             /etc/letsencrypt/options-ssl-nginx.conf;
-    # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+    ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
     root /eldojo/eldojo-front/dist-student;
     index index.html;
