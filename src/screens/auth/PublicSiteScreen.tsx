@@ -2028,67 +2028,112 @@ type HomeScreenProps = {
   initialSection?: PublicSiteSectionKey;
 };
 
-export function HomeScreen({ initialSection: initialSectionProp }: HomeScreenProps = {}) {
+const LANDING_FEATURES = [
+  {
+    id: "alumnos",
+    title: "Control de alumnos",
+    description: "Perfiles, matrículas, pagos y asistencia en una sola vista organizada por sucursal.",
+    icon: "users",
+  },
+  {
+    id: "pagos",
+    title: "Cobro y mensualidades",
+    description: "Registra pagos, envía recordatorios y visualiza morosidad sin hojas de cálculo.",
+    icon: "dollar-sign",
+  },
+  {
+    id: "asistencia",
+    title: "Asistencia y clases",
+    description: "Lectura por QR, lista por clase e historial de trayectoria individual por alumno.",
+    icon: "check-square",
+  },
+] as const;
+
+export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
-  const route = useRoute();
-  const { redirectToAppDashboard, user, status } = useAuth();
-  const routeParams = (route.params as { initialSection?: PublicSiteSectionKey } | undefined) ?? {};
-  const initialSection = initialSectionProp ?? routeParams.initialSection;
-
-  const scrollControlsRef = useRef<PublicSiteScrollControls | null>(null);
-  const publicSiteRef = useRef<PublicSiteScreenRef>(null);
-  const [readyTick, setReadyTick] = useState(0);
-  const initialSectionAppliedRef = useRef(false);
-
-  const handleReady = useCallback((controls: PublicSiteScrollControls) => {
-    scrollControlsRef.current = controls;
-    setReadyTick((tick) => (tick + 1) % 10_000);
-
-    if (initialSection && !initialSectionAppliedRef.current) {
-      initialSectionAppliedRef.current = true;
-      requestAnimationFrame(() => {
-        controls.scrollToSection(initialSection);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { isDesktop } = useResponsiveLayout();
 
   const spaNavItems = useMemo(() => {
-    return buildHomeSpaNavItems(scrollControlsRef, navigation);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyTick]);
+    return [
+      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
+      { key: "about", label: "Acerca de", onPress: () => navigation.navigate("About") },
+    ];
+  }, [navigation]);
 
-  const handleGoSignInInline = useCallback(() => {
-    publicSiteRef.current?.setAuthMode("login");
-  }, []);
+  const handleGoSignIn = useCallback(() => {
+    navigation.navigate("SignIn");
+  }, [navigation]);
 
-  const handleGoCreateAccountInline = useCallback(() => {
-    publicSiteRef.current?.setAuthMode("academy");
-  }, []);
-
-  const handleGoDashboard = useCallback(() => {
-    redirectToAppDashboard();
-  }, [redirectToAppDashboard]);
+  const handleGoCreateAccount = useCallback(() => {
+    navigation.navigate("CreateAccount");
+  }, [navigation]);
 
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-home"
       navItems={spaNavItems}
-      onBrandPress={() => scrollControlsRef.current?.scrollToSection("home") ?? navigateToPublicPageKey("home")}
-      onGoCreateAccount={handleGoCreateAccountInline}
-      onGoDashboard={handleGoDashboard}
-      onGoSignIn={handleGoSignInInline}
+      onBrandPress={() => navigation.navigate("Home")}
+      onGoCreateAccount={handleGoCreateAccount}
+      onGoSignIn={handleGoSignIn}
       screenScrollable={true}
       showFooterTopDivider={false}
     >
-      <PublicSiteScreen
-        ref={publicSiteRef}
-        disableAuthNavigation={true}
-        disableInternalScroll={true}
-        initialAuthMode="login"
-        onReadyScrollControls={handleReady}
-        page="home"
-      />
+      <View style={styles.landingContainer}>
+        <View style={[styles.landingHero, isDesktop ? styles.landingHeroDesktop : null]}>
+          <View style={styles.landingHeroContent}>
+            <View style={styles.landingHeroEyebrow}>
+              <View style={styles.landingHeroEyebrowDot} />
+              <Text style={styles.landingHeroEyebrowLabel}>Software para academias de artes marciales</Text>
+            </View>
+            <Text style={[styles.landingHeroTitle, isDesktop ? styles.landingHeroTitleDesktop : null]}>
+              Menos papeles. Más dojo.
+            </Text>
+            <Text style={[styles.landingHeroSubtitle, isDesktop ? styles.landingHeroSubtitleDesktop : null]}>
+              Administra alumnos, pagos, clases y asistencia desde una interfaz sencilla, pensada para recepción, entrenadores y dirección.
+            </Text>
+            <View style={styles.landingHeroActions}>
+              <AppButton label="Crear cuenta gratuita" onPress={handleGoCreateAccount} variant="primary" />
+              <AppButton label="Iniciar sesión" onPress={handleGoSignIn} variant="secondary" />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.landingFeaturesSection}>
+          <View style={styles.landingFeaturesHeader}>
+            <Text style={styles.landingFeaturesTitle}>Todo lo que necesitas para operar tu academia</Text>
+            <Text style={styles.landingFeaturesSubtitle}>
+              Sin configuraciones complicadas. Empieza con lo básico y escala cuando tu dojo crezca.
+            </Text>
+          </View>
+
+          <View style={[styles.landingFeaturesGrid, isDesktop ? styles.landingFeaturesGridDesktop : null]}>
+            {LANDING_FEATURES.map((feature) => (
+              <AppCard key={feature.id} style={styles.landingFeatureCard}>
+                <View style={styles.landingFeatureIconWrap}>
+                  <Feather color={colors.primary} name={feature.icon as any} size={22} />
+                </View>
+                <Text style={styles.landingFeatureTitle}>{feature.title}</Text>
+                <Text style={styles.landingFeatureDescription}>{feature.description}</Text>
+              </AppCard>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.landingCtaSection}>
+          <View style={styles.landingCtaCard}>
+            <Text style={styles.landingCtaTitle}>¿Tienes una academia y quieres ordenarla?</Text>
+            <Text style={styles.landingCtaSubtitle}>
+              Regístrate en menos de 2 minutos y entra al panel para registrar tu primera clase.
+            </Text>
+            <View style={styles.landingCtaActions}>
+              <AppButton label="Crear cuenta" onPress={handleGoCreateAccount} variant="primary" />
+              <Pressable onPress={handleGoSignIn} style={({ pressed }) => [styles.landingCtaInlineLink, pressed ? { opacity: 0.7 } : null]}>
+                <Text style={styles.landingCtaInlineLinkLabel}>Ya tengo cuenta · Iniciar sesión</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </View>
     </PublicPageChrome>
   );
 }
@@ -2930,5 +2975,220 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
+  },
+  landingContainer: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    backgroundColor: colors.background,
+    flex: 1,
+    gap: spacing.xl * 2,
+    paddingBottom: spacing.xl * 2,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    width: "100%",
+  },
+  landingHero: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    gap: spacing.lg,
+    justifyContent: "center",
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+    width: "100%",
+  },
+  landingHeroDesktop: {
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  landingHeroContent: {
+    alignSelf: "center",
+    alignItems: "center",
+    gap: spacing.md,
+    maxWidth: 720,
+    width: "100%",
+  },
+  landingHeroEyebrow: {
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  landingHeroEyebrowDot: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    height: 7,
+    width: 7,
+  },
+  landingHeroEyebrowLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.15,
+    lineHeight: 16,
+  },
+  landingHeroTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 40,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+    lineHeight: 46,
+    textAlign: "center",
+  },
+  landingHeroTitleDesktop: {
+    fontSize: 56,
+    lineHeight: 60,
+  },
+  landingHeroSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    lineHeight: 24,
+    textAlign: "center",
+  },
+  landingHeroSubtitleDesktop: {
+    fontSize: 17,
+    lineHeight: 28,
+  },
+  landingHeroActions: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    flexDirection: "column",
+    gap: spacing.sm,
+    justifyContent: "center",
+    marginTop: spacing.sm,
+    width: "100%",
+  },
+  landingFeaturesSection: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    gap: spacing.lg,
+    width: "100%",
+  },
+  landingFeaturesHeader: {
+    alignItems: "center",
+    alignSelf: "center",
+    gap: spacing.xs,
+    maxWidth: 640,
+    width: "100%",
+  },
+  landingFeaturesTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 26,
+    fontWeight: "800",
+    lineHeight: 32,
+    textAlign: "center",
+  },
+  landingFeaturesSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  landingFeaturesGrid: {
+    alignSelf: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    width: "100%",
+  },
+  landingFeaturesGridDesktop: {
+    alignSelf: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.lg,
+    justifyContent: "center",
+    maxWidth: 1040,
+  },
+  landingFeatureCard: {
+    alignItems: "flex-start",
+    alignSelf: "stretch",
+    flex: 1,
+    gap: spacing.sm,
+    justifyContent: "flex-start",
+    minWidth: 280,
+    padding: spacing.lg,
+  },
+  landingFeatureIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    width: 44,
+  },
+  landingFeatureTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  landingFeatureDescription: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  landingCtaSection: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    width: "100%",
+  },
+  landingCtaCard: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    width: "100%",
+  },
+  landingCtaTitle: {
+    color: colors.onPrimary,
+    fontFamily: typography.displayFamily,
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+    textAlign: "center",
+  },
+  landingCtaSubtitle: {
+    color: colors.onPrimaryMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 22,
+    maxWidth: 520,
+    textAlign: "center",
+  },
+  landingCtaActions: {
+    alignItems: "center",
+    flexDirection: "column",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    width: "100%",
+  },
+  landingCtaInlineLink: {
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  landingCtaInlineLinkLabel: {
+    color: colors.onPrimaryMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+    textDecorationLine: "underline",
   },
 });

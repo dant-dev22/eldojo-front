@@ -7,6 +7,7 @@ import { AppButton } from "@/components/AppButton";
 import { AppModal } from "@/components/AppModal";
 import { LogoSvg } from "@/components/LogoSvg";
 import { Screen } from "@/components/Screen";
+import { SessionIndicator } from "@/components/SessionIndicator";
 import {
   agedWood,
   agedWoodSoft,
@@ -217,58 +218,61 @@ export function PublicPageChrome({
               testID={`${idPrefix}-navbar-inner`}
               {...getWebClassNameProps("public-chrome-navbar-inner")}
             >
-              <Pressable
-                accessibilityRole="button"
-                nativeID={`${idPrefix}-brand-button`}
-                onPress={onBrandPress}
-                style={styles.brandButton}
-                testID={`${idPrefix}-brand-button`}
-                {...getWebClassNameProps("public-chrome-navbar-brand-button")}
-              >
-                <View
-                  nativeID={`${idPrefix}-brand-mark`}
-                  style={styles.brandMark}
-                  testID={`${idPrefix}-brand-mark`}
-                  {...getWebClassNameProps("public-chrome-navbar-brand-mark")}
+              <View style={styles.navbarLeftGroup}>
+                {showAuthControls ? <SessionIndicator idPrefix={idPrefix} /> : null}
+                <Pressable
+                  accessibilityRole="button"
+                  nativeID={`${idPrefix}-brand-button`}
+                  onPress={onBrandPress}
+                  style={styles.brandButton}
+                  testID={`${idPrefix}-brand-button`}
+                  {...getWebClassNameProps("public-chrome-navbar-brand-button")}
                 >
                   <View
-                    nativeID={`${idPrefix}-brand-mark-inner`}
-                    style={styles.brandMarkInner}
-                    testID={`${idPrefix}-brand-mark-inner`}
-                    {...getWebClassNameProps("public-chrome-navbar-brand-mark-inner")}
+                    nativeID={`${idPrefix}-brand-mark`}
+                    style={styles.brandMark}
+                    testID={`${idPrefix}-brand-mark`}
+                    {...getWebClassNameProps("public-chrome-navbar-brand-mark")}
                   >
-                    <LogoSvg
-                      nativeID={`${idPrefix}-brand-mark-label`}
-                      size={32}
-                      variant="brand-red"
-                      testID={`${idPrefix}-brand-mark-label`}
-                    />
+                    <View
+                      nativeID={`${idPrefix}-brand-mark-inner`}
+                      style={styles.brandMarkInner}
+                      testID={`${idPrefix}-brand-mark-inner`}
+                      {...getWebClassNameProps("public-chrome-navbar-brand-mark-inner")}
+                    >
+                      <LogoSvg
+                        nativeID={`${idPrefix}-brand-mark-label`}
+                        size={32}
+                        variant="brand-red"
+                        testID={`${idPrefix}-brand-mark-label`}
+                      />
+                    </View>
                   </View>
-                </View>
-                <View
-                  nativeID={`${idPrefix}-brand-copy`}
-                  style={styles.brandCopy}
-                  testID={`${idPrefix}-brand-copy`}
-                  {...getWebClassNameProps("public-chrome-navbar-brand-copy")}
-                >
-                  <Text
-                    nativeID={`${idPrefix}-brand-title`}
-                    style={styles.brandTitle}
-                    testID={`${idPrefix}-brand-title`}
-                    {...getWebClassNameProps("public-chrome-navbar-brand-title")}
+                  <View
+                    nativeID={`${idPrefix}-brand-copy`}
+                    style={styles.brandCopy}
+                    testID={`${idPrefix}-brand-copy`}
+                    {...getWebClassNameProps("public-chrome-navbar-brand-copy")}
                   >
-                    ElDojo
-                  </Text>
-                  <Text
-                    nativeID={`${idPrefix}-brand-subtitle`}
-                    style={styles.brandSubtitle}
-                    testID={`${idPrefix}-brand-subtitle`}
-                    {...getWebClassNameProps("public-chrome-navbar-brand-subtitle")}
-                  >
-                    Sencillez · Orden · Dojo
-                  </Text>
-                </View>
-              </Pressable>
+                    <Text
+                      nativeID={`${idPrefix}-brand-title`}
+                      style={styles.brandTitle}
+                      testID={`${idPrefix}-brand-title`}
+                      {...getWebClassNameProps("public-chrome-navbar-brand-title")}
+                    >
+                      ElDojo
+                    </Text>
+                    <Text
+                      nativeID={`${idPrefix}-brand-subtitle`}
+                      style={styles.brandSubtitle}
+                      testID={`${idPrefix}-brand-subtitle`}
+                      {...getWebClassNameProps("public-chrome-navbar-brand-subtitle")}
+                    >
+                      Sencillez · Orden · Dojo
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
 
               <View
                 nativeID={`${idPrefix}-nav-items`}
@@ -329,112 +333,108 @@ export function PublicPageChrome({
                   ))}
 
                   {actionItems.length === 0 ? (
-                    hintShowsAuth ? (
-                      <AdminUserMenu actions={adminActions} user={displayUser} />
-                    ) : (
-                      <View
-                        style={styles.publicAuthActionsRow}
-                        {...getWebClassNameProps("public-chrome-navbar-auth-actions-row")}
+                    <View
+                      style={styles.publicAuthActionsRow}
+                      {...getWebClassNameProps("public-chrome-navbar-auth-actions-row")}
+                    >
+                      <Pressable
+                        accessibilityRole="link"
+                        nativeID={`${idPrefix}-auth-signin`}
+                        onPress={handleSignInPress}
+                        style={(state) => {
+                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                          return [
+                            styles.authButton,
+                            styles.authButtonGhost,
+                            hovered ? styles.authButtonGhostHover : null,
+                            state.pressed ? styles.authButtonPressed : null,
+                          ];
+                        }}
+                        testID={`${idPrefix}-auth-signin`}
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "public-chrome-navbar-auth-button",
+                            "public-chrome-navbar-auth-button--ghost"
+                          )
+                        )}
                       >
-                        <Pressable
-                          accessibilityRole="link"
-                          nativeID={`${idPrefix}-auth-signin`}
-                          onPress={handleSignInPress}
-                          style={(state) => {
-                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                            return [
-                              styles.authButton,
-                              styles.authButtonGhost,
-                              hovered ? styles.authButtonGhostHover : null,
-                              state.pressed ? styles.authButtonPressed : null,
-                            ];
-                          }}
-                          testID={`${idPrefix}-auth-signin`}
-                          {...getWebClassNameProps(
-                            joinWebClassNames(
-                              "public-chrome-navbar-auth-button",
-                              "public-chrome-navbar-auth-button--ghost"
-                            )
-                          )}
-                        >
-                          {(state) => {
-                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                            return (
+                        {(state) => {
+                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                          return (
+                            <Text
+                              nativeID={`${idPrefix}-auth-signin-label`}
+                              style={[
+                                styles.authButtonLabel,
+                                styles.authButtonLabelGhost,
+                                hovered ? styles.authButtonLabelGhostHover : null,
+                              ]}
+                              testID={`${idPrefix}-auth-signin-label`}
+                              {...getWebClassNameProps(
+                                joinWebClassNames(
+                                  "public-chrome-navbar-auth-button-label",
+                                  "public-chrome-navbar-auth-button-label--ghost"
+                                )
+                              )}
+                            >
+                              Iniciar sesión
+                            </Text>
+                          );
+                        }}
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="link"
+                        nativeID={`${idPrefix}-auth-create`}
+                        onPress={handleCreateAccountPress}
+                        style={(state) => {
+                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                          return [
+                            styles.authButton,
+                            styles.authButtonPrimary,
+                            hovered ? styles.authButtonPrimaryHover : null,
+                            state.pressed ? styles.authButtonPressed : null,
+                          ];
+                        }}
+                        testID={`${idPrefix}-auth-create`}
+                        {...getWebClassNameProps(
+                          joinWebClassNames(
+                            "public-chrome-navbar-auth-button",
+                            "public-chrome-navbar-auth-button--primary"
+                          )
+                        )}
+                      >
+                        {(state) => {
+                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                          return (
+                            <>
+                              <Feather
+                                color="#FFFFFF"
+                                name="user-plus"
+                                size={15}
+                                style={styles.authPrimaryIcon}
+                                {...getWebClassNameProps("public-chrome-navbar-auth-primary-icon")}
+                              />
                               <Text
-                                nativeID={`${idPrefix}-auth-signin-label`}
+                                nativeID={`${idPrefix}-auth-create-label`}
                                 style={[
                                   styles.authButtonLabel,
-                                  styles.authButtonLabelGhost,
-                                  hovered ? styles.authButtonLabelGhostHover : null,
+                                  styles.authButtonLabelPrimary,
+                                  hovered ? styles.authButtonLabelPrimaryHover : null,
                                 ]}
-                                testID={`${idPrefix}-auth-signin-label`}
+                                testID={`${idPrefix}-auth-create-label`}
                                 {...getWebClassNameProps(
                                   joinWebClassNames(
                                     "public-chrome-navbar-auth-button-label",
-                                    "public-chrome-navbar-auth-button-label--ghost"
+                                    "public-chrome-navbar-auth-button-label--primary"
                                   )
                                 )}
                               >
-                                Iniciar sesión
+                                Crear cuenta
                               </Text>
-                            );
-                          }}
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="link"
-                          nativeID={`${idPrefix}-auth-create`}
-                          onPress={handleCreateAccountPress}
-                          style={(state) => {
-                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                            return [
-                              styles.authButton,
-                              styles.authButtonPrimary,
-                              hovered ? styles.authButtonPrimaryHover : null,
-                              state.pressed ? styles.authButtonPressed : null,
-                            ];
-                          }}
-                          testID={`${idPrefix}-auth-create`}
-                          {...getWebClassNameProps(
-                            joinWebClassNames(
-                              "public-chrome-navbar-auth-button",
-                              "public-chrome-navbar-auth-button--primary"
-                            )
-                          )}
-                        >
-                          {(state) => {
-                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                            return (
-                              <>
-                                <Feather
-                                  color="#FFFFFF"
-                                  name="user-plus"
-                                  size={15}
-                                  style={styles.authPrimaryIcon}
-                                  {...getWebClassNameProps("public-chrome-navbar-auth-primary-icon")}
-                                />
-                                <Text
-                                  nativeID={`${idPrefix}-auth-create-label`}
-                                  style={[
-                                    styles.authButtonLabel,
-                                    styles.authButtonLabelPrimary,
-                                    hovered ? styles.authButtonLabelPrimaryHover : null,
-                                  ]}
-                                  testID={`${idPrefix}-auth-create-label`}
-                                  {...getWebClassNameProps(
-                                    joinWebClassNames(
-                                      "public-chrome-navbar-auth-button-label",
-                                      "public-chrome-navbar-auth-button-label--primary"
-                                    )
-                                  )}
-                                >
-                                  Crear cuenta
-                                </Text>
-                              </>
-                            );
-                          }}
-                        </Pressable>
-                      </View>
-                    )
+                            </>
+                          );
+                        }}
+                      </Pressable>
+                    </View>
                   ) : null}
                 </View>
               ) : null}
@@ -1011,6 +1011,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: "space-between",
     width: "100%",
+  },
+  navbarLeftGroup: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
   },
   brandButton: {
     alignItems: "center",
