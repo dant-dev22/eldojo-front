@@ -9,7 +9,7 @@
 # =============================================================
 
 upstream api_backend {
-    server 127.0.0.1:5000;
+    server 127.0.0.1:5001;
     keepalive 32;
 }
 
@@ -19,13 +19,13 @@ server {
     listen [::]:443 ssl http2;
     server_name eldojo.tech www.eldojo.tech;
 
-    # ===== Reemplazar por rutas reales Certbot =====
+    # ===== Certbot (bundle multi-subdominio) =====
     # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
     # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
     # include             /etc/letsencrypt/options-ssl-nginx.conf;
     # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
-    root /var/www/eldojo/dist;
+    root /eldojo/eldojo-front/dist;
     index index.html;
 
     client_max_body_size 20M;
@@ -41,7 +41,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(self), microphone=()" always;
 
-    # ================= API / Backend (FastAPI :5000) =================
+    # ================= API / Backend (FastAPI :5001) =================
     location /api/ {
         proxy_pass         http://api_backend/api/;
         proxy_http_version 1.1;
@@ -94,16 +94,52 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # ================= Archivos estáticos =================
-    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
+    # ================= /_expo/ bundles con hash (INMUTABLES) =================
+    location /_expo/ {
         try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= /assets/ assets 30 días =================
+    location /assets/ {
+        try_files $uri =404;
+        access_log off;
+        expires    30d;
+        add_header Cache-Control "public, max-age=2592000, s-maxage=2592000" always;
+    }
+
+    # ================= Archivos estáticos fuera de carpetas (T8: immutable + mjs/cjs) =================
+    location ~* \.(?:js|mjs|cjs|css|woff2?|ttf|eot|otf|png|jpg|jpeg|gif|svg|ico|webp|avif|map)$ {
+        try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= HTML: NUNCA cachear =================
+    location ~* \.(?:html|htm)$ {
+        try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 
     # ================= SPA fallback PÚBLICO =================
     location / {
         try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 }
 
@@ -113,13 +149,13 @@ server {
     listen [::]:443 ssl http2;
     server_name app.eldojo.tech admin.eldojo.tech;
 
-    # ===== Reemplazar por rutas reales Certbot =====
-    # ssl_certificate     /etc/letsencrypt/live/app.eldojo.tech/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/app.eldojo.tech/privkey.pem;
+    # ===== Certbot (bundle multi-subdominio compartido) =====
+    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
     # include             /etc/letsencrypt/options-ssl-nginx.conf;
     # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
-    root /var/www/eldojo/dist-admin;
+    root /eldojo/eldojo-front/dist-admin;
     index index.html;
 
     client_max_body_size 20M;
@@ -160,15 +196,52 @@ server {
     location /openapi.json { proxy_pass http://api_backend/openapi.json; }
     location /uploads/     { proxy_pass http://api_backend/uploads/; }
 
-    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
+    # ================= /_expo/ bundles con hash (INMUTABLES) =================
+    location /_expo/ {
         try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= /assets/ assets 30 días =================
+    location /assets/ {
+        try_files $uri =404;
+        access_log off;
+        expires    30d;
+        add_header Cache-Control "public, max-age=2592000, s-maxage=2592000" always;
+    }
+
+    # ================= Estáticos fuera de carpetas (T8 immutable + cjs + mjs) =================
+    location ~* \.(?:js|mjs|cjs|css|woff2?|ttf|eot|otf|png|jpg|jpeg|gif|svg|ico|webp|avif|map)$ {
+        try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= HTML: NUNCA cachear =================
+    location ~* \.(?:html|htm)$ {
+        try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 
     # ================= SPA fallback ADMIN =================
     location / {
         try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 }
 
@@ -178,13 +251,13 @@ server {
     listen [::]:443 ssl http2;
     server_name mi.eldojo.tech;
 
-    # ===== Reemplazar por rutas reales Certbot =====
-    # ssl_certificate     /etc/letsencrypt/live/mi.eldojo.tech/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/mi.eldojo.tech/privkey.pem;
+    # ===== Certbot (bundle multi-subdominio compartido) =====
+    # ssl_certificate     /etc/letsencrypt/live/eldojo.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/eldojo.tech/privkey.pem;
     # include             /etc/letsencrypt/options-ssl-nginx.conf;
     # ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
-    root /var/www/eldojo/dist-student;
+    root /eldojo/eldojo-front/dist-student;
     index index.html;
 
     client_max_body_size 20M;
@@ -225,15 +298,52 @@ server {
     location /openapi.json { proxy_pass http://api_backend/openapi.json; }
     location /uploads/     { proxy_pass http://api_backend/uploads/; }
 
-    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp|avif)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
+    # ================= /_expo/ bundles con hash (INMUTABLES) =================
+    location /_expo/ {
         try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= /assets/ assets 30 días =================
+    location /assets/ {
+        try_files $uri =404;
+        access_log off;
+        expires    30d;
+        add_header Cache-Control "public, max-age=2592000, s-maxage=2592000" always;
+    }
+
+    # ================= Estáticos fuera de carpetas (T8 immutable + cjs + mjs) =================
+    location ~* \.(?:js|mjs|cjs|css|woff2?|ttf|eot|otf|png|jpg|jpeg|gif|svg|ico|webp|avif|map)$ {
+        try_files $uri =404;
+        access_log off;
+        expires    1y;
+        add_header Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable" always;
+    }
+
+    # ================= HTML: NUNCA cachear =================
+    location ~* \.(?:html|htm)$ {
+        try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 
     # ================= SPA fallback STUDENT =================
     location / {
         try_files $uri $uri/ /index.html;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private" always;
+        add_header Pragma        "no-cache" always;
+        add_header Expires       "Thu, 01 Jan 1970 00:00:00 GMT" always;
+        add_header Surrogate-Control "no-store" always;
+        etag off;
+        if_modified_since off;
     }
 }
 
