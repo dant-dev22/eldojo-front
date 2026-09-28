@@ -57,6 +57,17 @@ const queryClient = new QueryClient({
 });
 
 function resolveSelectedMode(): "public" | "admin" | "student" | "native" {
+  // ============================================================
+  // FIX SPINNER INFINITO eldojo.tech: OVERRIDE POR HOSTNAME
+  // (NO depende de EXPO_PUBLIC_APP_MODE bakeado, NO depende de domains.ts)
+  // ============================================================
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const hn = String(window.location.hostname || "").toLowerCase().trim();
+    if (hn === "app.eldojo.tech" || hn === "admin.eldojo.tech") return "admin";
+    if (hn === "mi.eldojo.tech") return "student";
+    if (hn === "eldojo.tech" || hn === "www.eldojo.tech" || hn.endsWith(".eldojo.tech")) return "public";
+  }
+  // --- lógica original como fallback ---
   const envMode = String(process.env.EXPO_PUBLIC_APP_MODE ?? "").trim().toLowerCase();
   if (envMode === "admin" || envMode === "student") return envMode;
   if (envMode === "public") return "public";
