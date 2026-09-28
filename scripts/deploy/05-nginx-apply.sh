@@ -14,12 +14,48 @@ log "====================================="
 log "Aplicar builds a Nginx (permisos + nginx -t + reload)"
 log "====================================="
 
-# 3 carpetas que sirve Nginx (root + alias en server blocks 040/050/060)
+# -------- PASO NUEVO (FIX SPINNER INFINITO eldojo.tech): --------
+# Los builds se generan en $PROJECT_ROOT/{dist,dist-admin,dist-student}
+# PERO Nginx los sirve desde /eldojo/eldojo-front/{dist,dist-admin,dist-student}
+# (ver `root` en eldojo-public.conf línea 43). Sin este rsync la carpeta
+# servida se queda con builds obsoletos mezclados (ej: build student en el
+# root del público → SimpleAuthGate judogiRed + loop de redirects).
+NGINX_DOCROOT_BASE="${NGINX_DOCROOT_BASE:-/eldojo/eldojo-front}"
+BUILD_PAIRS=(
+  "dist:${NGINX_DOCROOT_BASE}/dist"
+  "dist-admin:${NGINX_DOCROOT_BASE}/dist-admin"
+  "dist-student:${NGINX_DOCROOT_BASE}/dist-student"
+)
+for pair in "${BUILD_PAIRS[@]}"; do
+  src_rel="${pair%%:*}"
+  dst="${pair##*:}"
+  src="$PROJECT_ROOT/$src_rel"
+  if [[ ! -d "$src" ]]; then
+    log "ℹ️  $src_rel no existe en el repo (no se buildió). Se salta rsync → $dst."
+    continue
+  fi
+  log "📦 rsync --delete $src/  →  $dst/"
+  mkdir -p "$dst"
+  rsync -a --delete --chown=root:www-data \
+        --chmod=D755,F644 \
+        "$src/" "$dst/"
+  log "✅ $src_rel → $dst  listo."
+done
+
+# Permisos FINALES sobre la carpeta servida por Nginx (no sobre $PROJECT_ROOT)
+log "🔧 Permisos finales sobre docroot Nginx ($NGINX_DOCROOT_BASE):"
+[[ -d "$NGINX_DOCROOT_BASE" ]] && {
+  chown -R root:www-data "$NGINX_DOCROOT_BASE"
+  find "$NGINX_DOCROOT_BASE" -type d -exec chmod 755 {} \;
+  find "$NGINX_DOCROOT_BASE" -type f -exec chmod 644 {} \;
+}
+
+# Backwards-compat: también aplica permisos en $PROJECT_ROOT (por si alguien
+# lee desde ahí con scripts legacy)
 DIRS=("dist" "dist-admin" "dist-student")
 for d in "${DIRS[@]}"; do
   full="$PROJECT_ROOT/$d"
-  log "🔧 Permisos recursivos $full"
-  [[ -d "$full" ]] || { log "WARN: $full no existe (no se buildió — si es build público/legacy solo, se ignora)."; continue; }
+  [[ -d "$full" ]] || continue
   chown -R root:www-data "$full"
   find "$full" -type d -exec chmod 755 {} \;
   find "$full" -type f -exec chmod 644 {} \;
