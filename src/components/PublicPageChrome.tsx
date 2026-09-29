@@ -244,7 +244,7 @@ export function PublicPageChrome({
                       <LogoSvg
                         nativeID={`${idPrefix}-brand-mark-label`}
                         size={20}
-                        variant="brand-red"
+                        variant="brand-orange"
                         testID={`${idPrefix}-brand-mark-label`}
                       />
                     </View>
@@ -456,7 +456,7 @@ export function PublicPageChrome({
                       <LogoSvg
                         nativeID={`${idPrefix}-footer-brand-mark-label`}
                         size={20}
-                        variant="brand-red-solid"
+                        variant="brand-orange"
                         testID={`${idPrefix}-footer-brand-mark-label`}
                       />
                     </View>

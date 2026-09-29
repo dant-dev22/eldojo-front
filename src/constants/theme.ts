@@ -65,19 +65,19 @@ export const textSecondaryDark = "#999999";
 export const borderLight = "rgba(141, 110, 99, 0.22)";
 export const borderStrongLight = "rgba(141, 110, 99, 0.42)";
 
-export const EDITORIAL_BG = "#1F2937";
+export const EDITORIAL_BG = "#000000";
 export const EDITORIAL_FG = "#FFFFFF";
 export const EDITORIAL_BORDER = "rgba(255, 255, 255, 1)";
-export const EDITORIAL_BORDER_SOFT = "rgba(255, 255, 255, 0.12)";
-export const EDITORIAL_SURFACE = "rgba(255, 255, 255, 0.04)";
-export const EDITORIAL_SURFACE_HOVER = "rgba(255, 255, 255, 0.08)";
-export const EDITORIAL_FG_MUTED = "rgba(255, 255, 255, 0.62)";
-export const EDITORIAL_FG_SUBTLE = "rgba(255, 255, 255, 0.40)";
+export const EDITORIAL_BORDER_SOFT = "rgba(255, 255, 255, 0.14)";
+export const EDITORIAL_SURFACE = "rgba(255, 255, 255, 0.05)";
+export const EDITORIAL_SURFACE_HOVER = "rgba(255, 255, 255, 0.10)";
+export const EDITORIAL_FG_MUTED = "rgba(255, 255, 255, 0.68)";
+export const EDITORIAL_FG_SUBTLE = "rgba(255, 255, 255, 0.44)";
 export const EDITORIAL_ACCENT_SUCCESS = "#22C55E";
 export const EDITORIAL_ACCENT_WARNING = "#F59E0B";
 export const EDITORIAL_ACCENT_DANGER = "#EF4444";
 export const EDITORIAL_RING = "rgba(255, 255, 255, 1)";
-export const EDITORIAL_OVERLAY = "rgba(10, 12, 16, 0.72)";
+export const EDITORIAL_OVERLAY = "rgba(0, 0, 0, 0.78)";
 
 /* ---------- 2. FUENTES POR DEFECTO (web + native) ----------------------- */
 const DEFAULT_WEB_BODY = '"Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
@@ -87,39 +87,39 @@ const DEFAULT_WEB_MONO = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace
 
 /* ---------- 3. VALORES POR DEFECTO (layer 3, menor precedencia) --------- */
 const DEFAULTS_COLORS = {
-  background: EDITORIAL_BG,
+  background: "#000000",
   surface: EDITORIAL_SURFACE,
   surfaceAlt: EDITORIAL_SURFACE,
-  surfaceStrong: "rgba(255, 255, 255, 0.06)",
-  panel: EDITORIAL_BG,
+  surfaceStrong: "rgba(255, 255, 255, 0.08)",
+  panel: "#000000",
   panelSoft: EDITORIAL_SURFACE,
 
-  primary: EDITORIAL_FG,
-  primaryHover: "rgba(255, 255, 255, 0.92)",
-  primarySoft: EDITORIAL_BORDER_SOFT,
+  primary: "#FF7C39",
+  primaryHover: "#FF6B1F",
+  primarySoft: "rgba(255, 124, 57, 0.14)",
 
-  accent: EDITORIAL_FG,
-  accentSoft: EDITORIAL_BORDER_SOFT,
+  accent: "#FF7C39",
+  accentSoft: "rgba(255, 124, 57, 0.14)",
 
-  action: EDITORIAL_FG,
-  actionHover: "rgba(255, 255, 255, 0.92)",
-  actionSoft: EDITORIAL_BORDER_SOFT,
+  action: "#FF7C39",
+  actionHover: "#FF6B1F",
+  actionSoft: "rgba(255, 124, 57, 0.14)",
 
-  secondary: EDITORIAL_FG,
-  secondaryHover: "rgba(255, 255, 255, 0.92)",
+  secondary: "#FFFFFF",
+  secondaryHover: "rgba(255, 255, 255, 0.90)",
   secondarySoft: EDITORIAL_BORDER_SOFT,
 
   gold: EDITORIAL_ACCENT_WARNING,
   goldSoft: "rgba(245, 158, 11, 0.14)",
 
-  text: EDITORIAL_FG,
+  text: "#FFFFFF",
   textMuted: EDITORIAL_FG_MUTED,
 
-  onPrimary: EDITORIAL_BG,
-  onPrimaryMuted: "rgba(31, 41, 55, 0.88)",
+  onPrimary: "#FFFFFF",
+  onPrimaryMuted: "rgba(255, 255, 255, 0.82)",
 
   border: EDITORIAL_BORDER_SOFT,
-  borderStrong: EDITORIAL_BORDER,
+  borderStrong: "#FFFFFF",
 
   wood: EDITORIAL_FG,
   woodLight: EDITORIAL_FG_MUTED,
@@ -148,14 +148,14 @@ const DEFAULTS_COLORS = {
   hover: EDITORIAL_SURFACE,
   hoverStrong: EDITORIAL_SURFACE_HOVER,
 
-  sidebar: EDITORIAL_BG,
+  sidebar: "#000000",
   sidebarSoft: EDITORIAL_SURFACE,
   sidebarBorder: EDITORIAL_BORDER_SOFT,
-  sidebarText: EDITORIAL_FG,
+  sidebarText: "#FFFFFF",
   sidebarMuted: EDITORIAL_FG_MUTED,
 
-  activeIndicator: EDITORIAL_FG,
-  focusRing: EDITORIAL_RING,
+  activeIndicator: "#FF7C39",
+  focusRing: "#FF7C39",
 
   metricLavender: EDITORIAL_BORDER_SOFT,
   metricWood: EDITORIAL_BORDER_SOFT,

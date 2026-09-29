@@ -2,7 +2,7 @@ import React from "react";
 import { Platform, StyleSheet, View, Text, ViewStyle } from "react-native";
 import { colors, typography } from "../constants/theme";
 
-export type LogoVariant = "primary" | "mark-only" | "mono-dark" | "mono-light" | "brand-red" | "brand-red-solid";
+export type LogoVariant = "primary" | "mark-only" | "mono-dark" | "mono-light" | "brand-red" | "brand-red-solid" | "brand-orange" | "brand-orange-solid";
 
 export interface LogoSvgProps {
   size?: number;
@@ -91,6 +91,28 @@ function getFills(variant: LogoVariant): FillsByVariant {
       wordmarkWord: colors.primary,
       wordmarkBorder: colors.primary,
       wordmarkDot: colors.gold,
+    };
+  }
+  if (variant === "brand-orange") {
+    return {
+      seal: "rgba(255, 124, 57, 0.14)",
+      kanji: "#FF7C39",
+      sealStroke: "rgba(255, 124, 57, 0.35)",
+      kanjiStroke: "#FF7C39",
+      wordmarkWord: "#FF7C39",
+      wordmarkBorder: "#FF7C39",
+      wordmarkDot: "#FF7C39",
+    };
+  }
+  if (variant === "brand-orange-solid") {
+    return {
+      seal: "#FF7C39",
+      kanji: "#FFFFFF",
+      sealStroke: "#FF7C39",
+      kanjiStroke: "#FFFFFF",
+      wordmarkWord: "#FF7C39",
+      wordmarkBorder: "#FF7C39",
+      wordmarkDot: "#FFFFFF",
     };
   }
   return {

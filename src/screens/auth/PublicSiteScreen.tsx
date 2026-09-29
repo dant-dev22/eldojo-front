@@ -2334,7 +2334,39 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           </View>
         </View>
 
-        {/* SECTION 3: PRICING (3 planes) */}
+        {/* SECTION 3: CORE FEATURES (6 funciones principales) */}
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d5 ed-scroll-margin-top")}
+          nativeID="core-features"
+          testID="core-features"
+        >
+          <View style={styles.edSectionHead}>
+            <Text style={styles.edEyebrow}>Características</Text>
+            <Text style={[styles.edSectionTitle, isDesktop ? styles.edSectionTitleDesktop : null]}>
+              Todo lo que necesitas para gestionar
+            </Text>
+          </View>
+          <View style={[styles.edGridCoreFeatures, isDesktop ? styles.edGridCoreFeaturesDesktop : null]}>
+            {LANDING_FEATURES.map((feat, i) => (
+              <View
+                key={feat.id}
+                style={styles.edCoreFeatureCard}
+                {...getWebClassNameProps(`ed-fade ed-d${5 + (i % 4)}`)}
+                nativeID={`screens-auth-public-home-core-feat-${feat.id}`}
+                testID={`screens-auth-public-home-core-feat-${feat.id}`}
+              >
+                <View style={styles.edCoreFeatureIconWrap}>
+                  <Feather name={feat.icon as any} size={18} color="#FF7C39" />
+                </View>
+                <Text style={styles.edCoreFeatureTitle}>{feat.title}</Text>
+                <Text style={styles.edCoreFeatureBody}>{feat.description}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* SECTION 4: PRICING (3 planes) */}
         <View
           style={styles.edSection}
           {...getWebClassNameProps("ed-fade ed-d6 ed-scroll-margin-top")}
@@ -2381,7 +2413,7 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           </View>
         </View>
 
-        {/* SECTION 4: SOCIAL PROOF */}
+        {/* SECTION 5: SOCIAL PROOF */}
         <View
           style={styles.edSection}
           {...getWebClassNameProps("ed-fade ed-d7 ed-scroll-margin-top")}
@@ -2405,7 +2437,7 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           </View>
         </View>
 
-        {/* SECTION 5: CTA FINAL */}
+        {/* SECTION 6: CTA FINAL */}
         <View
           style={styles.edSection}
           {...getWebClassNameProps("ed-fade ed-d8 ed-scroll-margin-top")}
@@ -2628,13 +2660,13 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   navbar: {
-    backgroundColor: "rgba(23, 22, 18, 0.88)",
-    borderBottomColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: colors.background,
+    borderBottomColor: colors.border,
     borderBottomWidth: 1,
     elevation: 3,
-    shadowColor: "#8C96A3",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.18,
     shadowRadius: 16,
     zIndex: 20,
   },
@@ -2776,7 +2808,7 @@ const styles = StyleSheet.create({
   },
   navbarAuthButtonSecondary: {
     backgroundColor: "transparent",
-    borderColor: "rgba(255, 255, 255, 0.28)",
+    borderColor: colors.border,
   },
   navbarAuthButtonSecondaryHover: {
     backgroundColor: colors.surface,
@@ -2805,7 +2837,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heroSection: {
-    backgroundColor: "#151410",
+    backgroundColor: colors.background,
     justifyContent: "center",
     overflow: "hidden",
     paddingHorizontal: spacing.lg,
@@ -2823,7 +2855,7 @@ const styles = StyleSheet.create({
   heroMedia: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
-    backgroundColor: "#E8DDC7",
+    backgroundColor: colors.background,
     justifyContent: "flex-start",
     overflow: "hidden",
   },
@@ -2833,7 +2865,7 @@ const styles = StyleSheet.create({
   },
   heroBackgroundOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(23, 22, 18, 0.38)",
+    backgroundColor: "rgba(0, 0, 0, 0.38)",
   },
   heroContent: {
     alignSelf: "center",
@@ -2867,8 +2899,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   heroCopyMobile: {
-    backgroundColor: "rgba(23, 22, 18, 0.58)",
-    borderColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.lg,
@@ -2967,8 +2999,8 @@ const styles = StyleSheet.create({
   },
   mobileSectionChip: {
     alignItems: "center",
-    backgroundColor: "rgba(26, 35, 126, 0.06)",
-    borderColor: "rgba(26, 35, 126, 0.18)",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: radius.pill,
     borderWidth: 1,
     justifyContent: "center",
@@ -2976,14 +3008,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   mobileSectionChipActive: {
-    backgroundColor: "rgba(26, 35, 126, 0.14)",
-    borderColor: "rgba(26, 35, 126, 0.32)",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.borderStrong,
   },
   mobileSectionChipPressed: {
     opacity: 0.8,
   },
   mobileSectionChipLabel: {
-    color: colors.secondary,
+    color: colors.text,
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "700",
@@ -2997,14 +3029,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   pageContentHome: {
-    backgroundColor: "#faf7f0",
+    backgroundColor: colors.background,
   },
   formCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     gap: spacing.sm,
     marginBottom: 24,
     maxWidth: 520,
-    padding: spacing.sm,
+    padding: spacing.lg,
   },
   formCardMobile: {
     maxWidth: "100%",
@@ -3587,7 +3622,7 @@ const styles = StyleSheet.create({
   landingDisciplineBadge: {
     alignSelf: "flex-start",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: colors.surfaceStrong,
     borderRadius: 999,
     height: 24,
     justifyContent: "center",
@@ -3625,7 +3660,7 @@ const styles = StyleSheet.create({
   landingCtaEyebrow: {
     alignItems: "center",
     alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: colors.surface,
     borderRadius: 999,
     flexDirection: "row",
     gap: spacing.xs,
@@ -3634,7 +3669,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   landingCtaEyebrowDot: {
-    backgroundColor: goldenYellow,
+    backgroundColor: colors.borderStrong,
     borderRadius: 999,
     height: 6,
     width: 6,
@@ -3837,8 +3872,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   edPriceCardHighlight: {
-    borderColor: colors.borderStrong,
-    borderWidth: 1,
+    borderColor: "#FF7C39",
+    borderWidth: 1.5,
   },
   edPriceTop: {
     alignItems: "center",
@@ -3993,5 +4028,53 @@ const styles = StyleSheet.create({
     minHeight: 52,
     minWidth: 260,
     paddingHorizontal: spacing.xl,
+  },
+  edGridCoreFeatures: {
+    alignSelf: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    width: "100%",
+  },
+  edGridCoreFeaturesDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.lg,
+    justifyContent: "space-between",
+  },
+  edCoreFeatureCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    gap: spacing.sm,
+    minWidth: 260,
+    padding: spacing.lg,
+    width: "100%",
+  },
+  edCoreFeatureIconWrap: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255, 124, 57, 0.14)",
+    borderColor: "rgba(255, 124, 57, 0.35)",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    width: 40,
+  },
+  edCoreFeatureTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  edCoreFeatureBody: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

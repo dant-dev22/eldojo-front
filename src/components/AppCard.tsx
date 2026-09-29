@@ -47,6 +47,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     overflow: "hidden",
-    ...shadows.card,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
   },
 });

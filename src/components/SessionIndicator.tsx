@@ -98,8 +98,8 @@ export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndi
   if (!hasAnySession) return null;
 
   const portalLabel = sessionKind === "student" ? "Mi portal" : "Ir al panel";
-  const accentBg = sessionKind === "student" ? colors.successSoft : colors.accentSoft;
-  const accentFg = sessionKind === "student" ? colors.success : colors.accent;
+  const accentBg = "rgba(255, 124, 57, 0.14)";
+  const accentFg = "#FF7C39";
 
   return (
     <>
