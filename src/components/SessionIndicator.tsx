@@ -98,8 +98,6 @@ export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndi
   if (!hasAnySession) return null;
 
   const portalLabel = sessionKind === "student" ? "Mi portal" : "Ir al panel";
-  const accentBg = "rgba(255, 124, 57, 0.14)";
-  const accentFg = "#FF7C39";
 
   return (
     <>
@@ -111,12 +109,6 @@ export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndi
         style={({ pressed }) => [styles.trigger, pressed ? styles.triggerPressed : null]}
         testID={`${idPrefix}-trigger`}
       >
-        <View nativeID={`${idPrefix}-status-pill`} style={[styles.statusPill, { backgroundColor: accentBg }]} testID={`${idPrefix}-status-pill`}>
-          <View nativeID={`${idPrefix}-status-dot`} style={[styles.statusDot, { backgroundColor: accentFg }]} testID={`${idPrefix}-status-dot`} />
-          <Text nativeID={`${idPrefix}-status-label`} style={[styles.statusLabel, { color: accentFg }]} testID={`${idPrefix}-status-label`}>
-            Sesión iniciada
-          </Text>
-        </View>
         <View nativeID={`${idPrefix}-avatar`} style={styles.avatar} testID={`${idPrefix}-avatar`}>
           <Text nativeID={`${idPrefix}-avatar-initial`} style={styles.avatarLabel} testID={`${idPrefix}-avatar-initial`}>
             {initial}
@@ -208,25 +200,6 @@ const styles = StyleSheet.create({
   },
   triggerPressed: {
     opacity: 0.82,
-  },
-  statusPill: {
-    alignItems: "center",
-    borderRadius: radius.pill,
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusDot: {
-    borderRadius: 999,
-    height: 6,
-    width: 6,
-  },
-  statusLabel: {
-    fontFamily: typography.headingFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.3,
   },
   avatar: {
     alignItems: "center",

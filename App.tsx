@@ -1,7 +1,25 @@
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { Inter_400Regular } from "@expo-google-fonts/inter";
-import { Montserrat_700Bold, Montserrat_800ExtraBold } from "@expo-google-fonts/montserrat";
+import {
+  Teko_400Regular,
+  Teko_500Medium,
+  Teko_600SemiBold,
+  Teko_700Bold,
+} from "@expo-google-fonts/teko";
+import {
+  Rajdhani_400Regular,
+  Rajdhani_500Medium,
+  Rajdhani_600SemiBold,
+  Rajdhani_700Bold,
+} from "@expo-google-fonts/rajdhani";
+import {
+  Manrope_300Light,
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from "@expo-google-fonts/manrope";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Platform } from "react-native";
@@ -77,9 +95,20 @@ function resolveSelectedMode(): "public" | "admin" | "student" | "native" {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Montserrat_700Bold,
-    Montserrat_800ExtraBold,
+    Teko_400Regular,
+    Teko_500Medium,
+    Teko_600SemiBold,
+    Teko_700Bold,
+    Rajdhani_400Regular,
+    Rajdhani_500Medium,
+    Rajdhani_600SemiBold,
+    Rajdhani_700Bold,
+    Manrope_300Light,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
   });
 
   if (!fontsLoaded) {

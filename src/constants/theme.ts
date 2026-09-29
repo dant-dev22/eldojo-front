@@ -80,9 +80,12 @@ export const EDITORIAL_RING = "rgba(255, 255, 255, 1)";
 export const EDITORIAL_OVERLAY = "rgba(0, 0, 0, 0.78)";
 
 /* ---------- 2. FUENTES POR DEFECTO (web + native) ----------------------- */
-const DEFAULT_WEB_BODY = '"Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+const DEFAULT_WEB_BODY =
+  '"Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 const DEFAULT_WEB_DISPLAY =
-  '"Montserrat", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+  '"Teko", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+const DEFAULT_WEB_HEADING =
+  '"Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 const DEFAULT_WEB_MONO = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace';
 
 /* ---------- 3. VALORES POR DEFECTO (layer 3, menor precedencia) --------- */
@@ -353,7 +356,7 @@ const resolvedWebHeading =
   storageTypography.headingFamilyWeb ||
   HEADING_FONT_ENV ||
   (storageTypography.headingFamily as string) ||
-  DEFAULT_WEB_DISPLAY;
+  DEFAULT_WEB_HEADING;
 const resolvedWebBody =
   storageTypography.bodyFamilyWeb ||
   BODY_FONT_ENV ||
@@ -368,15 +371,15 @@ const resolvedWebMono =
 const resolvedNativeDisplay =
   (storageTypography.displayFamilyNative as string) ||
   (storageTypography.displayFamily as string) ||
-  "Montserrat_800ExtraBold";
+  "Teko_700Bold";
 const resolvedNativeHeading =
   (storageTypography.headingFamilyNative as string) ||
   (storageTypography.headingFamily as string) ||
-  "Montserrat_700Bold";
+  "Rajdhani_700Bold";
 const resolvedNativeBody =
   (storageTypography.bodyFamilyNative as string) ||
   (storageTypography.bodyFamily as string) ||
-  "Inter_400Regular";
+  "Manrope_400Regular";
 const resolvedNativeMono =
   (storageTypography.monoFamilyNative as string) ||
   (storageTypography.monoFamily as string) ||
