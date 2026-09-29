@@ -20,7 +20,8 @@ import { getErrorMessage } from "@/api/http";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
-import { PublicAuthModal, type AuthMode } from "@/components/PublicAuthModal";
+import type { AuthMode } from "@/components/PublicAuthModal";
+import { PublicAuthModal } from "@/components/PublicAuthModal";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, goldenYellow, goldenYellowSoft, indigoBlueSoft, judogiRedSoft, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
@@ -41,25 +42,22 @@ import {
   savePendingAcademyRegistration,
 } from "@/utils/storage";
 
-export type PublicSiteSectionKey = "home" | "about" | "events" | "stores";
-type SectionKey = "about";
-type DesktopNavKey = "home" | "about";
-
-export type PublicSiteScrollControls = {
-  scrollToSection: (section: PublicSiteSectionKey) => void;
-};
-
-export type PublicSiteScreenRef = {
-  setAuthMode: (mode: AuthMode) => void;
-};
-
-type PublicSiteScreenProps = {
-  page: PublicPageKey;
-  onReadyScrollControls?: (controls: PublicSiteScrollControls) => void;
-  initialAuthMode?: AuthMode;
-  disableAuthNavigation?: boolean;
-  disableInternalScroll?: boolean;
-};
+import type {
+  DesktopNavItem,
+  HomeDisciplineEditorial,
+  HomePricingPlan,
+  HomeScreenProps,
+  LandingDiscipline,
+  LandingFeature,
+  MobileSectionNavItem,
+  PublicPageCopy,
+  PublicSiteScreenProps,
+  PublicSiteScreenRef,
+  PublicSiteScrollControls,
+  PublicSiteSectionKey,
+  SectionKey,
+  DesktopNavKey,
+} from "./__types__/PublicSiteScreen.types";
 
 function buildWebsiteImage(prompt: string, imageSize: string): string {
   return `https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=${encodeURIComponent(prompt)}&image_size=${imageSize}`;
@@ -145,12 +143,12 @@ const HOME_HIGHLIGHTS = [
   "Configura tu academia y entra al panel en pocos pasos.",
 ];
 
-const DESKTOP_NAV_ITEMS: Array<{ key: DesktopNavKey; label: string; page: PublicPageKey; section: SectionKey | null }> = [
+const DESKTOP_NAV_ITEMS: DesktopNavItem[] = [
   { key: "home", label: "Inicio", page: "home", section: null },
   { key: "about", label: "Acerca de nosotros", page: "about", section: "about" },
 ];
 
-const MOBILE_SECTION_NAV_ITEMS: Array<{ key: SectionKey | "home"; label: string; page: PublicPageKey }> = [
+const MOBILE_SECTION_NAV_ITEMS: MobileSectionNavItem[] = [
   { key: "home", label: "Inicio", page: "home" },
   { key: "about", label: "Acerca de nosotros", page: "about" },
 ];
@@ -164,14 +162,7 @@ const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
   stores: [],
 };
 
-const PAGE_COPY: Record<
-  PublicPageKey,
-  {
-    description: string;
-    eyebrow: string;
-    title: string;
-  }
-> = {
+const PAGE_COPY: Record<PublicPageKey, PublicPageCopy> = {
   home: {
     description: "Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.",
     eyebrow: "Software de administracion",
@@ -2024,11 +2015,7 @@ function buildHomeSpaNavItems(
   }));
 }
 
-type HomeScreenProps = {
-  initialSection?: PublicSiteSectionKey;
-};
-
-const HOME_DISCIPLINES_EDITORIAL = [
+const HOME_DISCIPLINES_EDITORIAL: HomeDisciplineEditorial[] = [
   {
     id: "bjj",
     name: "Brazilian Jiu-Jitsu",
@@ -2044,9 +2031,9 @@ const HOME_DISCIPLINES_EDITORIAL = [
     name: "Judo Olímpico",
     tagline: "Registro de clases, inscripciones a torneos y progreso técnico.",
   },
-] as const;
+];
 
-const HOME_PRICING_PLANS = [
+const HOME_PRICING_PLANS: HomePricingPlan[] = [
   {
     id: "estandar",
     name: "Estándar",
@@ -2071,9 +2058,9 @@ const HOME_PRICING_PLANS = [
     cta: "Elegir Pro",
     highlight: true,
   },
-] as const;
+];
 
-const LANDING_FEATURES = [
+const LANDING_FEATURES: LandingFeature[] = [
   {
     id: "alumnos",
     title: "Control de alumnos",
@@ -2110,9 +2097,9 @@ const LANDING_FEATURES = [
     description: "Historial de graduaciones, promociones bit a bit y registro oficial de progreso.",
     icon: "award",
   },
-] as const;
+];
 
-const LANDING_DISCIPLINES = [
+const LANDING_DISCIPLINES: LandingDiscipline[] = [
   {
     id: "bjj",
     name: "Brazilian Jiu-Jitsu",
@@ -2137,7 +2124,7 @@ const LANDING_DISCIPLINES = [
     softColor: goldenYellowSoft,
     tagline: "Equilibrio · Proyección · Honor",
   },
-] as const;
+];
 
 export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
