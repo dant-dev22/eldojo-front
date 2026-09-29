@@ -555,6 +555,19 @@ export function PublicAuthModal({ visible, onClose, initialMode = "login" }: Pub
             testID="components-public-auth-modal-signin-password-input"
             value={password}
           />
+          <Pressable
+            accessibilityRole="link"
+            nativeID="components-public-auth-modal-signin-recovery-link"
+            onPress={() => {}}
+            style={({ pressed, hovered }: any) => [
+              styles.recoveryLink,
+              pressed ? { opacity: 0.8 } : null,
+              hovered ? styles.recoveryLinkHovered : null,
+            ]}
+            testID="components-public-auth-modal-signin-recovery-link"
+          >
+            <Text style={styles.recoveryLabel}>¿Olvidaste tu contraseña?</Text>
+          </Pressable>
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
           {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
 
@@ -586,26 +599,24 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tabs: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     borderWidth: 1,
     flexDirection: "row",
-    gap: spacing.xs,
-    padding: 4,
+    gap: 0,
+    padding: 0,
   },
   tabButton: {
     alignItems: "center",
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     flex: 1,
     justifyContent: "center",
-    minHeight: 38,
+    minHeight: 40,
     paddingHorizontal: spacing.sm,
   },
   tabButtonActive: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
-    borderWidth: 1,
+    backgroundColor: colors.text,
   },
   tabButtonPressed: {
     opacity: 0.85,
@@ -618,7 +629,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   tabLabelActive: {
-    color: colors.primary,
+    color: colors.background,
   },
   formTitle: {
     color: colors.text,
@@ -636,17 +647,17 @@ const styles = StyleSheet.create({
   },
   pendingConfirmationCard: {
     alignItems: "flex-start",
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
     padding: spacing.sm,
   },
   pendingConfirmationIndicator: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
+    backgroundColor: colors.text,
+    borderRadius: radius.sm,
     height: 10,
     marginTop: 3,
     width: 10,
@@ -681,7 +692,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   success: {
-    color: colors.primary,
+    color: colors.success,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
     lineHeight: 16,
@@ -694,6 +705,22 @@ const styles = StyleSheet.create({
   },
   passwordTogglePressed: {
     opacity: 0.65,
+  },
+  recoveryLink: {
+    alignSelf: "flex-start",
+    borderBottomColor: "transparent",
+    borderBottomWidth: 1,
+    paddingVertical: 2,
+  },
+  recoveryLinkHovered: {
+    borderBottomColor: colors.borderStrong,
+  },
+  recoveryLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.1,
   },
   formActions: {
     gap: spacing.xs,

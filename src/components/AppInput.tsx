@@ -196,9 +196,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   inputContainer: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -224,10 +224,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minWidth: 36,
     paddingHorizontal: 6,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
   },
   eyeButtonPressed: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceStrong,
     opacity: 0.8,
   },
   error: {

@@ -35,12 +35,78 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
 # ============ CONFIGURATION ============
 REASONING_FILE = "ui-reasoning.csv"
 
+# =============================================================================
+# PROYECTO ELDOJO — Valores por defecto + paleta base (sin search hit)
+# Usados cuando: a) la BDD no tiene resultados, b) el prompt no especifica nada
+# o c) como base de comparación. Pueden ser sobreescritos en runtime vía:
+#   localStorage["eldojo_theme_overrides"]   (consola navegador, sin build)
+#   EXPO_PUBLIC_THEME_*                      (archivos .env.public/.admin/.student)
+#   docs/brand-guidelines.md §1              (manual)
+# =============================================================================
+ELDOJO_COLORS_FALLBACK = {
+    "Primary": "#8D6E63",       "On Primary": "#FFFFFF",
+    "Secondary": "#1A237E",     "Accent": "#1A237E",
+    "Background": "#FFFFFF",    "Foreground": "#1A1A1A",
+    "Muted": "#6D6D6D",         "Border": "rgba(141,110,99,0.22)",
+    "Destructive": "#C62828",   "Ring": "#8D6E63",
+    "Notes": "Paleta por defecto de El Dojo (agedWood + indigo). Edita docs/brand-guidelines.md §1 o usa overrides runtime/localStorage/EXPO_PUBLIC_THEME_* para cambiar.",
+}
+ELDOJO_TYPOGRAPHY_FALLBACK = {
+    "Heading Font": "Montserrat",
+    "Body Font": "Inter",
+    "Mood/Style Keywords": "Editorial-minimal · traditional-dojo · warm-balanced",
+    "Best For": "Academias, software educativo, dashboards profesionales",
+    "Google Fonts URL": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap",
+    "CSS Import": "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap');",
+}
+ELDOJO_STYLE_FALLBACK = {
+    "Style Category": "Warm Editorial Minimalism",
+    "Type": "General",
+    "Keywords": "editorial minimal, warm neutrals, subtle wood accents, ample whitespace, Montserrat display, Inter body, soft shadows, 20px card radius",
+    "Best For": "Landing pages + dashboards, mix de contenido editorial con datos",
+    "Effects & Animation": "Fade + micro-translate 4px en entradas; hover 150ms en botones; sombra card en elevación",
+    "Performance": "Excelente (sin imágenes pesadas ni blur costoso)",
+    "Accessibility": "Full WCAG AA 4.5:1",
+    "Light Mode ✓": "Primary (recomendado)",
+    "Dark Mode ✓": "Full",
+}
+ELDOJO_PATTERN_FALLBACK = {
+    "Pattern Name": "Hero > Features > CTA",
+    "Section Order": "Hero > Features > CTA",
+    "Primary CTA Placement": "Above fold + sticky en menú",
+    "Color Strategy": "AgedWood (#8D6E63) como acción principal, Indigo (#1A237E) como acento secundario, neutros cálidos",
+    "Conversion Optimization": "CTA con copy claro, sin lero-lero; enlaces de login separados en ruta dedicada (SignInScreen)",
+}
+ELDOJO_CHOICE_HINTS = (
+    "aged wood", "agedwood", "dojo", "tatami", "judogi", "golden yellow",
+    "madera", "indigo #1a237e", "montserrat", "inter body", "wood #8d6e63",
+)
+ELDOJO_BRAND_PREPROMPT = """--- BRAND GUIDELINES §0 (OBLIGATORIO antes de generar banners/slides/assets)
+VISUAL STYLE MOOD: editorial-minimal warm-judogi tech-precise traditional-dojo
+COLORS (HEX):
+  PRIMARY = #8D6E63
+  SECONDARY = #1A237E
+  ACCENT = #1A237E
+  BG = #FFFFFF
+  TEXT = #1A1A1A
+LIGHTING: natural soft
+COMPOSITION: hero-centric minimal negative-space
+AESTHETIC: modern-minimal museum-quality
+CAMERA & LENS: 35mm f/1.8
+DON'Ts: ai artifacts, extra limbs, text-in-images, watermarks, low-res, compressed jpeg
+--- END BRAND §0 (si el usuario aporta un §0 propio en docs/brand-guidelines.md §1, usa SUS valores, no estos defaults)
+"""
+
 SEARCH_CONFIG = {
-    "product": {"max_results": 1},
-    "style": {"max_results": 3},
-    "color": {"max_results": 2},
-    "landing": {"max_results": 2},
-    "typography": {"max_results": 2}
+    # (Proyecto ElDojo) Ampliado para mayor diversidad de estilos/paletas.
+    # Antes: 1 producto / 3 estilos / 2 paletas / 2 tipografías / 2 landings
+    # Ahora: 3 productos / 9 estilos / 6 paletas / 6 tipografías / 5 landings
+    "product":     {"max_results": 3},
+    "style":       {"max_results": 9},
+    "color":       {"max_results": 6},
+    "landing":     {"max_results": 5},
+    "typography":  {"max_results": 6},
+    "reasoning":   {"max_results": 1},  # razonamiento por categoría
 }
 
 # ============ DESIGN DIALS (1-10) ============
@@ -145,6 +211,28 @@ def _query_wants_dark(query: str) -> bool:
     return any(marker in lowered for marker in _DARK_QUERY_MARKERS)
 
 
+_USER_EXPLICIT_COLOR_HINTS = (
+    "#", "hex", "palette", "colore", "couleur", "rgb",
+)
+
+
+def _query_has_explicit_color(query: str) -> bool:
+    """Detecta si el usuario ya está especificando colores en el query.
+
+    Señales: '#' (un hex), 'palette X', un color nombre de 4+ chars.
+    Si es True, SKIP filtros estrictos de modo/luminancia para no descartar
+    la paleta que el usuario sí pidió.
+    """
+    q = (query or "").lower()
+    if any(h in q for h in _USER_EXPLICIT_COLOR_HINTS):
+        return True
+    color_words = ("blue", "red", "green", "amber", "purple", "pink", "orange",
+                   "dark", "black", "white", "neutral", "olive", "monochrome",
+                   "azul", "rojo", "verde", "morado", "dorado", "violeta",
+                   "negro", "blanco", "madera", "oro", "lila")
+    return any(w in q for w in color_words)
+
+
 def _resolve_color_mode(query: str, style: dict) -> str:
     """Resolve the mode the rest of the output has to agree with."""
     if _query_wants_dark(query) or _style_is_dark_primary(style):
@@ -152,16 +240,18 @@ def _resolve_color_mode(query: str, style: dict) -> str:
     return "light"
 
 
-def _select_palette_for_mode(palettes: list, mode: str) -> dict:
+def _select_palette_for_mode(palettes: list, mode: str, query: str = None) -> dict:
     """Pick the highest-ranked palette matching the resolved mode.
 
-    Only the dark case filters. Light is left on the existing "top hit wins"
-    behaviour so queries that never mention a mode keep their current palette.
-    Falls back to the top hit when the data has no matching ramp.
+    Solo filtra en modo dark y SI el usuario NO dio una indicación explícita
+    de color/paleta en el query. Si el usuario especificó colores, devuelve
+    el top hit sin filtrar por luminancia (nunca descartamos su intención).
+    Falls back al ElDojo fallback si `palettes` está vacío.
     """
     if not palettes:
-        return {}
-    if mode == "dark":
+        return dict(ELDOJO_COLORS_FALLBACK)
+    explicit = _query_has_explicit_color(query or "")
+    if mode == "dark" and not explicit:
         for palette in palettes:
             if _palette_is_dark(palette):
                 return palette
@@ -313,13 +403,16 @@ class DesignSystemGenerator:
         variance/motion/density are optional 1-10 dials (see DIAL_TIERS) that bias
         style selection, pull in a matching motion.csv snippet, and override the
         spacing scale, without changing behavior when left unset.
+
+        Para proyecto ElDojo: inyecta también brand_preprompt §0, runtime overrides
+        listos para pegar en consola/navegador y equivalencia EXPO_PUBLIC_THEME_*.
         """
         variance_info = _resolve_dial("variance", variance)
         motion_info = _resolve_dial("motion", motion)
         density_info = _resolve_dial("density", density)
 
         # Step 1: First search product to get category
-        product_result = search(query, "product", 1)
+        product_result = search(query, "product", SEARCH_CONFIG["product"]["max_results"])
         product_results = product_result.get("results", [])
         category = "General"
         if product_results:
@@ -327,13 +420,19 @@ class DesignSystemGenerator:
 
         # Step 2: Get reasoning rules for this category
         reasoning = self._apply_reasoning(category, {})
-        style_priority = reasoning.get("style_priority", [])
+        base_style_priority = reasoning.get("style_priority") or []
+        if not base_style_priority:
+            base_style_priority = ["Editorial Minimalism", "Warm Minimalism"]
 
-        # DESIGN_VARIANCE dial: bias style retrieval/selection toward
-        # centered-minimal (low) or bold-asymmetric (high) keywords.
-        effective_style_priority = style_priority
+        # DESIGN_VARIANCE dial + hints del proyecto si el query menciona El Dojo
+        query_lower = (query or "").lower()
+        dojo_hint = any(h in query_lower for h in ELDOJO_CHOICE_HINTS)
+        effective_style_priority = list(base_style_priority)
         if variance_info:
-            effective_style_priority = variance_info["style_keywords"] + style_priority
+            effective_style_priority = list(variance_info["style_keywords"]) + effective_style_priority
+        if dojo_hint and not any(h in (s.lower() for s in effective_style_priority)
+                                  for h in ("editorial", "warm", "wood", "minimal")):
+            effective_style_priority = ["Warm Editorial", "Editorial Minimalism"] + effective_style_priority
 
         # Step 3: Multi-domain search with style priority hints
         search_results = self._multi_domain_search(query, effective_style_priority)
@@ -346,17 +445,16 @@ class DesignSystemGenerator:
         landing_results = self._extract_results(search_results.get("landing", {}))
 
         best_style = self._select_best_match(style_results, effective_style_priority)
-        # Resolve the mode from the style + query first, then pick a palette that
-        # agrees with it. Ranking colors independently is what let a dark-primary
-        # style ship with a light background.
+        if not best_style:
+            best_style = dict(ELDOJO_STYLE_FALLBACK)
         color_mode = _resolve_color_mode(query, best_style)
-        best_color = _select_palette_for_mode(color_results, color_mode)
-        best_typography = typography_results[0] if typography_results else {}
-        best_landing = landing_results[0] if landing_results else {}
+        best_color = _select_palette_for_mode(color_results, color_mode, query=query)
+        if not best_color:
+            best_color = dict(ELDOJO_COLORS_FALLBACK)
+        best_typography = typography_results[0] if typography_results else dict(ELDOJO_TYPOGRAPHY_FALLBACK)
+        best_landing = landing_results[0] if landing_results else dict(ELDOJO_PATTERN_FALLBACK)
 
         # MOTION_INTENSITY dial: pull a matching GSAP skeleton from motion.csv
-        # (domain key is "gsap", not "motion" - PR #296 already owns the "motion"
-        # domain for Emil Kowalski's motion-design principles, motion-principles.csv).
         motion_snippet = {}
         if motion_info:
             motion_result = search(f"{query} {motion_info['tier']}", "gsap", 5)
@@ -368,55 +466,127 @@ class DesignSystemGenerator:
                 motion_snippet = motion_matches[0]
 
         # Step 5: Build final recommendation
-        # Combine effects from both reasoning and style search
         style_effects = best_style.get("Effects & Animation", "")
         reasoning_effects = reasoning.get("key_effects", "")
         combined_effects = style_effects if style_effects else reasoning_effects
 
+        c_primary   = best_color.get("Primary",    ELDOJO_COLORS_FALLBACK["Primary"])
+        c_on_prim   = best_color.get("On Primary", ELDOJO_COLORS_FALLBACK["On Primary"])
+        c_secondary = best_color.get("Secondary",  ELDOJO_COLORS_FALLBACK["Secondary"])
+        c_accent    = best_color.get("Accent",     ELDOJO_COLORS_FALLBACK["Accent"])
+        c_bg        = best_color.get("Background", ELDOJO_COLORS_FALLBACK["Background"])
+        c_fg        = best_color.get("Foreground", ELDOJO_COLORS_FALLBACK["Foreground"])
+        c_muted     = best_color.get("Muted",      ELDOJO_COLORS_FALLBACK["Muted"])
+        c_border    = best_color.get("Border",     ELDOJO_COLORS_FALLBACK["Border"])
+        c_destruct  = best_color.get("Destructive",ELDOJO_COLORS_FALLBACK["Destructive"])
+        c_ring      = best_color.get("Ring",       ELDOJO_COLORS_FALLBACK["Ring"])
+        c_notes     = best_color.get("Notes",      "")
+
+        t_heading   = best_typography.get("Heading Font", ELDOJO_TYPOGRAPHY_FALLBACK["Heading Font"])
+        t_body      = best_typography.get("Body Font",    ELDOJO_TYPOGRAPHY_FALLBACK["Body Font"])
+
+        # ----- RUNTIME OVERRIDES (alineados con theme.ts + brand-guidelines §7)
+        runtime_localstorage = (
+            'localStorage.setItem("eldojo_theme_overrides", JSON.stringify({{'
+            '\n  colors: {{'
+            '\n    primary: "{p}", accent: "{a}", secondary: "{s}",'
+            '\n    danger: "{d}", success: "#16A34A", warning: "#D97706", info: "{s}",'
+            '\n    background: "{bg}", text: "{fg}", textMuted: "{m}",'
+            '\n    border: "{b}", focusRing: "{r}", activeIndicator: "{p}",'
+            '\n  }},'
+            '\n  typography: {{'
+            '\n    displayFamily: \'"{h}", system-ui, sans-serif\','
+            '\n    bodyFamily:    \'"{bf}", system-ui, sans-serif\','
+            '\n  }},'
+            '\n}})); location.reload();'
+        ).format(p=c_primary, a=c_accent, s=c_secondary, d=c_destruct or "#C62828",
+                 bg=c_bg, fg=c_fg, m=c_muted, b=c_border, r=c_ring,
+                 h=t_heading, bf=t_body)
+
+        runtime_dotenv = (
+            "EXPO_PUBLIC_THEME_PRIMARY={p}\n"
+            "EXPO_PUBLIC_THEME_ACCENT={a}\n"
+            "EXPO_PUBLIC_THEME_SECONDARY={s}\n"
+            "EXPO_PUBLIC_THEME_DANGER={d}\n"
+            "EXPO_PUBLIC_THEME_BG={bg}\n"
+            "EXPO_PUBLIC_THEME_SURFACE={bg}\n"
+            "EXPO_PUBLIC_THEME_TEXT={fg}\n"
+            "EXPO_PUBLIC_THEME_TEXT_MUTED={m}\n"
+            "EXPO_PUBLIC_THEME_BORDER={b}\n"
+            "EXPO_PUBLIC_THEME_FOCUS_RING={r}\n"
+            "EXPO_PUBLIC_THEME_ACTIVE_INDICATOR={p}\n"
+            "EXPO_PUBLIC_THEME_DISPLAY_FONT='\"{h}\", sans-serif'\n"
+            "EXPO_PUBLIC_THEME_BODY_FONT='\"{bf}\", sans-serif'"
+        ).format(p=c_primary, a=c_accent, s=c_secondary, d=c_destruct or "#C62828",
+                 bg=c_bg, fg=c_fg, m=c_muted, b=c_border, r=c_ring,
+                 h=t_heading, bf=t_body)
+
+        # ----- Pre-prompt §0 sugerido para skills de imagen/banner/slides
+        preprompt_suggested = (
+            "--- BRAND §0 AUTO-GENERADO POR UI/UX PRO MAX (copia/pega en skills de imagen)\n"
+            "VISUAL STYLE MOOD: {} {} {} {}\n".format(
+                "editorial-minimal", "warm-judogi" if dojo_hint else "modern-balanced",
+                "tech-precise", "traditional-dojo" if dojo_hint else "studio-clean") +
+            "COLORS (HEX):\n"
+            "  PRIMARY = {}\n".format(c_primary) +
+            "  SECONDARY = {}\n".format(c_secondary) +
+            "  ACCENT = {}\n".format(c_accent) +
+            "  BG = {}\n".format(c_bg) +
+            "  TEXT = {}\n".format(c_fg) +
+            "LIGHTING: natural soft\n"
+            "COMPOSITION: hero-centric minimal negative-space\n"
+            "AESTHETIC: modern-minimal museum-quality\n"
+            "CAMERA & LENS: 35mm f/1.8\n"
+            "DON'Ts: ai artifacts, extra limbs, text-in-images, watermarks, low-res, compressed jpeg\n"
+            "--- END BRAND §0"
+        )
+
         return {
-            "project_name": project_name or query.upper(),
+            "project_name": project_name or query.upper() or "ELDOJO",
             "category": category,
             "pattern": {
-                "name": best_landing.get("Pattern Name", reasoning.get("pattern", "Hero + Features + CTA")),
-                "sections": best_landing.get("Section Order", "Hero > Features > CTA"),
-                "cta_placement": best_landing.get("Primary CTA Placement", "Above fold"),
-                "color_strategy": best_landing.get("Color Strategy", ""),
-                "conversion": best_landing.get("Conversion Optimization", "")
+                "name": best_landing.get("Pattern Name",
+                                         reasoning.get("pattern", ELDOJO_PATTERN_FALLBACK["Pattern Name"])),
+                "sections": best_landing.get("Section Order", ELDOJO_PATTERN_FALLBACK["Section Order"]),
+                "cta_placement": best_landing.get("Primary CTA Placement", ELDOJO_PATTERN_FALLBACK["Primary CTA Placement"]),
+                "color_strategy": best_landing.get("Color Strategy", ELDOJO_PATTERN_FALLBACK["Color Strategy"]),
+                "conversion": best_landing.get("Conversion Optimization", ELDOJO_PATTERN_FALLBACK["Conversion Optimization"])
             },
             "style": {
-                "name": best_style.get("Style Category", "Minimalism"),
+                "name": best_style.get("Style Category", ELDOJO_STYLE_FALLBACK["Style Category"]),
                 "type": best_style.get("Type", "General"),
                 "effects": style_effects,
-                "keywords": best_style.get("Keywords", ""),
-                "best_for": best_style.get("Best For", ""),
-                "performance": best_style.get("Performance", ""),
-                "accessibility": best_style.get("Accessibility", ""),
-                "light_mode": best_style.get("Light Mode ✓", ""),
-                "dark_mode": best_style.get("Dark Mode ✓", ""),
+                "keywords": best_style.get("Keywords", ELDOJO_STYLE_FALLBACK["Keywords"]),
+                "best_for": best_style.get("Best For", ELDOJO_STYLE_FALLBACK["Best For"]),
+                "performance": best_style.get("Performance", ELDOJO_STYLE_FALLBACK["Performance"]),
+                "accessibility": best_style.get("Accessibility", ELDOJO_STYLE_FALLBACK["Accessibility"]),
+                "light_mode": best_style.get("Light Mode ✓", ELDOJO_STYLE_FALLBACK.get("Light Mode ✓", "")),
+                "dark_mode": best_style.get("Dark Mode ✓", ELDOJO_STYLE_FALLBACK.get("Dark Mode ✓", "")),
             },
             "colors": {
-                "primary": best_color.get("Primary", "#2563EB"),
-                "on_primary": best_color.get("On Primary", ""),
-                "secondary": best_color.get("Secondary", "#3B82F6"),
-                "accent": best_color.get("Accent", "#F97316"),
-                "background": best_color.get("Background", "#F8FAFC"),
-                "foreground": best_color.get("Foreground", "#1E293B"),
-                "muted": best_color.get("Muted", ""),
-                "border": best_color.get("Border", ""),
-                "destructive": best_color.get("Destructive", ""),
-                "ring": best_color.get("Ring", ""),
-                "notes": best_color.get("Notes", ""),
-                # Keep legacy keys for backward compat in MASTER.md
-                "cta": best_color.get("Accent", "#F97316"),
-                "text": best_color.get("Foreground", "#1E293B"),
+                "primary": c_primary,
+                "on_primary": c_on_prim,
+                "secondary": c_secondary,
+                "accent": c_accent,
+                "background": c_bg,
+                "foreground": c_fg,
+                "muted": c_muted,
+                "border": c_border,
+                "destructive": c_destruct,
+                "ring": c_ring,
+                "notes": c_notes,
+                "cta": c_accent,
+                "text": c_fg,
             },
             "typography": {
-                "heading": best_typography.get("Heading Font", "Inter"),
-                "body": best_typography.get("Body Font", "Inter"),
-                "mood": best_typography.get("Mood/Style Keywords", reasoning.get("typography_mood", "")),
-                "best_for": best_typography.get("Best For", ""),
-                "google_fonts_url": best_typography.get("Google Fonts URL", ""),
-                "css_import": best_typography.get("CSS Import", "")
+                "heading": t_heading,
+                "body": t_body,
+                "mood": best_typography.get("Mood/Style Keywords",
+                                           reasoning.get("typography_mood",
+                                                         ELDOJO_TYPOGRAPHY_FALLBACK["Mood/Style Keywords"])),
+                "best_for": best_typography.get("Best For", ELDOJO_TYPOGRAPHY_FALLBACK["Best For"]),
+                "google_fonts_url": best_typography.get("Google Fonts URL", ELDOJO_TYPOGRAPHY_FALLBACK["Google Fonts URL"]),
+                "css_import": best_typography.get("CSS Import", ELDOJO_TYPOGRAPHY_FALLBACK["CSS Import"])
             },
             "key_effects": combined_effects,
             "anti_patterns": _filter_anti_patterns_for_mode(
@@ -434,6 +604,14 @@ class DesignSystemGenerator:
             },
             "motion_snippet": motion_snippet,
             "spacing_scale": density_info["spacing"] if density_info else None,
+            # --- El Dojo extras (alineados con theme.ts + docs/brand-guidelines.md)
+            "brand_preprompt": preprompt_suggested,
+            "runtime_overrides": {
+                "localstorage_js": runtime_localstorage,
+                "dotenv": runtime_dotenv,
+            },
+            "brand_hint_active": dojo_hint,
+            "color_mode": color_mode,
         }
 
 
@@ -614,6 +792,30 @@ def format_ascii_box(design_system: dict) -> str:
         for line in wrap_text(anti_patterns, "│     ", BOX_WIDTH):
             lines.append(line.ljust(BOX_WIDTH) + "│")
 
+    # Brand §0 (preprompt para skills de imagen/banner/slides)
+    brand_pp = design_system.get("brand_preprompt")
+    if brand_pp:
+        lines.append(section_header("BRAND §0 — PRE-PROMPT (copia en skills de imagen)", BOX_WIDTH + 1))
+        for raw_line in brand_pp.splitlines():
+            safe = raw_line.rstrip()[:BOX_WIDTH - 8]
+            lines.append(f"│     {safe}".ljust(BOX_WIDTH) + "│")
+
+    # Runtime overrides (alineados con theme.ts del proyecto)
+    rto = design_system.get("runtime_overrides") or {}
+    if rto.get("localstorage_js") or rto.get("dotenv"):
+        lines.append(section_header("RUNTIME OVERRIDES (aplicar SIN BUILD)", BOX_WIDTH + 1))
+        if rto.get("localstorage_js"):
+            lines.append(f"│  📦 localStorage (Navegador → F12 Console)".ljust(BOX_WIDTH) + "│")
+            for raw_line in str(rto["localstorage_js"]).splitlines():
+                safe = raw_line.rstrip()[:BOX_WIDTH - 8]
+                lines.append(f"│     {safe}".ljust(BOX_WIDTH) + "│")
+        if rto.get("dotenv"):
+            lines.append(f"│  🔐 .env.* (EXPO_PUBLIC_THEME_* — requiere rebuild)".ljust(BOX_WIDTH) + "│")
+            for raw_line in str(rto["dotenv"]).splitlines():
+                safe = raw_line.rstrip()[:BOX_WIDTH - 8]
+                lines.append(f"│     {safe}".ljust(BOX_WIDTH) + "│")
+        lines.append(f"│  💾 Reset: localStorage.removeItem('eldojo_theme_overrides'); location.reload();".ljust(BOX_WIDTH) + "│")
+
     # Pre-Delivery Checklist section
     lines.append(section_header("PRE-DELIVERY CHECKLIST", BOX_WIDTH + 1))
     checklist_items = [
@@ -623,7 +825,7 @@ def format_ascii_box(design_system: dict) -> str:
         "[ ] Light mode: text contrast 4.5:1 minimum",
         "[ ] Focus states visible for keyboard nav",
         "[ ] prefers-reduced-motion respected",
-        "[ ] Responsive: 375px, 768px, 1024px, 1440px"
+        "[ ] Responsive: 375px, 768px, 1024px, 1440px",
     ]
     for item in checklist_items:
         lines.append(f"│     {item}".ljust(BOX_WIDTH) + "│")
@@ -756,6 +958,35 @@ def format_markdown(design_system: dict) -> str:
         lines.append("### Avoid (Anti-patterns)")
         newline_bullet = '\n- '
         lines.append(f"- {anti_patterns.replace(' + ', newline_bullet)}")
+        lines.append("")
+
+    # Brand §0 — Pre-prompt para skills de imagen/banner/slides
+    brand_pp = design_system.get("brand_preprompt")
+    if brand_pp:
+        lines.append("### Brand §0 — Pre-prompt (OBLIGATORIO en skills de imagen)")
+        lines.append("```")
+        lines.extend(brand_pp.splitlines())
+        lines.append("```")
+        lines.append("")
+
+    # Runtime overrides (alineados con theme.ts + docs/brand-guidelines.md §7)
+    rto = design_system.get("runtime_overrides") or {}
+    if rto.get("localstorage_js") or rto.get("dotenv"):
+        lines.append("### Runtime Overrides (aplicar SIN BUILD)")
+        if rto.get("localstorage_js"):
+            lines.append("**📦 localStorage (Navegador → F12 Console):**")
+            lines.append("```js")
+            lines.extend(str(rto["localstorage_js"]).splitlines())
+            lines.append("```")
+        if rto.get("dotenv"):
+            lines.append("**🔐 .env.* (variables `EXPO_PUBLIC_THEME_*` — requiere rebuild):**")
+            lines.append("```dotenv")
+            lines.extend(str(rto["dotenv"]).splitlines())
+            lines.append("```")
+        lines.append("**💾 Reset:**")
+        lines.append("```js")
+        lines.append("localStorage.removeItem('eldojo_theme_overrides'); location.reload();")
+        lines.append("```")
         lines.append("")
 
     # Pre-Delivery Checklist section
@@ -1210,7 +1441,60 @@ def format_master_md(design_system: dict) -> str:
     lines.append("- [ ] No content hidden behind fixed navbars")
     lines.append("- [ ] No horizontal scroll on mobile")
     lines.append("")
-    
+
+    # ====== ElDojo Integration ======
+    lines.append("---")
+    lines.append("")
+    lines.append("## El Dojo — Integración (theme.ts + docs/brand-guidelines.md)")
+    lines.append("")
+    lines.append("> Único skill de diseño activo en este proyecto: **ui-ux-pro-max**.")
+    lines.append("> Los valores de este MASTER.md se materializan en la app por 3 vías, con precedencia:")
+    lines.append("> 1. `localStorage['eldojo_theme_overrides']` (sin build, F12) →")
+    lines.append("> 2. `EXPO_PUBLIC_THEME_*` en `.env.public` / `.env.admin` / `.env.student` →")
+    lines.append("> 3. Este MASTER.md (`docs/brand-guidelines.md §1` como referencia manual) →")
+    lines.append("> 4. Fallbacks por defecto de `src/constants/theme.ts`.")
+    lines.append("")
+
+    # Brand §0
+    brand_pp = design_system.get("brand_preprompt")
+    if brand_pp:
+        lines.append("### Brand §0 — Pre-prompt para skills de imagen (copia/pega)")
+        lines.append("")
+        lines.append("```")
+        lines.extend(brand_pp.splitlines())
+        lines.append("```")
+        lines.append("")
+
+    # Runtime overrides
+    rto = design_system.get("runtime_overrides") or {}
+    if rto.get("localstorage_js") or rto.get("dotenv"):
+        lines.append("### Runtime Overrides — Aplicar la paleta")
+        lines.append("")
+        if rto.get("localstorage_js"):
+            lines.append("**A. Sin build (consola navegador F12):**")
+            lines.append("```js")
+            lines.extend(str(rto["localstorage_js"]).splitlines())
+            lines.append("```")
+            lines.append("")
+        if rto.get("dotenv"):
+            lines.append("**B. Con build (variables `EXPO_PUBLIC_THEME_*` en `.env.public` / `.env.admin` / `.env.student`):**")
+            lines.append("```dotenv")
+            lines.extend(str(rto["dotenv"]).splitlines())
+            lines.append("```")
+            lines.append("")
+        lines.append("**C. Resetear a defaults:**")
+        lines.append("```js")
+        lines.append("localStorage.removeItem('eldojo_theme_overrides'); location.reload();")
+        lines.append("```")
+        lines.append("")
+
+    lines.append("### Ref documental")
+    lines.append("")
+    lines.append("- `docs/brand-guidelines.md` §1 → tabla maestra editable (Quick Reference).")
+    lines.append("- `docs/brand-guidelines.md` §7 → ejemplos pre-cocinados (Tech Blue, Luxury).")
+    lines.append("- `src/constants/theme.ts` → resolver de overrides runtime + env + defaults.")
+    lines.append("")
+
     return "\n".join(lines)
 
 

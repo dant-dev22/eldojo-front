@@ -9,13 +9,15 @@ import { LogoSvg } from "@/components/LogoSvg";
 import { Screen } from "@/components/Screen";
 import { SessionIndicator } from "@/components/SessionIndicator";
 import {
-  agedWood,
-  agedWoodSoft,
+  EDITORIAL_BG,
+  EDITORIAL_BORDER,
+  EDITORIAL_BORDER_SOFT,
+  EDITORIAL_FG,
+  EDITORIAL_FG_MUTED,
+  EDITORIAL_FG_SUBTLE,
+  EDITORIAL_SURFACE,
+  EDITORIAL_SURFACE_HOVER,
   colors,
-  goldenYellow,
-  goldenYellowSoft,
-  indigoBlue,
-  indigoBlueSoft,
   radius,
   spacing,
   typography,
@@ -219,7 +221,6 @@ export function PublicPageChrome({
               {...getWebClassNameProps("public-chrome-navbar-inner")}
             >
               <View style={styles.navbarLeftGroup}>
-                {showAuthControls ? <SessionIndicator idPrefix={idPrefix} /> : null}
                 <Pressable
                   accessibilityRole="button"
                   nativeID={`${idPrefix}-brand-button`}
@@ -242,7 +243,7 @@ export function PublicPageChrome({
                     >
                       <LogoSvg
                         nativeID={`${idPrefix}-brand-mark-label`}
-                        size={32}
+                        size={20}
                         variant="brand-red"
                         testID={`${idPrefix}-brand-mark-label`}
                       />
@@ -260,18 +261,11 @@ export function PublicPageChrome({
                       testID={`${idPrefix}-brand-title`}
                       {...getWebClassNameProps("public-chrome-navbar-brand-title")}
                     >
-                      ElDojo
-                    </Text>
-                    <Text
-                      nativeID={`${idPrefix}-brand-subtitle`}
-                      style={styles.brandSubtitle}
-                      testID={`${idPrefix}-brand-subtitle`}
-                      {...getWebClassNameProps("public-chrome-navbar-brand-subtitle")}
-                    >
-                      Sencillez · Orden · Dojo
+                      El Dojo
                     </Text>
                   </View>
                 </Pressable>
+                {showAuthControls ? <SessionIndicator idPrefix={idPrefix} /> : null}
               </View>
 
               <View
@@ -280,7 +274,7 @@ export function PublicPageChrome({
                 testID={`${idPrefix}-nav-items`}
                 {...getWebClassNameProps("public-chrome-navbar-nav-items")}
               >
-                {navItems.map((item) => (
+                {navItems.slice(0, 2).map((item) => (
                   <Pressable
                     key={item.key}
                     accessibilityRole="button"
@@ -345,56 +339,12 @@ export function PublicPageChrome({
                           const hovered = (state as unknown as { hovered?: boolean }).hovered;
                           return [
                             styles.authButton,
-                            styles.authButtonGhost,
-                            hovered ? styles.authButtonGhostHover : null,
-                            state.pressed ? styles.authButtonPressed : null,
-                          ];
-                        }}
-                        testID={`${idPrefix}-auth-signin`}
-                        {...getWebClassNameProps(
-                          joinWebClassNames(
-                            "public-chrome-navbar-auth-button",
-                            "public-chrome-navbar-auth-button--ghost"
-                          )
-                        )}
-                      >
-                        {(state) => {
-                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                          return (
-                            <Text
-                              nativeID={`${idPrefix}-auth-signin-label`}
-                              style={[
-                                styles.authButtonLabel,
-                                styles.authButtonLabelGhost,
-                                hovered ? styles.authButtonLabelGhostHover : null,
-                              ]}
-                              testID={`${idPrefix}-auth-signin-label`}
-                              {...getWebClassNameProps(
-                                joinWebClassNames(
-                                  "public-chrome-navbar-auth-button-label",
-                                  "public-chrome-navbar-auth-button-label--ghost"
-                                )
-                              )}
-                            >
-                              Iniciar sesión
-                            </Text>
-                          );
-                        }}
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="link"
-                        nativeID={`${idPrefix}-auth-create`}
-                        onPress={handleCreateAccountPress}
-                        style={(state) => {
-                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                          return [
-                            styles.authButton,
                             styles.authButtonPrimary,
                             hovered ? styles.authButtonPrimaryHover : null,
                             state.pressed ? styles.authButtonPressed : null,
                           ];
                         }}
-                        testID={`${idPrefix}-auth-create`}
+                        testID={`${idPrefix}-auth-signin`}
                         {...getWebClassNameProps(
                           joinWebClassNames(
                             "public-chrome-navbar-auth-button",
@@ -405,32 +355,23 @@ export function PublicPageChrome({
                         {(state) => {
                           const hovered = (state as unknown as { hovered?: boolean }).hovered;
                           return (
-                            <>
-                              <Feather
-                                color="#FFFFFF"
-                                name="user-plus"
-                                size={15}
-                                style={styles.authPrimaryIcon}
-                                {...getWebClassNameProps("public-chrome-navbar-auth-primary-icon")}
-                              />
-                              <Text
-                                nativeID={`${idPrefix}-auth-create-label`}
-                                style={[
-                                  styles.authButtonLabel,
-                                  styles.authButtonLabelPrimary,
-                                  hovered ? styles.authButtonLabelPrimaryHover : null,
-                                ]}
-                                testID={`${idPrefix}-auth-create-label`}
-                                {...getWebClassNameProps(
-                                  joinWebClassNames(
-                                    "public-chrome-navbar-auth-button-label",
-                                    "public-chrome-navbar-auth-button-label--primary"
-                                  )
-                                )}
-                              >
-                                Crear cuenta
-                              </Text>
-                            </>
+                            <Text
+                              nativeID={`${idPrefix}-auth-signin-label`}
+                              style={[
+                                styles.authButtonLabel,
+                                styles.authButtonLabelPrimary,
+                                hovered ? styles.authButtonLabelPrimaryHover : null,
+                              ]}
+                              testID={`${idPrefix}-auth-signin-label`}
+                              {...getWebClassNameProps(
+                                joinWebClassNames(
+                                  "public-chrome-navbar-auth-button-label",
+                                  "public-chrome-navbar-auth-button-label--primary"
+                                )
+                              )}
+                            >
+                              Ingresar
+                            </Text>
                           );
                         }}
                       </Pressable>
@@ -552,29 +493,19 @@ export function PublicPageChrome({
                     >
                       <LogoSvg
                         nativeID={`${idPrefix}-footer-brand-mark-label`}
-                        size={28}
+                        size={20}
                         variant="brand-red-solid"
                         testID={`${idPrefix}-footer-brand-mark-label`}
                       />
                     </View>
-                    <View>
-                      <Text
-                        nativeID={`${idPrefix}-footer-brand-title`}
-                        style={styles.footerBrandTitle}
-                        testID={`${idPrefix}-footer-brand-title`}
-                        {...getWebClassNameProps("public-chrome-footer-brand-title")}
-                      >
-                        ElDojo
-                      </Text>
-                      <Text
-                        nativeID={`${idPrefix}-footer-tagline`}
-                        style={styles.footerTagline}
-                        testID={`${idPrefix}-footer-tagline`}
-                        {...getWebClassNameProps("public-chrome-footer-tagline")}
-                      >
-                        Sencillez · Orden · Dojo
-                      </Text>
-                    </View>
+                    <Text
+                      nativeID={`${idPrefix}-footer-brand-title`}
+                      style={styles.footerBrandTitle}
+                      testID={`${idPrefix}-footer-brand-title`}
+                      {...getWebClassNameProps("public-chrome-footer-brand-title")}
+                    >
+                      El Dojo
+                    </Text>
                   </View>
                   <Text
                     nativeID={`${idPrefix}-footer-brand-description`}
@@ -582,187 +513,8 @@ export function PublicPageChrome({
                     testID={`${idPrefix}-footer-brand-description`}
                     {...getWebClassNameProps("public-chrome-footer-brand-description")}
                   >
-                    Software de administración hecho para academias de artes marciales que prefieren la simplicidad antes que el ruido visual.
+                    Software de gestión para academias de BJJ, MMA y Judo.
                   </Text>
-                  <View
-                    nativeID={`${idPrefix}-footer-values-row`}
-                    style={styles.footerValuesRow}
-                    testID={`${idPrefix}-footer-values-row`}
-                    {...getWebClassNameProps("public-chrome-footer-values-row")}
-                  >
-                    <View
-                      style={[styles.footerValuePill, { backgroundColor: agedWoodSoft }]}
-                      {...getWebClassNameProps(
-                        joinWebClassNames(
-                          "public-chrome-footer-value-pill",
-                          "public-chrome-footer-value-pill--brown"
-                        )
-                      )}
-                    >
-                      <View
-                        style={styles.footerValueDotBrown}
-                        {...getWebClassNameProps("public-chrome-footer-value-dot-brown")}
-                      />
-                      <Text
-                        style={styles.footerValueLabel}
-                        {...getWebClassNameProps("public-chrome-footer-value-label")}
-                      >
-                        Disciplina
-                      </Text>
-                    </View>
-                    <View
-                      style={[styles.footerValuePill, { backgroundColor: goldenYellowSoft }]}
-                      {...getWebClassNameProps(
-                        joinWebClassNames(
-                          "public-chrome-footer-value-pill",
-                          "public-chrome-footer-value-pill--gold"
-                        )
-                      )}
-                    >
-                      <View
-                        style={styles.footerValueDotGold}
-                        {...getWebClassNameProps("public-chrome-footer-value-dot-gold")}
-                      />
-                      <Text
-                        style={styles.footerValueLabel}
-                        {...getWebClassNameProps("public-chrome-footer-value-label")}
-                      >
-                        Respeto
-                      </Text>
-                    </View>
-                    <View
-                      style={[styles.footerValuePill, { backgroundColor: indigoBlueSoft }]}
-                      {...getWebClassNameProps(
-                        joinWebClassNames(
-                          "public-chrome-footer-value-pill",
-                          "public-chrome-footer-value-pill--indigo"
-                        )
-                      )}
-                    >
-                      <View
-                        style={styles.footerValueDotIndigo}
-                        {...getWebClassNameProps("public-chrome-footer-value-dot-indigo")}
-                      />
-                      <Text
-                        style={styles.footerValueLabel}
-                        {...getWebClassNameProps("public-chrome-footer-value-label")}
-                      >
-                        Honor
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.footerColumnsWrap}>
-                  <View
-                    nativeID={`${idPrefix}-footer-nav-block`}
-                    style={styles.footerBlock}
-                    testID={`${idPrefix}-footer-nav-block`}
-                    {...getWebClassNameProps("public-chrome-footer-nav-block")}
-                  >
-                    <Text
-                      nativeID={`${idPrefix}-footer-nav-title`}
-                      style={styles.footerBlockTitle}
-                      testID={`${idPrefix}-footer-nav-title`}
-                      {...getWebClassNameProps("public-chrome-footer-nav-title")}
-                    >
-                      Navegar
-                    </Text>
-                    {[
-                      { key: "home", label: "Inicio" },
-                      { key: "about", label: "Acerca de ElDojo" },
-                    ].map((item) => (
-                      <Pressable
-                        key={item.key}
-                        nativeID={`${idPrefix}-footer-nav-item-${item.key}`}
-                        onPress={() => navigateToPublicPageKey(item.key as Parameters<typeof navigateToPublicPageKey>[0])}
-                        style={({ pressed }) => [styles.footerLink, pressed ? styles.footerLinkPressed : null]}
-                        testID={`${idPrefix}-footer-nav-item-${item.key}`}
-                        {...getWebClassNameProps(`public-chrome-footer-nav-item-${item.key}`)}
-                      >
-                        <Feather
-                          color={agedWood}
-                          name="arrow-right"
-                          size={12}
-                          style={styles.footerLinkArrow}
-                          {...getWebClassNameProps("public-chrome-footer-link-arrow")}
-                        />
-                        <Text
-                          style={styles.footerLinkLabel}
-                          {...getWebClassNameProps("public-chrome-footer-link-label")}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  <View
-                    nativeID={`${idPrefix}-footer-contact-block`}
-                    style={styles.footerBlock}
-                    testID={`${idPrefix}-footer-contact-block`}
-                    {...getWebClassNameProps("public-chrome-footer-contact-block")}
-                  >
-                    <Text
-                      nativeID={`${idPrefix}-footer-contact-title`}
-                      style={styles.footerBlockTitle}
-                      testID={`${idPrefix}-footer-contact-title`}
-                      {...getWebClassNameProps("public-chrome-footer-contact-title")}
-                    >
-                      Contacto
-                    </Text>
-                    <View
-                      style={styles.footerContactRow}
-                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
-                    >
-                      <View
-                        style={styles.footerContactIconWrap}
-                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
-                      >
-                        <Feather color={agedWood} name="mail" size={13} />
-                      </View>
-                      <Text
-                        style={styles.footerContactText}
-                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
-                      >
-                        hola@eldojo.tech
-                      </Text>
-                    </View>
-                    <View
-                      style={styles.footerContactRow}
-                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
-                    >
-                      <View
-                        style={styles.footerContactIconWrap}
-                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
-                      >
-                        <Feather color={agedWood} name="phone" size={13} />
-                      </View>
-                      <Text
-                        style={styles.footerContactText}
-                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
-                      >
-                        +52 81 0000 0000
-                      </Text>
-                    </View>
-                    <View
-                      style={styles.footerContactRow}
-                      {...getWebClassNameProps("public-chrome-footer-contact-row")}
-                    >
-                      <View
-                        style={styles.footerContactIconWrap}
-                        {...getWebClassNameProps("public-chrome-footer-contact-icon-wrap")}
-                      >
-                        <Feather color={agedWood} name="map-pin" size={13} />
-                      </View>
-                      <Text
-                        style={styles.footerContactText}
-                        {...getWebClassNameProps("public-chrome-footer-contact-text")}
-                      >
-                        Monterrey, N.L. · México
-                      </Text>
-                    </View>
-                  </View>
                 </View>
               </View>
 
@@ -785,14 +537,18 @@ export function PublicPageChrome({
                   testID={`${idPrefix}-footer-copyright`}
                   {...getWebClassNameProps("public-chrome-footer-copyright")}
                 >
-                  © {new Date().getFullYear()} ElDojo. Todos los derechos reservados.
+                  © 2026 El Dojo.
                 </Text>
                 <View
                   style={styles.footerLegalRow}
                   {...getWebClassNameProps("public-chrome-footer-legal-row")}
                 >
                   <Pressable
-                    style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}
+                    style={({ pressed, hovered }: any) => [
+                      styles.footerLegalLink,
+                      pressed ? { opacity: 0.7 } : null,
+                      hovered ? { borderBottomColor: EDITORIAL_BORDER } : null,
+                    ]}
                     {...getWebClassNameProps("public-chrome-footer-legal-link")}
                   >
                     <Text
@@ -807,7 +563,11 @@ export function PublicPageChrome({
                     {...getWebClassNameProps("public-chrome-footer-legal-separator")}
                   />
                   <Pressable
-                    style={({ pressed }) => [styles.footerLegalLink, pressed ? { opacity: 0.7 } : null]}
+                    style={({ pressed, hovered }: any) => [
+                      styles.footerLegalLink,
+                      pressed ? { opacity: 0.7 } : null,
+                      hovered ? { borderBottomColor: EDITORIAL_BORDER } : null,
+                    ]}
                     {...getWebClassNameProps("public-chrome-footer-legal-link")}
                   >
                     <Text
@@ -821,30 +581,21 @@ export function PublicPageChrome({
                     style={styles.footerLegalSeparator}
                     {...getWebClassNameProps("public-chrome-footer-legal-separator")}
                   />
-                  <View
-                    style={styles.footerMadeIn}
-                    {...getWebClassNameProps("public-chrome-footer-made-in")}
+                  <Pressable
+                    style={({ pressed, hovered }: any) => [
+                      styles.footerLegalLink,
+                      pressed ? { opacity: 0.7 } : null,
+                      hovered ? { borderBottomColor: EDITORIAL_BORDER } : null,
+                    ]}
+                    {...getWebClassNameProps("public-chrome-footer-legal-link")}
                   >
                     <Text
-                      style={styles.footerMadeInLabel}
-                      {...getWebClassNameProps("public-chrome-footer-made-in-label")}
+                      style={styles.footerLegalLabel}
+                      {...getWebClassNameProps("public-chrome-footer-legal-label")}
                     >
-                      Hecho con
+                      Contacto
                     </Text>
-                    <Feather
-                      color={goldenYellow}
-                      name="award"
-                      size={12}
-                      style={styles.footerMadeInIcon}
-                      {...getWebClassNameProps("public-chrome-footer-made-in-icon")}
-                    />
-                    <Text
-                      style={styles.footerMadeInLabel}
-                      {...getWebClassNameProps("public-chrome-footer-made-in-label")}
-                    >
-                      en México
-                    </Text>
-                  </View>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -1000,9 +751,9 @@ const styles = StyleSheet.create({
     zIndex: 50,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: EDITORIAL_BG,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(141, 110, 99, 0.14)",
+    borderBottomColor: EDITORIAL_BORDER_SOFT,
   },
   navbarInner: {
     alignItems: "center",
@@ -1015,7 +766,7 @@ const styles = StyleSheet.create({
   navbarLeftGroup: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   brandButton: {
     alignItems: "center",
@@ -1026,68 +777,63 @@ const styles = StyleSheet.create({
   brandMark: {
     alignItems: "center",
     justifyContent: "center",
-    height: 44,
-    width: 44,
-    borderRadius: radius.md,
-    backgroundColor: agedWoodSoft,
+    height: 40,
+    width: 40,
+    borderRadius: 0,
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "rgba(141, 110, 99, 0.28)",
+    borderColor: EDITORIAL_BORDER,
   },
   brandMarkInner: {
     alignItems: "center",
     justifyContent: "center",
   },
   brandMarkLabel: {
-    color: agedWood,
-    fontFamily: typography.headingFamily,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  brandCopy: {
-    gap: 1,
-  },
-  brandTitle: {
-    color: colors.text,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
     fontSize: 18,
     fontWeight: "800",
-    letterSpacing: -0.2,
   },
-  brandSubtitle: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 12,
-    letterSpacing: 0.2,
+  brandCopy: {
+    gap: 0,
+  },
+  brandTitle: {
+    color: EDITORIAL_FG,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
   navItems: {
     alignItems: "center",
     flex: 1,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.xs,
+    gap: spacing.lg,
     justifyContent: "center",
   },
   navItem: {
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
   },
   navItemHovered: {
-    backgroundColor: colors.hover,
+    borderBottomColor: EDITORIAL_BORDER,
   },
   navItemPressed: {
-    opacity: 0.88,
-    backgroundColor: colors.hoverStrong,
+    opacity: 0.75,
   },
   navItemLabel: {
-    color: colors.textMuted,
-    fontFamily: typography.headingFamily,
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.2,
+    color: EDITORIAL_FG_MUTED,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: 0.1,
   },
   navItemLabelActive: {
-    color: colors.text,
+    color: EDITORIAL_FG,
   },
   actions: {
     alignItems: "center",
@@ -1102,56 +848,48 @@ const styles = StyleSheet.create({
   },
   authButton: {
     alignItems: "center",
-    borderRadius: radius.pill,
+    borderRadius: 0,
     flexDirection: "row",
     justifyContent: "center",
     minHeight: 42,
     paddingHorizontal: spacing.md,
   },
   authButtonPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.985 }],
+    opacity: 0.82,
   },
   authButtonGhost: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: EDITORIAL_BORDER,
   },
   authButtonGhostHover: {
-    backgroundColor: colors.hover,
-    borderColor: "rgba(141, 110, 99, 0.24)",
+    backgroundColor: EDITORIAL_SURFACE_HOVER,
   },
   authButtonPrimary: {
-    backgroundColor: agedWood,
+    backgroundColor: EDITORIAL_FG,
     borderWidth: 1,
-    borderColor: agedWood,
-    shadowColor: agedWood,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
+    borderColor: EDITORIAL_BORDER,
   },
   authButtonPrimaryHover: {
-    backgroundColor: colors.primaryHover,
-    borderColor: colors.primaryHover,
-    shadowOpacity: 0.26,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
   },
   authButtonLabel: {
     fontFamily: typography.headingFamily,
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: 0.15,
   },
   authButtonLabelGhost: {
-    color: colors.text,
+    color: EDITORIAL_FG,
   },
   authButtonLabelGhostHover: {
-    color: agedWood,
+    color: EDITORIAL_FG,
   },
   authButtonLabelPrimary: {
-    color: "#FFFFFF",
+    color: EDITORIAL_BG,
   },
   authButtonLabelPrimaryHover: {
-    color: "#FFFFFF",
+    color: EDITORIAL_BG,
   },
   authPrimaryIcon: {
     marginRight: 8,
@@ -1164,45 +902,41 @@ const styles = StyleSheet.create({
   mobileMiniAvatar: {
     alignItems: "center",
     justifyContent: "center",
-    height: 38,
-    width: 38,
-    borderRadius: radius.pill,
-    backgroundColor: agedWoodSoft,
+    height: 40,
+    width: 40,
+    borderRadius: 0,
+    backgroundColor: EDITORIAL_SURFACE,
     borderWidth: 1,
-    borderColor: "rgba(141, 110, 99, 0.22)",
+    borderColor: EDITORIAL_BORDER,
   },
   mobileMiniAvatarInitial: {
-    color: agedWood,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "800",
   },
   menuTrigger: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
+    backgroundColor: EDITORIAL_BG,
+    borderColor: EDITORIAL_BORDER,
+    borderRadius: 0,
     borderWidth: 1,
-    height: 42,
+    height: 44,
     justifyContent: "center",
-    shadowColor: "#1A1A1A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    width: 42,
+    width: 44,
   },
   menuTriggerPressed: {
     opacity: 0.82,
-    backgroundColor: colors.hover,
+    backgroundColor: EDITORIAL_SURFACE_HOVER,
   },
   mobileFloatingBar: {
     alignItems: "center",
     alignSelf: "flex-end",
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    borderBottomColor: colors.border,
-    borderBottomLeftRadius: 28,
-    borderColor: colors.border,
-    borderLeftColor: colors.border,
+    backgroundColor: EDITORIAL_BG,
+    borderBottomColor: EDITORIAL_BORDER_SOFT,
+    borderBottomLeftRadius: 0,
+    borderColor: EDITORIAL_BORDER_SOFT,
+    borderLeftColor: EDITORIAL_BORDER_SOFT,
     borderLeftWidth: 1,
     borderWidth: 0,
     borderBottomWidth: 1,
@@ -1215,10 +949,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     position: (Platform.OS === "web" ? "sticky" : "relative") as unknown as ViewStyle["position"],
     right: 0,
-    shadowColor: "#1A1A1A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
     top: 0,
     zIndex: 60,
   },
@@ -1240,10 +970,13 @@ const styles = StyleSheet.create({
     flexBasis: "auto",
   },
   footerShell: {
+    borderTopWidth: 1,
+    borderTopColor: EDITORIAL_BORDER_SOFT,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing["2xl"],
-    paddingTop: spacing.xl,
+    paddingTop: spacing["2xl"],
     width: "100%",
+    backgroundColor: EDITORIAL_BG,
   },
   footerShellStatic: {
     position: "relative",
@@ -1252,28 +985,28 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   footerDividerTop: {
-    alignSelf: "center",
-    width: 64,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: agedWood,
-    marginBottom: spacing.xl,
+    alignSelf: "flex-start",
+    width: 40,
+    height: 1,
+    backgroundColor: EDITORIAL_BORDER,
+    marginBottom: spacing.lg,
   },
   footerInner: {
     alignSelf: "center",
     width: "100%",
   },
   footerGrid: {
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   footerGridDesktop: {
     flexDirection: "row",
     gap: spacing["2xl"],
     justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   footerBrandBlock: {
     flex: 1,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   footerBrandRow: {
     alignItems: "center",
@@ -1283,73 +1016,31 @@ const styles = StyleSheet.create({
   footerBrandMark: {
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
-    width: 40,
-    borderRadius: radius.md,
-    backgroundColor: agedWood,
+    height: 36,
+    width: 36,
+    borderRadius: 0,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: EDITORIAL_BORDER,
   },
   footerBrandMarkLabel: {
-    color: "#FFFFFF",
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
   },
   footerBrandTitle: {
-    color: colors.text,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
   },
-  footerTagline: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
   footerBrandDescription: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_MUTED,
     fontFamily: typography.bodyFamily,
     fontSize: 14,
     lineHeight: 22,
-    maxWidth: 360,
-  },
-  footerValuesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  footerValuePill: {
-    alignItems: "center",
-    borderRadius: radius.pill,
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-  },
-  footerValueDotBrown: {
-    width: 6,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: agedWood,
-  },
-  footerValueDotGold: {
-    width: 6,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: goldenYellow,
-  },
-  footerValueDotIndigo: {
-    width: 6,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: indigoBlue,
-  },
-  footerValueLabel: {
-    color: colors.text,
-    fontFamily: typography.headingFamily,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.2,
+    maxWidth: 340,
   },
   footerColumnsWrap: {
     flexDirection: "row",
@@ -1360,14 +1051,14 @@ const styles = StyleSheet.create({
   },
   footerBlock: {
     gap: spacing.sm,
-    minWidth: 160,
+    minWidth: 140,
   },
   footerBlockTitle: {
-    color: colors.text,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
     fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.4,
+    fontWeight: "700",
+    letterSpacing: 1.6,
     marginBottom: spacing.xs,
     textTransform: "uppercase",
   },
@@ -1375,40 +1066,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
   },
   footerLinkPressed: {
     opacity: 0.72,
+    borderBottomColor: EDITORIAL_BORDER,
   },
   footerLinkArrow: {
     opacity: 0.9,
   },
   footerLinkLabel: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_MUTED,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
+    fontSize: 14,
   },
   footerContactRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 6,
   },
   footerContactIconWrap: {
     alignItems: "center",
     justifyContent: "center",
     height: 24,
     width: 24,
-    borderRadius: radius.pill,
-    backgroundColor: agedWoodSoft,
+    borderRadius: 0,
+    backgroundColor: EDITORIAL_SURFACE,
+    borderWidth: 1,
+    borderColor: EDITORIAL_BORDER_SOFT,
   },
   footerContactText: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_MUTED,
     fontFamily: typography.bodyFamily,
-    fontSize: 13,
+    fontSize: 14,
   },
   footerDivider: {
-    backgroundColor: "rgba(141, 110, 99, 0.16)",
+    backgroundColor: EDITORIAL_BORDER_SOFT,
     height: 1,
     marginVertical: spacing.lg,
     width: "100%",
@@ -1422,27 +1118,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   footerCopyright: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_SUBTLE,
     fontFamily: typography.bodyFamily,
-    fontSize: 12,
+    fontSize: 13,
   },
   footerLegalRow: {
     alignItems: "center",
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   footerLegalLink: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
     paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
   },
   footerLegalLabel: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_MUTED,
     fontFamily: typography.bodyFamily,
-    fontSize: 12,
+    fontSize: 13,
   },
   footerLegalSeparator: {
-    backgroundColor: "rgba(141, 110, 99, 0.22)",
+    backgroundColor: EDITORIAL_BORDER_SOFT,
     height: 12,
     width: 1,
   },
@@ -1453,7 +1151,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   footerMadeInLabel: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_SUBTLE,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
   },
@@ -1465,10 +1163,10 @@ const styles = StyleSheet.create({
   },
   mobileMenuProfileCard: {
     alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.lg,
+    backgroundColor: EDITORIAL_SURFACE,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: EDITORIAL_BORDER,
     flexDirection: "row",
     gap: spacing.sm,
     marginBottom: spacing.xs,
@@ -1476,14 +1174,16 @@ const styles = StyleSheet.create({
   },
   mobileMenuAvatar: {
     alignItems: "center",
-    backgroundColor: agedWoodSoft,
-    borderRadius: radius.pill,
+    backgroundColor: EDITORIAL_SURFACE,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: EDITORIAL_BORDER,
     height: 40,
     justifyContent: "center",
     width: 40,
   },
   mobileMenuAvatarInitial: {
-    color: agedWood,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
     fontSize: 15,
     fontWeight: "800",
@@ -1493,13 +1193,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   mobileMenuProfileName: {
-    color: colors.text,
+    color: EDITORIAL_FG,
     fontFamily: typography.headingFamily,
     fontSize: 14,
     fontWeight: "700",
   },
   mobileMenuProfileEmail: {
-    color: colors.textMuted,
+    color: EDITORIAL_FG_MUTED,
     fontFamily: typography.bodyFamily,
     fontSize: 12,
   },

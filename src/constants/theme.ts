@@ -65,6 +65,20 @@ export const textSecondaryDark = "#999999";
 export const borderLight = "rgba(141, 110, 99, 0.22)";
 export const borderStrongLight = "rgba(141, 110, 99, 0.42)";
 
+export const EDITORIAL_BG = "#1F2937";
+export const EDITORIAL_FG = "#FFFFFF";
+export const EDITORIAL_BORDER = "rgba(255, 255, 255, 1)";
+export const EDITORIAL_BORDER_SOFT = "rgba(255, 255, 255, 0.12)";
+export const EDITORIAL_SURFACE = "rgba(255, 255, 255, 0.04)";
+export const EDITORIAL_SURFACE_HOVER = "rgba(255, 255, 255, 0.08)";
+export const EDITORIAL_FG_MUTED = "rgba(255, 255, 255, 0.62)";
+export const EDITORIAL_FG_SUBTLE = "rgba(255, 255, 255, 0.40)";
+export const EDITORIAL_ACCENT_SUCCESS = "#22C55E";
+export const EDITORIAL_ACCENT_WARNING = "#F59E0B";
+export const EDITORIAL_ACCENT_DANGER = "#EF4444";
+export const EDITORIAL_RING = "rgba(255, 255, 255, 1)";
+export const EDITORIAL_OVERLAY = "rgba(10, 12, 16, 0.72)";
+
 /* ---------- 2. FUENTES POR DEFECTO (web + native) ----------------------- */
 const DEFAULT_WEB_BODY = '"Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 const DEFAULT_WEB_DISPLAY =
@@ -73,103 +87,104 @@ const DEFAULT_WEB_MONO = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace
 
 /* ---------- 3. VALORES POR DEFECTO (layer 3, menor precedencia) --------- */
 const DEFAULTS_COLORS = {
-  background: bgLight,
-  surface: "#FFFFFF",
-  surfaceAlt: "#FAFAFA",
-  surfaceStrong: "#FFFFFF",
-  panel: "#FFFFFF",
-  panelSoft: "#FAFAFA",
+  background: EDITORIAL_BG,
+  surface: EDITORIAL_SURFACE,
+  surfaceAlt: EDITORIAL_SURFACE,
+  surfaceStrong: "rgba(255, 255, 255, 0.06)",
+  panel: EDITORIAL_BG,
+  panelSoft: EDITORIAL_SURFACE,
 
-  primary: agedWood,
-  primaryHover: agedWoodHover,
-  primarySoft: agedWoodSoft,
+  primary: EDITORIAL_FG,
+  primaryHover: "rgba(255, 255, 255, 0.92)",
+  primarySoft: EDITORIAL_BORDER_SOFT,
 
-  accent: indigoBlue,
-  accentSoft: indigoBlueSoft,
+  accent: EDITORIAL_FG,
+  accentSoft: EDITORIAL_BORDER_SOFT,
 
-  action: agedWood,
-  actionHover: agedWoodHover,
-  actionSoft: agedWoodSoft,
+  action: EDITORIAL_FG,
+  actionHover: "rgba(255, 255, 255, 0.92)",
+  actionSoft: EDITORIAL_BORDER_SOFT,
 
-  secondary: indigoBlue,
-  secondaryHover: indigoBlueHover,
-  secondarySoft: indigoBlueSoft,
+  secondary: EDITORIAL_FG,
+  secondaryHover: "rgba(255, 255, 255, 0.92)",
+  secondarySoft: EDITORIAL_BORDER_SOFT,
 
-  gold: goldenYellow,
-  goldSoft: goldenYellowSoft,
+  gold: EDITORIAL_ACCENT_WARNING,
+  goldSoft: "rgba(245, 158, 11, 0.14)",
 
-  text: textPrimaryLight,
-  textMuted: textSecondaryLight,
+  text: EDITORIAL_FG,
+  textMuted: EDITORIAL_FG_MUTED,
 
-  onPrimary: "#FFFFFF",
-  onPrimaryMuted: "rgba(255, 255, 255, 0.88)",
+  onPrimary: EDITORIAL_BG,
+  onPrimaryMuted: "rgba(31, 41, 55, 0.88)",
 
-  border: borderLight,
-  borderStrong: borderStrongLight,
+  border: EDITORIAL_BORDER_SOFT,
+  borderStrong: EDITORIAL_BORDER,
 
-  wood: agedWood,
-  woodLight: agedWoodLight,
-  woodSoft: agedWoodSoft,
-  woodStrong: agedWoodStrong,
+  wood: EDITORIAL_FG,
+  woodLight: EDITORIAL_FG_MUTED,
+  woodSoft: EDITORIAL_BORDER_SOFT,
+  woodStrong: EDITORIAL_BORDER,
 
-  danger: judogiRed,
-  dangerHover: judogiRedHover,
-  dangerSoft: judogiRedSoft,
+  danger: EDITORIAL_ACCENT_DANGER,
+  dangerHover: "#DC2626",
+  dangerSoft: "rgba(239, 68, 68, 0.12)",
 
-  success: tatamiGreen,
-  successHover: tatamiGreenHover,
-  successSoft: tatamiGreenSoft,
+  success: EDITORIAL_ACCENT_SUCCESS,
+  successHover: "#16A34A",
+  successSoft: "rgba(34, 197, 94, 0.12)",
 
-  warning: goldenYellow,
-  warningHover: goldenYellowHover,
-  warningSoft: goldenYellowSoft,
+  warning: EDITORIAL_ACCENT_WARNING,
+  warningHover: "#D97706",
+  warningSoft: "rgba(245, 158, 11, 0.14)",
 
-  info: indigoBlue,
-  infoHover: indigoBlueHover,
-  infoSoft: indigoBlueSoft,
+  info: EDITORIAL_FG,
+  infoHover: "rgba(255, 255, 255, 0.92)",
+  infoSoft: EDITORIAL_BORDER_SOFT,
 
-  overlay: "rgba(26, 26, 26, 0.32)",
-  ink: textPrimaryLight,
+  overlay: EDITORIAL_OVERLAY,
+  ink: EDITORIAL_FG,
 
-  hover: agedWoodSoft,
-  hoverStrong: "rgba(141, 110, 99, 0.20)",
+  hover: EDITORIAL_SURFACE,
+  hoverStrong: EDITORIAL_SURFACE_HOVER,
 
-  sidebar: "#FFFFFF",
-  sidebarSoft: "#FAFAFA",
-  sidebarBorder: borderLight,
-  sidebarText: textPrimaryLight,
-  sidebarMuted: textSecondaryLight,
+  sidebar: EDITORIAL_BG,
+  sidebarSoft: EDITORIAL_SURFACE,
+  sidebarBorder: EDITORIAL_BORDER_SOFT,
+  sidebarText: EDITORIAL_FG,
+  sidebarMuted: EDITORIAL_FG_MUTED,
 
-  activeIndicator: agedWood,
-  focusRing: agedWood,
+  activeIndicator: EDITORIAL_FG,
+  focusRing: EDITORIAL_RING,
 
-  metricLavender: indigoBlueSoft,
-  metricWood: agedWoodSoft,
-  metricAmber: goldenYellowSoft,
-  metricBlue: indigoBlueSoft,
-  metricSuccess: tatamiGreenSoft,
+  metricLavender: EDITORIAL_BORDER_SOFT,
+  metricWood: EDITORIAL_BORDER_SOFT,
+  metricAmber: "rgba(245, 158, 11, 0.14)",
+  metricBlue: EDITORIAL_BORDER_SOFT,
+  metricSuccess: "rgba(34, 197, 94, 0.12)",
 };
 
 const DEFAULTS_SPACING = {
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 20,
-  xl: 28,
-  "2xl": 36,
+  xs: 10,
+  sm: 16,
+  md: 24,
+  lg: 32,
+  xl: 48,
+  "2xl": 72,
+  "3xl": 96,
 };
 
 const DEFAULTS_RADIUS = {
-  sm: 10,
-  md: 14,
-  lg: 20,
+  sm: 0,
+  md: 2,
+  lg: 4,
   pill: 999,
 };
 
 const DEFAULTS_TRANSITIONS = {
-  fast: 150,
+  fast: 120,
   base: 200,
-  slow: 250,
+  slow: 320,
 };
 
 const DEFAULTS_SHADOW_COLOR = "#1A1A1A";
@@ -224,7 +239,7 @@ function hexToRgba(hex: string | undefined, alpha: number): string | undefined {
 }
 
 function readEnvOverrides(): NestedRecord {
-  const env = (typeof process !== "undefined" && process.env) || {};
+  const env = ((typeof process !== "undefined" && process.env) || {}) as Record<string, string | undefined>;
   const out: NestedRecord = {
     colors: {},
     spacing: {},
@@ -367,7 +382,7 @@ const resolvedNativeMono =
   (storageTypography.monoFamily as string) ||
   undefined;
 
-const env = (typeof process !== "undefined" && process.env) || {};
+const env = ((typeof process !== "undefined" && process.env) || {}) as Record<string, string | undefined>;
 const _num = (v: string | undefined, fallback: number) =>
   v && !isNaN(Number(v)) ? Number(v) : fallback;
 
@@ -390,13 +405,13 @@ const mergedTypography = {
   }),
   displaySize:
     (storageTypography.displaySize as number) ??
-    _num(env.EXPO_PUBLIC_THEME_DISPLAY_SIZE, 40),
+    _num(env.EXPO_PUBLIC_THEME_DISPLAY_SIZE, 56),
   titleSize:
-    (storageTypography.titleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_TITLE_SIZE, 30),
+    (storageTypography.titleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_TITLE_SIZE, 36),
   subtitleSize:
-    (storageTypography.subtitleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_SUBTITLE_SIZE, 18),
+    (storageTypography.subtitleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_SUBTITLE_SIZE, 20),
   bodySize:
-    (storageTypography.bodySize as number) ?? _num(env.EXPO_PUBLIC_THEME_BODY_SIZE, 15),
+    (storageTypography.bodySize as number) ?? _num(env.EXPO_PUBLIC_THEME_BODY_SIZE, 16),
   captionSize:
     (storageTypography.captionSize as number) ?? _num(env.EXPO_PUBLIC_THEME_CAPTION_SIZE, 13),
 };
@@ -453,5 +468,5 @@ export const transitions = mergedTransitions;
 export const typography = mergedTypography;
 
 /* ---------- 9. Modo claro/oscuro (mantiene compatibilidad) --------------- */
-const LIGHT_MODE = true;
+const LIGHT_MODE = false;
 export const themeMode: "light" | "dark" = LIGHT_MODE ? "light" : "dark";

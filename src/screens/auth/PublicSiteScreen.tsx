@@ -22,7 +22,7 @@ import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
 import { PublicAuthModal, type AuthMode } from "@/components/PublicAuthModal";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
-import { colors, radius, spacing, typography } from "@/constants/theme";
+import { colors, goldenYellow, goldenYellowSoft, indigoBlueSoft, judogiRedSoft, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import {
@@ -2028,125 +2028,202 @@ type HomeScreenProps = {
   initialSection?: PublicSiteSectionKey;
 };
 
+const HOME_DISCIPLINES_EDITORIAL = [
+  {
+    id: "bjj",
+    name: "Brazilian Jiu-Jitsu",
+    tagline: "Gestión de graduaciones, niveles de cinturón y trayectoria por alumno.",
+  },
+  {
+    id: "mma",
+    name: "Artes Marciales Mixtas",
+    tagline: "Cobro de mensualidades, control de asistencia y horarios de combate.",
+  },
+  {
+    id: "judo",
+    name: "Judo Olímpico",
+    tagline: "Registro de clases, inscripciones a torneos y progreso técnico.",
+  },
+] as const;
+
+const HOME_PRICING_PLANS = [
+  {
+    id: "estandar",
+    name: "Estándar",
+    price: "1 sede",
+    bullets: [
+      "Alumnos y asistencia ilimitados",
+      "Cobro de mensualidades y morosidad",
+      "Panel de recepción y administración",
+    ],
+    cta: "Elegir Estándar",
+    highlight: false,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "Multi-sede",
+    bullets: [
+      "Todo lo de Estándar",
+      "Gestión de 2+ academias independientes",
+      "KPIs cruzados y reportes consolidados",
+    ],
+    cta: "Elegir Pro",
+    highlight: true,
+  },
+] as const;
+
 const LANDING_FEATURES = [
   {
     id: "alumnos",
     title: "Control de alumnos",
-    description: "Perfiles, matrículas, pagos y asistencia organizada por sucursal.",
+    description: "Perfiles completos, matrículas y estatus organizados por disciplina y sucursal.",
     icon: "users",
   },
   {
     id: "pagos",
     title: "Cobro y mensualidades",
-    description: "Registra pagos, envía recordatorios y visualiza morosidad.",
+    description: "Registra pagos, historial completo y seguimiento claro de morosidad.",
     icon: "dollar-sign",
   },
   {
     id: "asistencia",
     title: "Asistencia por QR",
-    description: "Lectura rápida, lista por clase e historial de trayectoria.",
+    description: "Lectura rápida por clase, listas diarias e historial individual de trayectoria.",
     icon: "check-square",
+  },
+  {
+    id: "clases",
+    title: "Clases y horarios",
+    description: "Organiza horarios de BJJ, MMA y Judo con asignación de instructores.",
+    icon: "calendar",
+  },
+  {
+    id: "sucursales",
+    title: "Multi-sede",
+    description: "Gestiona varias academias en un solo panel con métricas independientes.",
+    icon: "map-pin",
+  },
+  {
+    id: "cinturones",
+    title: "Cinturones y trayectoria",
+    description: "Historial de graduaciones, promociones bit a bit y registro oficial de progreso.",
+    icon: "award",
+  },
+] as const;
+
+const LANDING_DISCIPLINES = [
+  {
+    id: "bjj",
+    name: "Brazilian Jiu-Jitsu",
+    shortName: "BJJ",
+    color: "#1A237E",
+    softColor: indigoBlueSoft,
+    tagline: "Técnica · Resistencia · Estrategia",
+  },
+  {
+    id: "mma",
+    name: "Artes Marciales Mixtas",
+    shortName: "MMA",
+    color: "#C62828",
+    softColor: judogiRedSoft,
+    tagline: "Potencia · Agilidad · Combate",
+  },
+  {
+    id: "judo",
+    name: "Judo Olímpico",
+    shortName: "JUDO",
+    color: "#F9A825",
+    softColor: goldenYellowSoft,
+    tagline: "Equilibrio · Proyección · Honor",
   },
 ] as const;
 
 export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
-  const { isDesktop } = useResponsiveLayout();
+  const { isDesktop, contentMaxWidth } = useResponsiveLayout();
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<AuthMode>("login");
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    const styleId = "eldojo-public-landing-fade-styles";
+    const styleId = "eldojo-public-editorial-fade";
     if (document.getElementById(styleId)) return;
     const styleEl = document.createElement("style");
     styleEl.id = styleId;
     styleEl.appendChild(
       document.createTextNode(`
-        .eldojo-public-desktop-fade-in {
+        .ed-fade {
           opacity: 0;
-          transform: translateY(18px);
+          transform: translateY(12px);
           transition-property: opacity, transform;
-          transition-duration: 620ms;
+          transition-duration: 380ms;
           transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
           will-change: opacity, transform;
         }
-        .eldojo-public-desktop-fade-in.is-visible {
+        .ed-fade.ed-in {
           opacity: 1;
           transform: translateY(0);
         }
-        .eldojo-public-desktop-fade-in-delay-1 { transition-delay: 60ms; }
-        .eldojo-public-desktop-fade-in-delay-2 { transition-delay: 130ms; }
-        .eldojo-public-desktop-fade-in-delay-3 { transition-delay: 200ms; }
-        .eldojo-public-desktop-fade-in-delay-4 { transition-delay: 280ms; }
-        .eldojo-public-desktop-fade-in-delay-5 { transition-delay: 360ms; }
-        .eldojo-public-desktop-fade-in-delay-6 { transition-delay: 440ms; }
-        .eldojo-public-desktop-fade-in-delay-7 { transition-delay: 520ms; }
-        .eldojo-public-desktop-fade-in-delay-8 { transition-delay: 600ms; }
+        .ed-d1 { transition-delay: 60ms; }
+        .ed-d2 { transition-delay: 140ms; }
+        .ed-d3 { transition-delay: 220ms; }
+        .ed-d4 { transition-delay: 300ms; }
+        .ed-d5 { transition-delay: 380ms; }
+        .ed-d6 { transition-delay: 460ms; }
+        .ed-d7 { transition-delay: 540ms; }
+        .ed-d8 { transition-delay: 620ms; }
       `)
     );
     document.head.appendChild(styleEl);
 
-    const applyVisibility = () => {
-      const nodes = document.querySelectorAll<HTMLElement>(".eldojo-public-desktop-fade-in");
-      nodes.forEach((node) => {
-        requestAnimationFrame(() => node.classList.add("is-visible"));
-      });
+    const markIn = (nodes: NodeListOf<Element>) => {
+      nodes.forEach((n) => requestAnimationFrame(() => n.classList.add("ed-in")));
     };
-
+    const immediate = document.querySelectorAll<HTMLElement>(".ed-fade.ed-d1,.ed-fade.ed-d2,.ed-fade.ed-d3,.ed-fade.ed-d4");
     if ("requestIdleCallback" in window) {
-      (window as any).requestIdleCallback(applyVisibility, { timeout: 120 });
+      (window as any).requestIdleCallback(() => markIn(immediate), { timeout: 140 });
     } else {
-      setTimeout(applyVisibility, 30);
+      setTimeout(() => markIn(immediate), 40);
     }
-
-    let observer: IntersectionObserver | null = null;
+    let io: IntersectionObserver | null = null;
     if ("IntersectionObserver" in window) {
-      observer = new IntersectionObserver(
+      io = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
-              (entry.target as HTMLElement).classList.add("is-visible");
-              observer?.unobserve(entry.target);
+              (entry.target as HTMLElement).classList.add("ed-in");
+              io?.unobserve(entry.target);
             }
           });
         },
-        { threshold: 0.08 }
+        { threshold: 0.1 }
       );
-      const laterNodes = document.querySelectorAll<HTMLElement>(
-        ".eldojo-public-desktop-fade-in-delay-5, .eldojo-public-desktop-fade-in-delay-6, .eldojo-public-desktop-fade-in-delay-7, .eldojo-public-desktop-fade-in-delay-8"
-      );
-      laterNodes.forEach((node) => {
-        node.classList.remove("is-visible");
-        observer?.observe(node);
+      document.querySelectorAll<HTMLElement>(".ed-fade.ed-d5,.ed-fade.ed-d6,.ed-fade.ed-d7,.ed-fade.ed-d8").forEach((n) => {
+        n.classList.remove("ed-in");
+        io?.observe(n);
       });
     }
-
     return () => {
-      if (observer) observer.disconnect();
+      if (io) io.disconnect();
     };
   }, []);
-
-  const spaNavItems = useMemo(() => {
-    return [
-      { key: "home", label: "Inicio", onPress: () => navigation.navigate("Home") },
-      { key: "about", label: "Acerca de", onPress: () => navigation.navigate("About") },
-    ];
-  }, [navigation]);
 
   const openSignIn = useCallback(() => {
     setAuthInitialMode("login");
     setAuthModalVisible(true);
   }, []);
-
   const openCreateAccount = useCallback(() => {
     setAuthInitialMode("academy");
     setAuthModalVisible(true);
   }, []);
+  const closeModal = useCallback(() => setAuthModalVisible(false), []);
 
-  const closeModal = useCallback(() => {
-    setAuthModalVisible(false);
-  }, []);
+  const layoutWidth = Math.min(contentMaxWidth, 1200);
+  const spaNavItems = useMemo(() => ([
+    { key: "features", label: "Características", onPress: () => {} },
+    { key: "pricing", label: "Precios", onPress: () => {} },
+  ]), []);
 
   return (
     <PublicPageChrome
@@ -2158,141 +2235,146 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
       screenScrollable={true}
       showFooterTopDivider={false}
     >
-      <View style={styles.landingContainer}>
-        <View
-          style={[styles.landingHero, isDesktop ? styles.landingHeroDesktop : null]}
-          {...getWebClassNameProps(
-            isDesktop ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : undefined
-          )}
-        >
-          <View style={styles.landingHeroContent}>
-            <View
-              style={styles.landingHeroEyebrow}
-              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1")}
-            >
-              <View style={styles.landingHeroEyebrowDot} />
-              <Text style={styles.landingHeroEyebrowLabel}>Sistema de administración v2.0</Text>
-            </View>
-
-            <Text
-              style={[styles.landingHeroTitle, isDesktop ? styles.landingHeroTitleDesktop : null]}
-              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-2")}
-            >
-              <Text style={styles.landingHeroTitleBold}>Simplicidad</Text>
-              <Text style={styles.landingHeroTitleMuted}> Elegante.</Text>
+      <View style={[styles.edShell, { maxWidth: layoutWidth }]}>
+        {/* SECTION 1: HERO */}
+        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d1")}>
+          <View style={styles.edHero}>
+            <Text style={[styles.edHeroH1, isDesktop ? styles.edHeroH1Desktop : null]}>
+              Menos operación manual.
+              {"\n"}
+              <Text style={styles.edHeroH1Muted}>Más tiempo para tu academia.</Text>
             </Text>
-
-            <Text
-              style={[styles.landingHeroSubtitle, isDesktop ? styles.landingHeroSubtitleDesktop : null]}
-              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-3")}
-            >
-              Diseño minimalista enfocado en lo esencial. Tu academia, clara y ordenada, sin distracciones innecesarias.
+            <Text style={[styles.edHeroLead, isDesktop ? styles.edHeroLeadDesktop : null]}>
+              El Dojo centraliza alumnos, pagos, asistencia y clases de BJJ, MMA y Judo en una sola interfaz clara para recepción y dirección.
             </Text>
-
-            <View
-              style={styles.landingHeroActions}
-              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-4")}
-            >
+            <View style={[styles.edHeroActions, isDesktop ? styles.edHeroActionsDesktop : null]}>
               <AppButton
-                label="Comenzar ahora"
-                nativeID="screens-auth-public-home-hero-cta-primary"
+                label="Crear cuenta"
+                nativeID="screens-auth-public-home-hero-cta"
                 onPress={openCreateAccount}
-                style={styles.landingHeroCtaPrimary}
-                leadingIcon={<Feather color="#FFFFFF" name="arrow-right" size={15} />}
-                testID="screens-auth-public-home-hero-cta-primary"
+                style={styles.edHeroCtaPrimary}
+                testID="screens-auth-public-home-hero-cta"
                 variant="primary"
               />
-              <AppButton
-                label="Saber más"
-                nativeID="screens-auth-public-home-hero-cta-secondary"
-                onPress={() => navigation.navigate("About")}
-                style={styles.landingHeroCtaSecondary}
-                testID="screens-auth-public-home-hero-cta-secondary"
-                variant="secondary"
-              />
+              <Pressable
+                accessibilityRole="link"
+                nativeID="screens-auth-public-home-hero-link"
+                onPress={openSignIn}
+                style={({ pressed, hovered }: any) => [
+                  styles.edHeroLink,
+                  pressed ? { opacity: 0.8 } : null,
+                  hovered ? styles.edHeroLinkHovered : null,
+                ]}
+                testID="screens-auth-public-home-hero-link"
+              >
+                <Text style={styles.edHeroLinkLabel}>Ya tengo cuenta → Iniciar sesión</Text>
+              </Pressable>
             </View>
           </View>
         </View>
 
-        <View
-          style={styles.landingPreviewSection}
-          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-4")}
-        >
-          <View style={styles.landingPreviewCard}>
-            <View style={styles.landingPreviewDots}>
-              <View style={[styles.landingPreviewDot, { backgroundColor: "#FFD6D6" }]} />
-              <View style={[styles.landingPreviewDot, { backgroundColor: "#FFE8B8" }]} />
-              <View style={[styles.landingPreviewDot, { backgroundColor: "#C8F7D6" }]} />
-            </View>
-            <View style={styles.landingPreviewBody}>
-              <View style={styles.landingPreviewIconWrap}>
-                <Feather color={colors.primary} name="layout" size={28} />
-              </View>
-              <Text style={styles.landingPreviewTitle}>Interface Limpia</Text>
-              <Text style={styles.landingPreviewCaption}>Donde la forma sigue a la función.</Text>
-            </View>
-          </View>
-        </View>
-
-        <View
-          style={styles.landingFeaturesSection}
-          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-5")}
-        >
-          <View style={styles.landingFeaturesHeader}>
-            <Text style={styles.landingFeaturesTitle}>Todo lo que tu academia necesita</Text>
-            <Text style={styles.landingFeaturesSubtitle}>
-              Sin configuraciones complicadas. Empieza hoy y crece con tu dojo.
+        {/* SECTION 2: FEATURES (3 por disciplina) */}
+        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d5")}>
+          <View style={styles.edSectionHead}>
+            <Text style={styles.edEyebrow}>Por disciplina</Text>
+            <Text style={[styles.edSectionTitle, isDesktop ? styles.edSectionTitleDesktop : null]}>
+              Una herramienta para cada arte
             </Text>
           </View>
-
-          <View style={[styles.landingFeaturesGrid, isDesktop ? styles.landingFeaturesGridDesktop : null]}>
-            {LANDING_FEATURES.map((feature, index) => (
-              <AppCard
-                key={feature.id}
-                style={[styles.landingFeatureCard, isDesktop ? styles.landingFeatureCardDesktop : null]}
-                {...getWebClassNameProps(
-                  `eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-${index + 5}`
-                )}
+          <View style={[styles.edGrid3, isDesktop ? styles.edGrid3Desktop : null]}>
+            {HOME_DISCIPLINES_EDITORIAL.map((card, i) => (
+              <View
+                key={card.id}
+                style={styles.edCard}
+                {...getWebClassNameProps(`ed-fade ed-d${5 + i}`)}
+                nativeID={`screens-auth-public-home-feature-${card.id}`}
+                testID={`screens-auth-public-home-feature-${card.id}`}
               >
-                <View style={styles.landingFeatureIconWrap}>
-                  <Feather color={colors.primary} name={feature.icon as any} size={20} />
-                </View>
-                <Text style={styles.landingFeatureTitle}>{feature.title}</Text>
-                <Text style={styles.landingFeatureDescription}>{feature.description}</Text>
-              </AppCard>
+                <Text style={styles.edCardTitle}>{card.name}</Text>
+                <Text style={styles.edCardBody}>{card.tagline}</Text>
+              </View>
             ))}
           </View>
         </View>
 
-        <View
-          style={styles.landingCtaSection}
-          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-7")}
-        >
-          <View style={[styles.landingCtaCard, isDesktop ? styles.landingCtaCardDesktop : null]}>
-            <Text style={[styles.landingCtaTitle, isDesktop ? styles.landingCtaTitleDesktop : null]}>
-              ¿Listo para ordenar tu academia?
+        {/* SECTION 3: PRICING (2 planes) */}
+        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d6")}>
+          <View style={styles.edSectionHead}>
+            <Text style={styles.edEyebrow}>Planes</Text>
+            <Text style={[styles.edSectionTitle, isDesktop ? styles.edSectionTitleDesktop : null]}>
+              Tarifas sencillas. Sin sorpresas.
             </Text>
-            <Text style={styles.landingCtaSubtitle}>
-              Regístrate en menos de 2 minutos y entra al panel. Sin tarjeta, sin compromisos.
-            </Text>
-            <View style={styles.landingCtaActions}>
-              <AppButton
-                label="Crear cuenta"
-                nativeID="screens-auth-public-home-final-cta-primary"
-                onPress={openCreateAccount}
-                style={styles.landingHeroCtaPrimary}
-                testID="screens-auth-public-home-final-cta-primary"
-                variant="primary"
-              />
-              <Pressable
-                onPress={openSignIn}
-                style={({ pressed }) => [styles.landingCtaInlineLink, pressed ? { opacity: 0.7 } : null]}
+          </View>
+          <View style={[styles.edGrid2, isDesktop ? styles.edGrid2Desktop : null]}>
+            {HOME_PRICING_PLANS.map((plan, i) => (
+              <View
+                key={plan.id}
+                style={[styles.edPriceCard, plan.highlight ? styles.edPriceCardHighlight : null]}
+                {...getWebClassNameProps(`ed-fade ed-d${6 + i}`)}
+                nativeID={`screens-auth-public-home-plan-${plan.id}`}
+                testID={`screens-auth-public-home-plan-${plan.id}`}
               >
-                <Text style={styles.landingCtaInlineLinkLabel}>
-                  Ya tengo cuenta · Iniciar sesión
-                </Text>
-              </Pressable>
+                <View style={styles.edPriceTop}>
+                  <Text style={styles.edPriceName}>{plan.name}</Text>
+                  <Text style={styles.edPricePrice}>{plan.price}</Text>
+                </View>
+                <View style={styles.edPriceBullets}>
+                  {plan.bullets.map((b, idx) => (
+                    <View key={idx} style={styles.edPriceBullet}>
+                      <View style={styles.edPriceBulletMark} />
+                      <Text style={styles.edPriceBulletText}>{b}</Text>
+                    </View>
+                  ))}
+                </View>
+                <AppButton
+                  label={plan.cta}
+                  onPress={openCreateAccount}
+                  style={styles.edPriceCta}
+                  variant={plan.highlight ? "primary" : "secondary"}
+                  nativeID={`screens-auth-public-home-plan-${plan.id}-cta`}
+                  testID={`screens-auth-public-home-plan-${plan.id}-cta`}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* SECTION 4: SOCIAL PROOF */}
+        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d7")}>
+          <View style={styles.edProof}>
+            <Text style={styles.edProofEyebrow}>En el tatami</Text>
+            <Text style={[styles.edProofQuote, isDesktop ? styles.edProofQuoteDesktop : null]}>
+              “Dejamos de perder facturas en libretas. Ahora todo el equipo entra al mismo panel y recepción cobra sin errores.”
+            </Text>
+            <View style={styles.edProofSign}>
+              <View style={styles.edProofAvatar}>
+                <Text style={styles.edProofAvatarInitials}>MR</Text>
+              </View>
+              <View style={styles.edProofSignCopy}>
+                <Text style={styles.edProofName}>María Rojas</Text>
+                <Text style={styles.edProofRole}>Dueña · Academia Unión MMA</Text>
+              </View>
             </View>
+          </View>
+        </View>
+
+        {/* SECTION 5: CTA FINAL */}
+        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d8")}>
+          <View style={styles.edCtaFinal}>
+            <Text style={[styles.edCtaFinalTitle, isDesktop ? styles.edCtaFinalTitleDesktop : null]}>
+              Arranca tu academia con El Dojo hoy.
+            </Text>
+            <Text style={styles.edCtaFinalCopy}>
+              Crea la cuenta de tu academia en minutos y entra directo al panel operativo.
+            </Text>
+            <AppButton
+              label="Crear cuenta gratis"
+              onPress={openCreateAccount}
+              style={styles.edCtaFinalButton}
+              variant="primary"
+              nativeID="screens-auth-public-home-final-cta"
+              testID="screens-auth-public-home-final-cta"
+            />
           </View>
         </View>
       </View>
@@ -3370,77 +3452,6 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontWeight: "300",
   },
-  landingPreviewSection: {
-    alignSelf: "stretch",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    width: "100%",
-  },
-  landingPreviewCard: {
-    alignSelf: "stretch",
-    backgroundColor: colors.surface,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    maxWidth: 960,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 30,
-    width: "100%",
-  },
-  landingPreviewDots: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-  },
-  landingPreviewDot: {
-    borderRadius: 999,
-    height: 10,
-    width: 10,
-  },
-  landingPreviewBody: {
-    alignItems: "center",
-    alignSelf: "stretch",
-    backgroundColor: colors.surface,
-    gap: spacing.sm,
-    justifyContent: "center",
-    paddingBottom: spacing.xl * 1.5,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    width: "100%",
-  },
-  landingPreviewIconWrap: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    height: 60,
-    justifyContent: "center",
-    marginBottom: spacing.sm,
-    opacity: 0.9,
-    width: 60,
-  },
-  landingPreviewTitle: {
-    color: colors.text,
-    fontFamily: typography.displayFamily,
-    fontSize: 22,
-    fontWeight: "700",
-    lineHeight: 28,
-    textAlign: "center",
-  },
-  landingPreviewCaption: {
-    color: colors.textMuted,
-    fontFamily: typography.bodyFamily,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-  },
   landingHeroCtaPrimary: {
     backgroundColor: colors.text,
     borderRadius: radius.pill,
@@ -3460,6 +3471,142 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.lg,
   },
+  landingDisciplinesSection: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    width: "100%",
+  },
+  landingDisciplinesHeader: {
+    alignItems: "center",
+    gap: spacing.xs,
+    maxWidth: 640,
+  },
+  landingDisciplinesEyebrow: {
+    color: colors.primary,
+    fontFamily: typography.bodyFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+  landingDisciplinesTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+    textAlign: "center",
+  },
+  landingDisciplinesRow: {
+    alignSelf: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    width: "100%",
+  },
+  landingDisciplinesRowDesktop: {
+    alignSelf: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    justifyContent: "center",
+    maxWidth: 1020,
+  },
+  landingDisciplineCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderLeftWidth: 4,
+    borderWidth: 1,
+    gap: spacing.sm,
+    minHeight: 120,
+    padding: spacing.lg,
+    width: "100%",
+  },
+  landingDisciplineCardDesktop: {
+    flex: 1,
+    minHeight: 136,
+    minWidth: 280,
+    maxWidth: 328,
+  },
+  landingDisciplineBadge: {
+    alignSelf: "flex-start",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 999,
+    height: 24,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  landingDisciplineBadgeLabel: {
+    fontFamily: typography.bodyFamily,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  landingDisciplineName: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  landingDisciplineTagline: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  landingFeaturesEyebrow: {
+    color: colors.primary,
+    fontFamily: typography.bodyFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+  },
+  landingCtaEyebrow: {
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  landingCtaEyebrowDot: {
+    backgroundColor: goldenYellow,
+    borderRadius: 999,
+    height: 6,
+    width: 6,
+  },
+  landingCtaEyebrowLabel: {
+    color: colors.onPrimary,
+    fontFamily: typography.bodyFamily,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    opacity: 0.92,
+    textTransform: "uppercase",
+  },
+  landingCtaPrimaryButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: radius.pill,
+    elevation: 3,
+    minHeight: 48,
+    paddingHorizontal: spacing.xl,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+  },
   landingCtaCardDesktop: {
     alignSelf: "center",
     maxWidth: 820,
@@ -3474,5 +3621,325 @@ const styles = StyleSheet.create({
   landingFeatureCardDesktop: {
     minWidth: 300,
     padding: spacing.lg,
+  },
+
+  edShell: {
+    alignSelf: "center",
+    paddingHorizontal: spacing.sm,
+    width: "100%",
+  },
+  edSection: {
+    paddingVertical: spacing.xl,
+    width: "100%",
+  },
+  edHero: {
+    alignSelf: "flex-start",
+    gap: spacing.lg,
+    maxWidth: 720,
+    width: "100%",
+  },
+  edHeroH1: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 44,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    lineHeight: 48,
+  },
+  edHeroH1Desktop: {
+    fontSize: 56,
+    lineHeight: 60,
+  },
+  edHeroH1Muted: {
+    color: colors.textMuted,
+  },
+  edHeroLead: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 16,
+    lineHeight: 24,
+    maxWidth: 600,
+  },
+  edHeroLeadDesktop: {
+    fontSize: 20,
+    lineHeight: 30,
+  },
+  edHeroActions: {
+    alignItems: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    marginTop: spacing.xs,
+    width: "100%",
+  },
+  edHeroActionsDesktop: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    width: "auto",
+  },
+  edHeroCtaPrimary: {
+    minWidth: 220,
+  },
+  edHeroLink: {
+    alignSelf: "flex-start",
+    paddingVertical: spacing.xs,
+  },
+  edHeroLinkHovered: {
+    borderBottomColor: colors.borderStrong,
+    borderBottomWidth: 1,
+  },
+  edHeroLinkLabel: {
+    color: colors.text,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  edEyebrow: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    lineHeight: 16,
+    textTransform: "uppercase",
+  },
+  edSectionHead: {
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+    maxWidth: 640,
+    width: "100%",
+  },
+  edSectionTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+    lineHeight: 32,
+  },
+  edSectionTitleDesktop: {
+    fontSize: 36,
+    lineHeight: 42,
+  },
+  edGrid3: {
+    alignSelf: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    width: "100%",
+  },
+  edGrid3Desktop: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    justifyContent: "space-between",
+  },
+  edGrid2: {
+    alignSelf: "stretch",
+    flexDirection: "column",
+    gap: spacing.md,
+    width: "100%",
+  },
+  edGrid2Desktop: {
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: spacing.lg,
+    justifyContent: "center",
+    maxWidth: 960,
+  },
+  edCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    flex: 1,
+    gap: spacing.sm,
+    minHeight: 128,
+    minWidth: 260,
+    padding: spacing.lg,
+  },
+  edCardTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 26,
+  },
+  edCardBody: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  edPriceCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    flex: 1,
+    gap: spacing.lg,
+    minWidth: 280,
+    padding: spacing.lg,
+  },
+  edPriceCardHighlight: {
+    borderColor: colors.borderStrong,
+    borderWidth: 1,
+  },
+  edPriceTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  edPriceName: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 24,
+  },
+  edPricePrice: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 34,
+  },
+  edPriceBullets: {
+    gap: spacing.sm,
+  },
+  edPriceBullet: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  edPriceBulletMark: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    height: 6,
+    marginTop: 9,
+    width: 6,
+  },
+  edPriceBulletText: {
+    color: colors.text,
+    flex: 1,
+    fontFamily: typography.bodyFamily,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  edPriceCta: {
+    marginTop: spacing.sm,
+    width: "100%",
+  },
+  edProof: {
+    alignSelf: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    gap: spacing.lg,
+    maxWidth: 820,
+    padding: spacing.xl,
+    width: "100%",
+  },
+  edProofEyebrow: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    lineHeight: 16,
+    textTransform: "uppercase",
+  },
+  edProofQuote: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 20,
+    fontWeight: "500",
+    lineHeight: 28,
+  },
+  edProofQuoteDesktop: {
+    fontSize: 28,
+    lineHeight: 36,
+  },
+  edProofSign: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  edProofAvatar: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  edProofAvatarInitials: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  edProofSignCopy: {
+    gap: 2,
+  },
+  edProofName: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  edProofRole: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  edCtaFinal: {
+    alignSelf: "center",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    gap: spacing.lg,
+    maxWidth: 820,
+    padding: spacing.xl,
+    width: "100%",
+  },
+  edCtaFinalTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+    lineHeight: 36,
+    maxWidth: 560,
+    textAlign: "center",
+  },
+  edCtaFinalTitleDesktop: {
+    fontSize: 44,
+    lineHeight: 50,
+  },
+  edCtaFinalCopy: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 16,
+    lineHeight: 24,
+    maxWidth: 520,
+    textAlign: "center",
+  },
+  edCtaFinalButton: {
+    minHeight: 52,
+    minWidth: 260,
+    paddingHorizontal: spacing.xl,
   },
 });

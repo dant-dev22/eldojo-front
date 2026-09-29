@@ -4,6 +4,44 @@ description: UI/UX design intelligence with searchable database
 ---
 # ui-ux-pro-max
 
+> ## ⚠️ MODO EXCLUSIVO — PROYECTO EL DOJO
+>
+> Este proyecto **únicamente tiene habilitado este skill** para decisiones de diseño.
+> Los skills `brand`, `design-system`, `ui-styling`, `banner-design`, `design` y
+> `slides` están deshabilitados localmente (`SKILL.md` renombrado a
+> `SKILL.md_DISABLED`) y **no deben volver a activarse a menos que el usuario lo
+> indique explícitamente**.
+>
+> ### Pipeline canónico de decisiones visuales
+>
+> 1. **Si el usuario aporta colores/tokens en el prompt → usalos, no busques
+>    fallbacks genéricos.** `_query_has_explicit_color()` +
+>    `_select_palette_for_mode(..., query=query)` ya saltan filtros si detectan
+>    un hex, un color nombre, o "paleta X".
+> 2. **Si no hay indicación explícita, usa los defaults internos de El Dojo**
+>    (`ELDOJO_*_FALLBACK` en `scripts/design_system.py`):
+>    - Primary = `#8D6E63` (Aged Wood) · Accent/Secondary = `#1A237E` (Indigo)
+>    - Danger = `#C62828` · Success = `#558B2F` · Warning = `#F9A825`
+>    - Display = Montserrat 800/700 · Body = Inter 400/500/600
+> 3. **Antes de producir banners/slides/assets de marca, inyecta SIEMPRE el
+>    bloque BRAND §0** (ver `docs/brand-guidelines.md §0`). Si
+>    `design_system.brand_preprompt` ya viene auto-generado, usa ese bloque
+>    tal cual; si detectas que `docs/brand-guidelines.md §1` tiene valores
+>    distintos, prioriza los del documento manual por sobre los defaults.
+> 4. **Toda recomendación de paleta/tipografía termina SIEMPRE con 2 bloques
+>    aplicables** (ya los genera `scripts/design_system.py`):
+>    - `runtime_overrides.localstorage_js` → copy/paste en F12 para aplicar sin build
+>    - `runtime_overrides.dotenv` → `EXPO_PUBLIC_THEME_*` en `.env.public` / `.env.admin` / `.env.student`
+>
+> ### Archivos canónicos de referencia (léelos antes de diseñar si existen)
+>
+> | Archivo | Propósito |
+> |---------|-----------|
+> | [docs/brand-guidelines.md](../../docs/brand-guidelines.md) §1 | Quick Reference — tabla maestra editable con mapping 1 a 1 a `EXPO_PUBLIC_THEME_*`. **Source of Truth manual.** |
+> | [docs/brand-guidelines.md](../../docs/brand-guidelines.md) §7 | Runtime overrides pre-cocinados (Tech Blue, Luxury Dark, Reset). |
+> | [src/constants/theme.ts](../../src/constants/theme.ts) | Motor de aplicación real: **storage › EXPO_PUBLIC_THEME_* › defaults.** Cualquier token nuevo sugerido debe tener contraparte aquí. |
+> | [scripts/design_system.py](./scripts/design_system.py) | Generador `--design-system` (este skill). Contiene los `ELDOJO_*_FALLBACK`, ampliación de `SEARCH_CONFIG`, brand-preprompt §0 auto-generado, runtime overrides listos para pegar. |
+
 Comprehensive design guide for web, mobile, and desktop applications. Contains 67 styles, 161 color palettes, 57 font pairings, 99 UX guidelines, and 25 chart types across 22 technology stacks. Searchable database with priority-based recommendations.
 
 # Prerequisites

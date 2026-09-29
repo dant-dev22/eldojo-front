@@ -118,13 +118,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dialog: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
+    backgroundColor: colors.background,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.sm,
     borderWidth: 1,
     padding: spacing.lg,
     width: "100%",
-    ...shadows.card,
   },
   header: {
     alignItems: "flex-start",
@@ -151,14 +150,16 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
     height: 36,
     justifyContent: "center",
     width: 36,
   },
   closeButtonPressed: {
-    backgroundColor: colors.hover,
+    backgroundColor: colors.surfaceStrong,
     opacity: 0.92,
   },
   content: {

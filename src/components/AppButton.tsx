@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
   base: {
     alignItems: "center",
     borderColor: colors.borderStrong,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     justifyContent: "center",
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
@@ -152,15 +152,14 @@ const styles = StyleSheet.create({
   primaryHovered: {
     backgroundColor: colors.primaryHover,
     borderColor: colors.primaryHover,
-    ...shadows.cardElevated,
   },
   secondary: {
     backgroundColor: "transparent",
-    borderColor: "transparent",
+    borderColor: colors.borderStrong,
   },
   secondaryHovered: {
-    backgroundColor: colors.secondarySoft,
-    borderColor: "transparent",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.borderStrong,
   },
   danger: {
     backgroundColor: "transparent",
@@ -177,7 +176,6 @@ const styles = StyleSheet.create({
   successHovered: {
     backgroundColor: colors.successHover,
     borderColor: colors.successHover,
-    ...shadows.cardElevated,
   },
   disabled: {
     opacity: 0.5,
@@ -194,7 +192,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.15,
   },
   secondaryLabel: {
-    color: colors.secondary,
+    color: colors.text,
   },
   dangerLabel: {
     color: colors.danger,
