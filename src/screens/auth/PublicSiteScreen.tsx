@@ -20,6 +20,7 @@ import { getErrorMessage } from "@/api/http";
 import { AppButton } from "@/components/AppButton";
 import { AppCard } from "@/components/AppCard";
 import { AppInput } from "@/components/AppInput";
+import { PublicAuthModal, type AuthMode } from "@/components/PublicAuthModal";
 import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { colors, radius, spacing, typography } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
@@ -40,7 +41,6 @@ import {
   savePendingAcademyRegistration,
 } from "@/utils/storage";
 
-type AuthMode = "login" | "academy";
 export type PublicSiteSectionKey = "home" | "about" | "events" | "stores";
 type SectionKey = "about";
 type DesktopNavKey = "home" | "about";
@@ -2032,19 +2032,19 @@ const LANDING_FEATURES = [
   {
     id: "alumnos",
     title: "Control de alumnos",
-    description: "Perfiles, matrículas, pagos y asistencia en una sola vista organizada por sucursal.",
+    description: "Perfiles, matrículas, pagos y asistencia organizada por sucursal.",
     icon: "users",
   },
   {
     id: "pagos",
     title: "Cobro y mensualidades",
-    description: "Registra pagos, envía recordatorios y visualiza morosidad sin hojas de cálculo.",
+    description: "Registra pagos, envía recordatorios y visualiza morosidad.",
     icon: "dollar-sign",
   },
   {
     id: "asistencia",
-    title: "Asistencia y clases",
-    description: "Lectura por QR, lista por clase e historial de trayectoria individual por alumno.",
+    title: "Asistencia por QR",
+    description: "Lectura rápida, lista por clase e historial de trayectoria.",
     icon: "check-square",
   },
 ] as const;
@@ -2052,6 +2052,80 @@ const LANDING_FEATURES = [
 export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
   const { isDesktop } = useResponsiveLayout();
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<AuthMode>("login");
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const styleId = "eldojo-public-landing-fade-styles";
+    if (document.getElementById(styleId)) return;
+    const styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    styleEl.appendChild(
+      document.createTextNode(`
+        .eldojo-public-desktop-fade-in {
+          opacity: 0;
+          transform: translateY(18px);
+          transition-property: opacity, transform;
+          transition-duration: 620ms;
+          transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+          will-change: opacity, transform;
+        }
+        .eldojo-public-desktop-fade-in.is-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .eldojo-public-desktop-fade-in-delay-1 { transition-delay: 60ms; }
+        .eldojo-public-desktop-fade-in-delay-2 { transition-delay: 130ms; }
+        .eldojo-public-desktop-fade-in-delay-3 { transition-delay: 200ms; }
+        .eldojo-public-desktop-fade-in-delay-4 { transition-delay: 280ms; }
+        .eldojo-public-desktop-fade-in-delay-5 { transition-delay: 360ms; }
+        .eldojo-public-desktop-fade-in-delay-6 { transition-delay: 440ms; }
+        .eldojo-public-desktop-fade-in-delay-7 { transition-delay: 520ms; }
+        .eldojo-public-desktop-fade-in-delay-8 { transition-delay: 600ms; }
+      `)
+    );
+    document.head.appendChild(styleEl);
+
+    const applyVisibility = () => {
+      const nodes = document.querySelectorAll<HTMLElement>(".eldojo-public-desktop-fade-in");
+      nodes.forEach((node) => {
+        requestAnimationFrame(() => node.classList.add("is-visible"));
+      });
+    };
+
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(applyVisibility, { timeout: 120 });
+    } else {
+      setTimeout(applyVisibility, 30);
+    }
+
+    let observer: IntersectionObserver | null = null;
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              (entry.target as HTMLElement).classList.add("is-visible");
+              observer?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.08 }
+      );
+      const laterNodes = document.querySelectorAll<HTMLElement>(
+        ".eldojo-public-desktop-fade-in-delay-5, .eldojo-public-desktop-fade-in-delay-6, .eldojo-public-desktop-fade-in-delay-7, .eldojo-public-desktop-fade-in-delay-8"
+      );
+      laterNodes.forEach((node) => {
+        node.classList.remove("is-visible");
+        observer?.observe(node);
+      });
+    }
+
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, []);
 
   const spaNavItems = useMemo(() => {
     return [
@@ -2060,57 +2134,128 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
     ];
   }, [navigation]);
 
-  const handleGoSignIn = useCallback(() => {
-    navigation.navigate("SignIn");
-  }, [navigation]);
+  const openSignIn = useCallback(() => {
+    setAuthInitialMode("login");
+    setAuthModalVisible(true);
+  }, []);
 
-  const handleGoCreateAccount = useCallback(() => {
-    navigation.navigate("CreateAccount");
-  }, [navigation]);
+  const openCreateAccount = useCallback(() => {
+    setAuthInitialMode("academy");
+    setAuthModalVisible(true);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setAuthModalVisible(false);
+  }, []);
 
   return (
     <PublicPageChrome
       idPrefix="screens-auth-public-home"
       navItems={spaNavItems}
       onBrandPress={() => navigation.navigate("Home")}
-      onGoCreateAccount={handleGoCreateAccount}
-      onGoSignIn={handleGoSignIn}
+      onGoCreateAccount={openCreateAccount}
+      onGoSignIn={openSignIn}
       screenScrollable={true}
       showFooterTopDivider={false}
     >
       <View style={styles.landingContainer}>
-        <View style={[styles.landingHero, isDesktop ? styles.landingHeroDesktop : null]}>
+        <View
+          style={[styles.landingHero, isDesktop ? styles.landingHeroDesktop : null]}
+          {...getWebClassNameProps(
+            isDesktop ? "eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1" : undefined
+          )}
+        >
           <View style={styles.landingHeroContent}>
-            <View style={styles.landingHeroEyebrow}>
+            <View
+              style={styles.landingHeroEyebrow}
+              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-1")}
+            >
               <View style={styles.landingHeroEyebrowDot} />
-              <Text style={styles.landingHeroEyebrowLabel}>Software para academias de artes marciales</Text>
+              <Text style={styles.landingHeroEyebrowLabel}>Sistema de administración v2.0</Text>
             </View>
-            <Text style={[styles.landingHeroTitle, isDesktop ? styles.landingHeroTitleDesktop : null]}>
-              Menos papeles. Más dojo.
+
+            <Text
+              style={[styles.landingHeroTitle, isDesktop ? styles.landingHeroTitleDesktop : null]}
+              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-2")}
+            >
+              <Text style={styles.landingHeroTitleBold}>Simplicidad</Text>
+              <Text style={styles.landingHeroTitleMuted}> Elegante.</Text>
             </Text>
-            <Text style={[styles.landingHeroSubtitle, isDesktop ? styles.landingHeroSubtitleDesktop : null]}>
-              Administra alumnos, pagos, clases y asistencia desde una interfaz sencilla, pensada para recepción, entrenadores y dirección.
+
+            <Text
+              style={[styles.landingHeroSubtitle, isDesktop ? styles.landingHeroSubtitleDesktop : null]}
+              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-3")}
+            >
+              Diseño minimalista enfocado en lo esencial. Tu academia, clara y ordenada, sin distracciones innecesarias.
             </Text>
-            <View style={styles.landingHeroActions}>
-              <AppButton label="Crear cuenta gratuita" onPress={handleGoCreateAccount} variant="primary" />
-              <AppButton label="Iniciar sesión" onPress={handleGoSignIn} variant="secondary" />
+
+            <View
+              style={styles.landingHeroActions}
+              {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-4")}
+            >
+              <AppButton
+                label="Comenzar ahora"
+                nativeID="screens-auth-public-home-hero-cta-primary"
+                onPress={openCreateAccount}
+                style={styles.landingHeroCtaPrimary}
+                leadingIcon={<Feather color="#FFFFFF" name="arrow-right" size={15} />}
+                testID="screens-auth-public-home-hero-cta-primary"
+                variant="primary"
+              />
+              <AppButton
+                label="Saber más"
+                nativeID="screens-auth-public-home-hero-cta-secondary"
+                onPress={() => navigation.navigate("About")}
+                style={styles.landingHeroCtaSecondary}
+                testID="screens-auth-public-home-hero-cta-secondary"
+                variant="secondary"
+              />
             </View>
           </View>
         </View>
 
-        <View style={styles.landingFeaturesSection}>
+        <View
+          style={styles.landingPreviewSection}
+          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-4")}
+        >
+          <View style={styles.landingPreviewCard}>
+            <View style={styles.landingPreviewDots}>
+              <View style={[styles.landingPreviewDot, { backgroundColor: "#FFD6D6" }]} />
+              <View style={[styles.landingPreviewDot, { backgroundColor: "#FFE8B8" }]} />
+              <View style={[styles.landingPreviewDot, { backgroundColor: "#C8F7D6" }]} />
+            </View>
+            <View style={styles.landingPreviewBody}>
+              <View style={styles.landingPreviewIconWrap}>
+                <Feather color={colors.primary} name="layout" size={28} />
+              </View>
+              <Text style={styles.landingPreviewTitle}>Interface Limpia</Text>
+              <Text style={styles.landingPreviewCaption}>Donde la forma sigue a la función.</Text>
+            </View>
+          </View>
+        </View>
+
+        <View
+          style={styles.landingFeaturesSection}
+          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-5")}
+        >
           <View style={styles.landingFeaturesHeader}>
-            <Text style={styles.landingFeaturesTitle}>Todo lo que necesitas para operar tu academia</Text>
+            <Text style={styles.landingFeaturesTitle}>Todo lo que tu academia necesita</Text>
             <Text style={styles.landingFeaturesSubtitle}>
-              Sin configuraciones complicadas. Empieza con lo básico y escala cuando tu dojo crezca.
+              Sin configuraciones complicadas. Empieza hoy y crece con tu dojo.
             </Text>
           </View>
 
           <View style={[styles.landingFeaturesGrid, isDesktop ? styles.landingFeaturesGridDesktop : null]}>
-            {LANDING_FEATURES.map((feature) => (
-              <AppCard key={feature.id} style={styles.landingFeatureCard}>
+            {LANDING_FEATURES.map((feature, index) => (
+              <AppCard
+                key={feature.id}
+                style={[styles.landingFeatureCard, isDesktop ? styles.landingFeatureCardDesktop : null]}
+                {...getWebClassNameProps(
+                  `eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-${index + 5}`
+                )}
+              >
                 <View style={styles.landingFeatureIconWrap}>
-                  <Feather color={colors.primary} name={feature.icon as any} size={22} />
+                  <Feather color={colors.primary} name={feature.icon as any} size={20} />
                 </View>
                 <Text style={styles.landingFeatureTitle}>{feature.title}</Text>
                 <Text style={styles.landingFeatureDescription}>{feature.description}</Text>
@@ -2119,21 +2264,44 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           </View>
         </View>
 
-        <View style={styles.landingCtaSection}>
-          <View style={styles.landingCtaCard}>
-            <Text style={styles.landingCtaTitle}>¿Tienes una academia y quieres ordenarla?</Text>
+        <View
+          style={styles.landingCtaSection}
+          {...getWebClassNameProps("eldojo-public-desktop-fade-in eldojo-public-desktop-fade-in-delay-7")}
+        >
+          <View style={[styles.landingCtaCard, isDesktop ? styles.landingCtaCardDesktop : null]}>
+            <Text style={[styles.landingCtaTitle, isDesktop ? styles.landingCtaTitleDesktop : null]}>
+              ¿Listo para ordenar tu academia?
+            </Text>
             <Text style={styles.landingCtaSubtitle}>
-              Regístrate en menos de 2 minutos y entra al panel para registrar tu primera clase.
+              Regístrate en menos de 2 minutos y entra al panel. Sin tarjeta, sin compromisos.
             </Text>
             <View style={styles.landingCtaActions}>
-              <AppButton label="Crear cuenta" onPress={handleGoCreateAccount} variant="primary" />
-              <Pressable onPress={handleGoSignIn} style={({ pressed }) => [styles.landingCtaInlineLink, pressed ? { opacity: 0.7 } : null]}>
-                <Text style={styles.landingCtaInlineLinkLabel}>Ya tengo cuenta · Iniciar sesión</Text>
+              <AppButton
+                label="Crear cuenta"
+                nativeID="screens-auth-public-home-final-cta-primary"
+                onPress={openCreateAccount}
+                style={styles.landingHeroCtaPrimary}
+                testID="screens-auth-public-home-final-cta-primary"
+                variant="primary"
+              />
+              <Pressable
+                onPress={openSignIn}
+                style={({ pressed }) => [styles.landingCtaInlineLink, pressed ? { opacity: 0.7 } : null]}
+              >
+                <Text style={styles.landingCtaInlineLinkLabel}>
+                  Ya tengo cuenta · Iniciar sesión
+                </Text>
               </Pressable>
             </View>
           </View>
         </View>
       </View>
+
+      <PublicAuthModal
+        visible={authModalVisible}
+        onClose={closeModal}
+        initialMode={authInitialMode}
+      />
     </PublicPageChrome>
   );
 }
@@ -3190,5 +3358,121 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 18,
     textDecorationLine: "underline",
+  },
+  landingHeroTitleBold: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontWeight: "800",
+  },
+  landingHeroTitleMuted: {
+    color: colors.textMuted,
+    fontFamily: typography.displayFamily,
+    fontStyle: "italic",
+    fontWeight: "300",
+  },
+  landingPreviewSection: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    width: "100%",
+  },
+  landingPreviewCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    maxWidth: 960,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 30,
+    width: "100%",
+  },
+  landingPreviewDots: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+  },
+  landingPreviewDot: {
+    borderRadius: 999,
+    height: 10,
+    width: 10,
+  },
+  landingPreviewBody: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
+    justifyContent: "center",
+    paddingBottom: spacing.xl * 1.5,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    width: "100%",
+  },
+  landingPreviewIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    height: 60,
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+    opacity: 0.9,
+    width: 60,
+  },
+  landingPreviewTitle: {
+    color: colors.text,
+    fontFamily: typography.displayFamily,
+    fontSize: 22,
+    fontWeight: "700",
+    lineHeight: 28,
+    textAlign: "center",
+  },
+  landingPreviewCaption: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  landingHeroCtaPrimary: {
+    backgroundColor: colors.text,
+    borderRadius: radius.pill,
+    elevation: 2,
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+  },
+  landingHeroCtaSecondary: {
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+  },
+  landingCtaCardDesktop: {
+    alignSelf: "center",
+    maxWidth: 820,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl * 1.5,
+    width: "100%",
+  },
+  landingCtaTitleDesktop: {
+    fontSize: 32,
+    lineHeight: 38,
+  },
+  landingFeatureCardDesktop: {
+    minWidth: 300,
+    padding: spacing.lg,
   },
 });
