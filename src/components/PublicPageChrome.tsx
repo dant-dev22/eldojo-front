@@ -149,6 +149,31 @@ export function PublicPageChrome({
     };
   }, [showAuthControls]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    const { pathname, search, origin } = window.location;
+    if (pathname !== "/") return;
+
+    const effectiveUserId = displayUser?.id ?? (hintSnapshot?.userId ? Number(hintSnapshot.userId) : null);
+    const expected = hintShowsAuth && effectiveUserId && effectiveUserId > 0 ? String(effectiveUserId) : null;
+
+    const params = new URLSearchParams(search);
+    const current = params.get("u");
+
+    if (current === expected) return;
+
+    if (expected) {
+      params.set("u", expected);
+    } else {
+      params.delete("u");
+    }
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery
+      ? `${pathname}?${nextQuery}${window.location.hash}`
+      : `${pathname}${window.location.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }, [hintShowsAuth, displayUser, hintSnapshot]);
+
   const adminActions = useMemo(() => {
     return [
       {
@@ -265,7 +290,6 @@ export function PublicPageChrome({
                     </Text>
                   </View>
                 </Pressable>
-                {showAuthControls ? <SessionIndicator idPrefix={idPrefix} /> : null}
               </View>
 
               <View style={{ flex: 1 }} />
@@ -289,55 +313,59 @@ export function PublicPageChrome({
                   ))}
 
                   {actionItems.length === 0 ? (
-                    <View
-                      style={styles.publicAuthActionsRow}
-                      {...getWebClassNameProps("public-chrome-navbar-auth-actions-row")}
-                    >
-                      <Pressable
-                        accessibilityRole="link"
-                        nativeID={`${idPrefix}-auth-signin`}
-                        onPress={handleSignInPress}
-                        style={(state) => {
-                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                          return [
-                            styles.authButton,
-                            styles.authButtonPrimary,
-                            hovered ? styles.authButtonPrimaryHover : null,
-                            state.pressed ? styles.authButtonPressed : null,
-                          ];
-                        }}
-                        testID={`${idPrefix}-auth-signin`}
-                        {...getWebClassNameProps(
-                          joinWebClassNames(
-                            "public-chrome-navbar-auth-button",
-                            "public-chrome-navbar-auth-button--primary"
-                          )
-                        )}
+                    hintShowsAuth ? (
+                      <SessionIndicator idPrefix={idPrefix} />
+                    ) : (
+                      <View
+                        style={styles.publicAuthActionsRow}
+                        {...getWebClassNameProps("public-chrome-navbar-auth-actions-row")}
                       >
-                        {(state) => {
-                          const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                          return (
-                            <Text
-                              nativeID={`${idPrefix}-auth-signin-label`}
-                              style={[
-                                styles.authButtonLabel,
-                                styles.authButtonLabelPrimary,
-                                hovered ? styles.authButtonLabelPrimaryHover : null,
-                              ]}
-                              testID={`${idPrefix}-auth-signin-label`}
-                              {...getWebClassNameProps(
-                                joinWebClassNames(
-                                  "public-chrome-navbar-auth-button-label",
-                                  "public-chrome-navbar-auth-button-label--primary"
-                                )
-                              )}
-                            >
-                              Ingresar
-                            </Text>
-                          );
-                        }}
-                      </Pressable>
-                    </View>
+                        <Pressable
+                          accessibilityRole="link"
+                          nativeID={`${idPrefix}-auth-signin`}
+                          onPress={handleSignInPress}
+                          style={(state) => {
+                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                            return [
+                              styles.authButton,
+                              styles.authButtonPrimary,
+                              hovered ? styles.authButtonPrimaryHover : null,
+                              state.pressed ? styles.authButtonPressed : null,
+                            ];
+                          }}
+                          testID={`${idPrefix}-auth-signin`}
+                          {...getWebClassNameProps(
+                            joinWebClassNames(
+                              "public-chrome-navbar-auth-button",
+                              "public-chrome-navbar-auth-button--primary"
+                            )
+                          )}
+                        >
+                          {(state) => {
+                            const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                            return (
+                              <Text
+                                nativeID={`${idPrefix}-auth-signin-label`}
+                                style={[
+                                  styles.authButtonLabel,
+                                  styles.authButtonLabelPrimary,
+                                  hovered ? styles.authButtonLabelPrimaryHover : null,
+                                ]}
+                                testID={`${idPrefix}-auth-signin-label`}
+                                {...getWebClassNameProps(
+                                  joinWebClassNames(
+                                    "public-chrome-navbar-auth-button-label",
+                                    "public-chrome-navbar-auth-button-label--primary"
+                                  )
+                                )}
+                              >
+                                Ingresar
+                              </Text>
+                            );
+                          }}
+                        </Pressable>
+                      </View>
+                    )
                   ) : null}
                 </View>
               ) : null}
