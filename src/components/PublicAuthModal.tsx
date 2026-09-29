@@ -18,6 +18,7 @@ import {
 } from "@/utils/storage";
 
 export type AuthMode = "login" | "academy";
+type LoginProviderTab = "email" | "google";
 
 interface PublicAuthModalProps {
   visible: boolean;
@@ -92,12 +93,14 @@ export function PublicAuthModal({ visible, onClose, initialMode = "login" }: Pub
   const [formError, setFormError] = useState<string | null>(null);
   const [formFeedback, setFormFeedback] = useState<string | null>(null);
   const [pendingRegistration, setPendingRegistration] = useState<PendingAcademyRegistration | null>(null);
+  const [loginProviderTab, setLoginProviderTab] = useState<LoginProviderTab>("email");
 
   useEffect(() => {
     if (visible) {
       setMode(initialMode);
       setFormError(null);
       setFormFeedback(null);
+      setLoginProviderTab("email");
       void restorePendingIfAny();
     }
   }, [visible, initialMode]);
@@ -522,52 +525,126 @@ export function PublicAuthModal({ visible, onClose, initialMode = "login" }: Pub
           <Text nativeID="components-public-auth-modal-signin-subtitle" style={styles.formSubtitle} testID="components-public-auth-modal-signin-subtitle">
             Inicia sesión con la cuenta administradora de tu academia para entrar al panel operativo.
           </Text>
-          <AppInput
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            label="Correo"
-            nativeID="components-public-auth-modal-signin-email-input"
-            onChangeText={setEmail}
-            placeholder="admin@tuacademia.com"
-            testID="components-public-auth-modal-signin-email-input"
-            value={email}
-          />
-          <AppInput
-            autoComplete="current-password"
-            label="Contraseña"
-            nativeID="components-public-auth-modal-signin-password-input"
-            onChangeText={setPassword}
-            placeholder="Tu contraseña"
-            rightAdornment={
+
+          <View style={styles.providerTabs} testID="components-public-auth-modal-provider-tabs" {...getWebClassNameProps("components-public-auth-modal-provider-tabs")}>
+            <Pressable
+              accessibilityRole="button"
+              testID="components-public-auth-modal-provider-tab-email"
+              onPress={() => setLoginProviderTab("email")}
+              style={({ pressed }) => [
+                styles.providerTabButton,
+                loginProviderTab === "email" ? styles.providerTabButtonActive : null,
+                pressed ? styles.providerTabButtonPressed : null,
+              ]}
+            >
+              <Text style={[styles.providerTabLabel, loginProviderTab === "email" ? styles.providerTabLabelActive : null]}>
+                Correo electrónico
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              testID="components-public-auth-modal-provider-tab-google"
+              onPress={() => {
+                setLoginProviderTab("google");
+                setFormError(null);
+                setFormFeedback("Inicio de sesión con Google: Próximamente.");
+              }}
+              style={({ pressed }) => [
+                styles.providerTabButton,
+                loginProviderTab === "google" ? styles.providerTabButtonActive : null,
+                pressed ? styles.providerTabButtonPressed : null,
+              ]}
+            >
+              <View style={styles.providerTabGoogleRow}>
+                <Text style={[styles.providerTabLabel, loginProviderTab === "google" ? styles.providerTabLabelActive : null]}>
+                  Google
+                </Text>
+                <View style={styles.providerTabBadge}>
+                  <Text style={styles.providerTabBadgeLabel}>Próximamente</Text>
+                </View>
+              </View>
+            </Pressable>
+          </View>
+
+          {loginProviderTab === "email" ? (
+            <>
+              <AppInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                label="Correo"
+                nativeID="components-public-auth-modal-signin-email-input"
+                onChangeText={setEmail}
+                placeholder="admin@tuacademia.com"
+                testID="components-public-auth-modal-signin-email-input"
+                value={email}
+              />
+              <AppInput
+                autoComplete="current-password"
+                label="Contraseña"
+                nativeID="components-public-auth-modal-signin-password-input"
+                onChangeText={setPassword}
+                placeholder="Tu contraseña"
+                rightAdornment={
+                  <Pressable
+                    accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    accessibilityRole="button"
+                    nativeID="components-public-auth-modal-signin-password-toggle"
+                    onPress={() => setShowPassword((current) => !current)}
+                    style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
+                    testID="components-public-auth-modal-signin-password-toggle"
+                  >
+                    <Feather color={colors.textMuted} name={showPassword ? "eye-off" : "eye"} size={18} />
+                  </Pressable>
+                }
+                secureTextEntry={!showPassword}
+                testID="components-public-auth-modal-signin-password-input"
+                value={password}
+              />
               <Pressable
-                accessibilityLabel={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                accessibilityRole="button"
-                nativeID="components-public-auth-modal-signin-password-toggle"
-                onPress={() => setShowPassword((current) => !current)}
-                style={({ pressed }) => [styles.passwordToggle, pressed ? styles.passwordTogglePressed : null]}
-                testID="components-public-auth-modal-signin-password-toggle"
+                accessibilityRole="link"
+                nativeID="components-public-auth-modal-signin-recovery-link"
+                onPress={() => {
+                  setFormError(null);
+                  setFormFeedback("Recuperación de contraseña: Próximamente.");
+                  let cancelled = false;
+                  const t = setTimeout(() => {
+                    if (cancelled) return;
+                    setFormFeedback((cur) =>
+                      cur === "Recuperación de contraseña: Próximamente." ? null : cur
+                    );
+                  }, 3500);
+                  return () => {
+                    cancelled = true;
+                    clearTimeout(t);
+                  };
+                }}
+                style={({ pressed, hovered }: any) => [
+                  styles.recoveryLink,
+                  pressed ? { opacity: 0.8 } : null,
+                  hovered ? styles.recoveryLinkHovered : null,
+                ]}
+                testID="components-public-auth-modal-signin-recovery-link"
               >
-                <Feather color={colors.textMuted} name={showPassword ? "eye-off" : "eye"} size={18} />
+                <Text style={styles.recoveryLabel}>¿Olvidaste tu contraseña?</Text>
               </Pressable>
-            }
-            secureTextEntry={!showPassword}
-            testID="components-public-auth-modal-signin-password-input"
-            value={password}
-          />
-          <Pressable
-            accessibilityRole="link"
-            nativeID="components-public-auth-modal-signin-recovery-link"
-            onPress={() => {}}
-            style={({ pressed, hovered }: any) => [
-              styles.recoveryLink,
-              pressed ? { opacity: 0.8 } : null,
-              hovered ? styles.recoveryLinkHovered : null,
-            ]}
-            testID="components-public-auth-modal-signin-recovery-link"
-          >
-            <Text style={styles.recoveryLabel}>¿Olvidaste tu contraseña?</Text>
-          </Pressable>
+            </>
+          ) : (
+            <View style={styles.googleStubCard} testID="components-public-auth-modal-google-stub">
+              <View style={styles.googleStubBadgeG}>
+                <Text style={styles.googleStubBadgeGText}>G</Text>
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.googleStubTitle}>
+                  Inicio de sesión con Google
+                </Text>
+                <Text style={styles.googleStubDesc}>
+                  Estamos trabajando para integrarlo. Mientras tanto, usa tu correo y contraseña.
+                </Text>
+              </View>
+            </View>
+          )}
+
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
           {formFeedback ? <Text style={styles.success}>{formFeedback}</Text> : null}
 
@@ -583,6 +660,7 @@ export function PublicAuthModal({ visible, onClose, initialMode = "login" }: Pub
           ) : null}
           <AppButton
             label="Entrar"
+            disabled={loginProviderTab !== "email"}
             loading={loginMutation.isPending}
             nativeID="components-public-auth-modal-signin-submit-button"
             onPress={handleLoginSubmit}
@@ -724,6 +802,103 @@ const styles = StyleSheet.create({
   },
   formActions: {
     gap: spacing.xs,
+  },
+  providerTabs: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 0,
+    padding: 0,
+  },
+  providerTabButton: {
+    alignItems: "center",
+    borderRadius: radius.sm,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 40,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  providerTabButtonActive: {
+    backgroundColor: colors.text,
+  },
+  providerTabButtonPressed: {
+    opacity: 0.85,
+  },
+  providerTabLabel: {
+    color: colors.textMuted,
+    fontFamily: typography.headingFamily,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  providerTabLabelActive: {
+    color: colors.background,
+  },
+  providerTabGoogleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  providerTabBadge: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 2,
+    borderWidth: 1,
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  providerTabBadgeLabel: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    opacity: 0.78,
+    textTransform: "uppercase",
+  },
+  googleStubCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.sm,
+  },
+  googleStubBadgeG: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: 0,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  googleStubBadgeGText: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
+  googleStubTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  googleStubDesc: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
 

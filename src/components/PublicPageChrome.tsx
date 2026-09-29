@@ -268,45 +268,7 @@ export function PublicPageChrome({
                 {showAuthControls ? <SessionIndicator idPrefix={idPrefix} /> : null}
               </View>
 
-              <View
-                nativeID={`${idPrefix}-nav-items`}
-                style={styles.navItems}
-                testID={`${idPrefix}-nav-items`}
-                {...getWebClassNameProps("public-chrome-navbar-nav-items")}
-              >
-                {navItems.slice(0, 2).map((item) => (
-                  <Pressable
-                    key={item.key}
-                    accessibilityRole="button"
-                    nativeID={`${idPrefix}-nav-item-${item.key}`}
-                    onPress={item.onPress}
-                    style={(state) => {
-                      const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                      return [
-                        styles.navItem,
-                        hovered ? styles.navItemHovered : null,
-                        state.pressed ? styles.navItemPressed : null,
-                      ];
-                    }}
-                    testID={`${idPrefix}-nav-item-${item.key}`}
-                    {...getWebClassNameProps("public-chrome-navbar-nav-item")}
-                  >
-                    {(state) => {
-                      const hovered = (state as unknown as { hovered?: boolean }).hovered;
-                      return (
-                        <Text
-                          nativeID={`${idPrefix}-nav-item-${item.key}-label`}
-                          style={[styles.navItemLabel, hovered ? styles.navItemLabelActive : null]}
-                          testID={`${idPrefix}-nav-item-${item.key}-label`}
-                          {...getWebClassNameProps("public-chrome-navbar-nav-item-label")}
-                        >
-                          {item.label}
-                        </Text>
-                      );
-                    }}
-                  </Pressable>
-                ))}
-              </View>
+              <View style={{ flex: 1 }} />
 
               {showAuthControls ? (
                 <View
@@ -537,7 +499,7 @@ export function PublicPageChrome({
                   testID={`${idPrefix}-footer-copyright`}
                   {...getWebClassNameProps("public-chrome-footer-copyright")}
                 >
-                  © 2026 El Dojo.
+                  © 2026 El Dojo
                 </Text>
                 <View
                   style={styles.footerLegalRow}

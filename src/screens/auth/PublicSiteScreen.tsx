@@ -164,9 +164,10 @@ const PAGE_SECTIONS: Record<PublicPageKey, SectionKey[]> = {
 
 const PAGE_COPY: Record<PublicPageKey, PublicPageCopy> = {
   home: {
-    description: "Centraliza alumnos, clases, pagos, sucursales y asistencia en una sola plataforma lista para la operacion diaria.",
-    eyebrow: "Software de administracion",
-    title: "La administracion de un club de pelea nunca fue tan sencilla.",
+    description:
+      "Administra BJJ, MMA y Judo con software diseñado para instructores y dueños de club. Menos planillas, más tiempo en el tatami.",
+    eyebrow: "Gestión de academias",
+    title: "La gestión de tu academia de artes marciales, en un solo lugar.",
   },
   about: {
     description: "Conoce como ElDojo ayuda a academias de MMA, BJJ y judo a ordenar la operacion diaria sin hojas sueltas ni mensajes perdidos.",
@@ -2019,21 +2020,33 @@ const HOME_DISCIPLINES_EDITORIAL: HomeDisciplineEditorial[] = [
   {
     id: "bjj",
     name: "Brazilian Jiu-Jitsu",
-    tagline: "Gestión de graduaciones, niveles de cinturón y trayectoria por alumno.",
+    tagline: "Gestión de graduaciones, gi por peso y torneos oficiales IBJJF.",
   },
   {
     id: "mma",
     name: "Artes Marciales Mixtas",
-    tagline: "Cobro de mensualidades, control de asistencia y horarios de combate.",
+    tagline: "Control de rounds, sparring de equipo y cobro de clases de combate.",
   },
   {
     id: "judo",
     name: "Judo Olímpico",
-    tagline: "Registro de clases, inscripciones a torneos y progreso técnico.",
+    tagline: "Registro de katas, competencias oficiales y progreso por kyu y dan.",
   },
 ];
 
 const HOME_PRICING_PLANS: HomePricingPlan[] = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: "Inicio",
+    bullets: [
+      "1 academia, hasta 50 alumnos",
+      "Cobro básico de mensualidades",
+      "Panel de recepción y asistencia",
+    ],
+    cta: "Empezar con Starter",
+    highlight: false,
+  },
   {
     id: "estandar",
     name: "Estándar",
@@ -2126,9 +2139,25 @@ const LANDING_DISCIPLINES: LandingDiscipline[] = [
   },
 ];
 
+function scrollToSectionWeb(hash: string) {
+  if (Platform.OS !== "web" || typeof window === "undefined") return;
+  try {
+    const target = document.getElementById(hash);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  } catch {
+    try {
+      window.location.hash = `#${hash}`;
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenProps = {}) {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList & AdminStackParamList>>();
-  const { isDesktop, contentMaxWidth } = useResponsiveLayout();
+  const { isDesktop, contentMaxWidth, isMobile } = useResponsiveLayout();
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<AuthMode>("login");
 
@@ -2142,9 +2171,9 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
       document.createTextNode(`
         .ed-fade {
           opacity: 0;
-          transform: translateY(12px);
+          transform: translateY(10px);
           transition-property: opacity, transform;
-          transition-duration: 380ms;
+          transition-duration: 350ms;
           transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
           will-change: opacity, transform;
         }
@@ -2152,14 +2181,21 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           opacity: 1;
           transform: translateY(0);
         }
-        .ed-d1 { transition-delay: 60ms; }
-        .ed-d2 { transition-delay: 140ms; }
-        .ed-d3 { transition-delay: 220ms; }
-        .ed-d4 { transition-delay: 300ms; }
-        .ed-d5 { transition-delay: 380ms; }
-        .ed-d6 { transition-delay: 460ms; }
-        .ed-d7 { transition-delay: 540ms; }
-        .ed-d8 { transition-delay: 620ms; }
+        @media (prefers-reduced-motion: reduce) {
+          .ed-fade {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+          }
+        }
+        .ed-d1 { transition-delay: 50ms; }
+        .ed-d2 { transition-delay: 120ms; }
+        .ed-d3 { transition-delay: 190ms; }
+        .ed-d4 { transition-delay: 260ms; }
+        .ed-d5 { transition-delay: 340ms; }
+        .ed-d6 { transition-delay: 420ms; }
+        .ed-d7 { transition-delay: 500ms; }
+        .ed-d8 { transition-delay: 580ms; }
       `)
     );
     document.head.appendChild(styleEl);
@@ -2206,10 +2242,13 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
   }, []);
   const closeModal = useCallback(() => setAuthModalVisible(false), []);
 
-  const layoutWidth = Math.min(contentMaxWidth, 1200);
+  const layoutWidth = Math.min(contentMaxWidth, 1160);
   const spaNavItems = useMemo(() => ([
-    { key: "features", label: "Características", onPress: () => {} },
-    { key: "pricing", label: "Precios", onPress: () => {} },
+    { key: "hero", label: "Inicio", onPress: () => scrollToSectionWeb("hero") },
+    { key: "features", label: "Características", onPress: () => scrollToSectionWeb("features") },
+    { key: "pricing", label: "Planes", onPress: () => scrollToSectionWeb("pricing") },
+    { key: "testimonial", label: "Testimonios", onPress: () => scrollToSectionWeb("testimonial") },
+    { key: "cta", label: "Empezar", onPress: () => scrollToSectionWeb("cta") },
   ]), []);
 
   return (
@@ -2224,19 +2263,25 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
     >
       <View style={[styles.edShell, { maxWidth: layoutWidth }]}>
         {/* SECTION 1: HERO */}
-        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d1")}>
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d1 ed-scroll-margin-top")}
+          nativeID="hero"
+          testID="hero"
+        >
           <View style={styles.edHero}>
+            <Text style={styles.edEyebrow}>
+              {PAGE_COPY.home.eyebrow}
+            </Text>
             <Text style={[styles.edHeroH1, isDesktop ? styles.edHeroH1Desktop : null]}>
-              Menos operación manual.
-              {"\n"}
-              <Text style={styles.edHeroH1Muted}>Más tiempo para tu academia.</Text>
+              {PAGE_COPY.home.title}
             </Text>
             <Text style={[styles.edHeroLead, isDesktop ? styles.edHeroLeadDesktop : null]}>
-              El Dojo centraliza alumnos, pagos, asistencia y clases de BJJ, MMA y Judo en una sola interfaz clara para recepción y dirección.
+              {PAGE_COPY.home.description}
             </Text>
             <View style={[styles.edHeroActions, isDesktop ? styles.edHeroActionsDesktop : null]}>
               <AppButton
-                label="Crear cuenta"
+                label="Crear cuenta gratis"
                 nativeID="screens-auth-public-home-hero-cta"
                 onPress={openCreateAccount}
                 style={styles.edHeroCtaPrimary}
@@ -2246,7 +2291,7 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
               <Pressable
                 accessibilityRole="link"
                 nativeID="screens-auth-public-home-hero-link"
-                onPress={openSignIn}
+                onPress={() => scrollToSectionWeb("pricing")}
                 style={({ pressed, hovered }: any) => [
                   styles.edHeroLink,
                   pressed ? { opacity: 0.8 } : null,
@@ -2254,14 +2299,19 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
                 ]}
                 testID="screens-auth-public-home-hero-link"
               >
-                <Text style={styles.edHeroLinkLabel}>Ya tengo cuenta → Iniciar sesión</Text>
+                <Text style={styles.edHeroLinkLabel}>Ver planes ↓</Text>
               </Pressable>
             </View>
           </View>
         </View>
 
         {/* SECTION 2: FEATURES (3 por disciplina) */}
-        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d5")}>
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d5 ed-scroll-margin-top")}
+          nativeID="features"
+          testID="features"
+        >
           <View style={styles.edSectionHead}>
             <Text style={styles.edEyebrow}>Por disciplina</Text>
             <Text style={[styles.edSectionTitle, isDesktop ? styles.edSectionTitleDesktop : null]}>
@@ -2284,20 +2334,25 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
           </View>
         </View>
 
-        {/* SECTION 3: PRICING (2 planes) */}
-        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d6")}>
+        {/* SECTION 3: PRICING (3 planes) */}
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d6 ed-scroll-margin-top")}
+          nativeID="pricing"
+          testID="pricing"
+        >
           <View style={styles.edSectionHead}>
             <Text style={styles.edEyebrow}>Planes</Text>
             <Text style={[styles.edSectionTitle, isDesktop ? styles.edSectionTitleDesktop : null]}>
               Tarifas sencillas. Sin sorpresas.
             </Text>
           </View>
-          <View style={[styles.edGrid2, isDesktop ? styles.edGrid2Desktop : null]}>
+          <View style={[styles.edGrid3, isDesktop ? styles.edGrid3Desktop : null]}>
             {HOME_PRICING_PLANS.map((plan, i) => (
               <View
                 key={plan.id}
                 style={[styles.edPriceCard, plan.highlight ? styles.edPriceCardHighlight : null]}
-                {...getWebClassNameProps(`ed-fade ed-d${6 + i}`)}
+                {...getWebClassNameProps(`ed-fade ed-d${6 + (i >= 2 ? 2 : i)}`)}
                 nativeID={`screens-auth-public-home-plan-${plan.id}`}
                 testID={`screens-auth-public-home-plan-${plan.id}`}
               >
@@ -2327,7 +2382,12 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
         </View>
 
         {/* SECTION 4: SOCIAL PROOF */}
-        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d7")}>
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d7 ed-scroll-margin-top")}
+          nativeID="testimonial"
+          testID="testimonial"
+        >
           <View style={styles.edProof}>
             <Text style={styles.edProofEyebrow}>En el tatami</Text>
             <Text style={[styles.edProofQuote, isDesktop ? styles.edProofQuoteDesktop : null]}>
@@ -2346,10 +2406,15 @@ export function HomeScreen({ initialSection: _initialSectionProp }: HomeScreenPr
         </View>
 
         {/* SECTION 5: CTA FINAL */}
-        <View style={styles.edSection} {...getWebClassNameProps("ed-fade ed-d8")}>
+        <View
+          style={styles.edSection}
+          {...getWebClassNameProps("ed-fade ed-d8 ed-scroll-margin-top")}
+          nativeID="cta"
+          testID="cta"
+        >
           <View style={styles.edCtaFinal}>
             <Text style={[styles.edCtaFinalTitle, isDesktop ? styles.edCtaFinalTitleDesktop : null]}>
-              Arranca tu academia con El Dojo hoy.
+              ¿Listo para dejar de gestionar con planillas? Empieza hoy.
             </Text>
             <Text style={styles.edCtaFinalCopy}>
               Crea la cuenta de tu academia en minutos y entra directo al panel operativo.

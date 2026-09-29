@@ -1,95 +1,101 @@
 :root {
-  --color-judogi-red: #C62828;
-  --color-judogi-red-hover: #A81F1F;
-  --color-judogi-red-soft: rgba(198, 40, 40, 0.10);
-  --color-indigo-blue: #1A237E;
-  --color-indigo-blue-hover: #151C66;
-  --color-indigo-blue-soft: rgba(26, 35, 126, 0.10);
-  --color-tatami-green: #558B2F;
-  --color-tatami-green-hover: #456E25;
-  --color-tatami-green-soft: rgba(85, 139, 47, 0.12);
-  --color-golden-yellow: #F9A825;
-  --color-golden-yellow-hover: #D98E1A;
-  --color-golden-yellow-soft: rgba(249, 168, 37, 0.14);
-  --color-aged-wood: #8D6E63;
-  --color-aged-wood-hover: #6D4C41;
-  --color-aged-wood-light: #A1887F;
-  --color-aged-wood-soft: rgba(141, 110, 99, 0.12);
-  --color-aged-wood-strong: #6D4C41;
+  --color-editorial-bg: #1F2937;
+  --color-editorial-fg: #FFFFFF;
+  --color-editorial-border: rgba(255, 255, 255, 1);
+  --color-editorial-border-soft: rgba(255, 255, 255, 0.12);
+  --color-editorial-surface: rgba(255, 255, 255, 0.04);
+  --color-editorial-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-editorial-fg-muted: rgba(255, 255, 255, 0.62);
+  --color-editorial-fg-subtle: rgba(255, 255, 255, 0.40);
+  --color-editorial-ring: #FFFFFF;
+  --color-editorial-overlay: rgba(10, 12, 16, 0.72);
 
-  --color-bg-light: #FFFFFF;
-  --color-text-primary-light: #1A1A1A;
-  --color-text-secondary-light: #6D6D6D;
-  --color-border-light: rgba(141, 110, 99, 0.22);
-  --color-border-strong-light: rgba(141, 110, 99, 0.42);
+  --color-success: #22C55E;
+  --color-success-hover: #16A34A;
+  --color-success-soft: rgba(34, 197, 94, 0.12);
+  --color-warning: #F59E0B;
+  --color-warning-hover: #D97706;
+  --color-warning-soft: rgba(245, 158, 11, 0.12);
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-soft: rgba(239, 68, 68, 0.12);
 
-  --color-background: var(--color-bg-light);
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #FAFAFA;
-  --color-surface-strong: #FFFFFF;
-  --color-panel: #FFFFFF;
-  --color-panel-soft: #FAFAFA;
+  --color-judogi-red: var(--color-danger);
+  --color-judogi-red-hover: var(--color-danger-hover);
+  --color-judogi-red-soft: var(--color-danger-soft);
+  --color-indigo-blue: #3B82F6;
+  --color-indigo-blue-hover: #2563EB;
+  --color-indigo-blue-soft: rgba(59, 130, 246, 0.12);
+  --color-tatami-green: var(--color-success);
+  --color-tatami-green-hover: var(--color-success-hover);
+  --color-tatami-green-soft: var(--color-success-soft);
+  --color-golden-yellow: var(--color-warning);
+  --color-golden-yellow-hover: var(--color-warning-hover);
+  --color-golden-yellow-soft: var(--color-warning-soft);
+  --color-aged-wood: #FFFFFF;
+  --color-aged-wood-hover: rgba(255, 255, 255, 0.90);
+  --color-aged-wood-light: rgba(255, 255, 255, 0.80);
+  --color-aged-wood-soft: var(--color-editorial-border-soft);
+  --color-aged-wood-strong: #FFFFFF;
 
-  --color-primary: var(--color-aged-wood);
+  --color-background: var(--color-editorial-bg);
+  --color-surface: var(--color-editorial-surface);
+  --color-surface-alt: var(--color-editorial-surface-hover);
+  --color-surface-strong: var(--color-editorial-bg);
+  --color-panel: var(--color-editorial-bg);
+  --color-panel-soft: var(--color-editorial-surface);
+
+  --color-primary: var(--color-editorial-fg);
   --color-primary-hover: var(--color-aged-wood-hover);
-  --color-primary-soft: var(--color-aged-wood-soft);
-  --color-accent: var(--color-indigo-blue);
-  --color-accent-soft: var(--color-indigo-blue-soft);
-  --color-action: var(--color-aged-wood);
+  --color-primary-soft: var(--color-editorial-border-soft);
+  --color-accent: var(--color-editorial-fg);
+  --color-accent-soft: var(--color-editorial-border-soft);
+  --color-action: var(--color-editorial-fg);
   --color-action-hover: var(--color-aged-wood-hover);
-  --color-action-soft: var(--color-aged-wood-soft);
-  --color-secondary: var(--color-indigo-blue);
-  --color-secondary-hover: var(--color-indigo-blue-hover);
-  --color-secondary-soft: var(--color-indigo-blue-soft);
-  --color-gold: var(--color-golden-yellow);
-  --color-gold-soft: var(--color-golden-yellow-soft);
+  --color-action-soft: var(--color-editorial-border-soft);
+  --color-secondary: var(--color-editorial-fg-muted);
+  --color-secondary-hover: var(--color-editorial-fg);
+  --color-secondary-soft: var(--color-editorial-border-soft);
+  --color-gold: var(--color-warning);
+  --color-gold-soft: var(--color-warning-soft);
 
-  --color-text: var(--color-text-primary-light);
-  --color-text-muted: var(--color-text-secondary-light);
-  --color-on-primary: #FFFFFF;
-  --color-on-primary-muted: rgba(255, 255, 255, 0.88);
-  --color-border: var(--color-border-light);
-  --color-border-strong: var(--color-border-strong-light);
+  --color-text: var(--color-editorial-fg);
+  --color-text-muted: var(--color-editorial-fg-muted);
+  --color-on-primary: var(--color-editorial-bg);
+  --color-on-primary-muted: var(--color-editorial-bg);
+  --color-border: var(--color-editorial-border-soft);
+  --color-border-strong: var(--color-editorial-border);
   --color-wood: var(--color-aged-wood);
   --color-wood-light: var(--color-aged-wood-light);
   --color-wood-soft: var(--color-aged-wood-soft);
   --color-wood-strong: var(--color-aged-wood-strong);
-  --color-danger: var(--color-judogi-red);
-  --color-danger-hover: var(--color-judogi-red-hover);
-  --color-danger-soft: var(--color-judogi-red-soft);
-  --color-success: var(--color-tatami-green);
-  --color-success-hover: var(--color-tatami-green-hover);
-  --color-success-soft: var(--color-tatami-green-soft);
-  --color-warning: var(--color-golden-yellow);
-  --color-warning-hover: var(--color-golden-yellow-hover);
-  --color-warning-soft: var(--color-golden-yellow-soft);
   --color-info: var(--color-indigo-blue);
   --color-info-hover: var(--color-indigo-blue-hover);
   --color-info-soft: var(--color-indigo-blue-soft);
-  --color-overlay: rgba(26, 26, 26, 0.32);
-  --color-ink: var(--color-text-primary-light);
-  --color-hover: var(--color-aged-wood-soft);
-  --color-hover-strong: rgba(141, 110, 99, 0.20);
+  --color-overlay: var(--color-editorial-overlay);
+  --color-ink: var(--color-editorial-fg);
+  --color-hover: var(--color-editorial-surface);
+  --color-hover-strong: var(--color-editorial-surface-hover);
 
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 20px;
-  --spacing-xl: 28px;
-  --spacing-2xl: 36px;
+  --spacing-xs: 10px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --spacing-2xl: 72px;
 
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
   --radius-pill: 999px;
 
   --font-display: "Montserrat", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-heading: "Montserrat", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-body: '"Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 
-  --transition-fast: 150ms;
+  --transition-fast: 120ms;
   --transition-base: 200ms;
-  --transition-slow: 250ms;
+  --transition-slow: 350ms;
 }
 
 *,
@@ -155,4 +161,31 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+:focus-visible {
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.ed-scroll-margin-top {
+  scroll-margin-top: 96px;
 }

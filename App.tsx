@@ -107,7 +107,7 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <SimpleAuthProvider forceAppMode="public">
             <AuthProvider>
-              <StatusBar style="dark" />
+              <StatusBar style="light" />
               <PublicNavigator />
             </AuthProvider>
           </SimpleAuthProvider>
@@ -122,7 +122,7 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <SimpleAuthProvider forceAppMode="admin">
             <AuthProvider>
-              <StatusBar style="dark" />
+              <StatusBar style="light" />
               <SimpleAuthGate requiredRole="gym_admin">
                 <AdminNavigator />
               </SimpleAuthGate>
@@ -138,7 +138,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <SimpleAuthProvider forceAppMode="student">
           <AuthProvider>
-            <StatusBar style="dark" />
+            <StatusBar style="light" />
             <SimpleAuthGate requiredRole="student">
               <StudentNavigator />
             </SimpleAuthGate>
