@@ -25,7 +25,6 @@ import {
   SignInScreen,
   StoresScreen,
 } from "@/screens/auth/PublicSiteScreen";
-import { PublicAttendanceScreen } from "@/screens/public/PublicAttendanceScreen";
 import { StudentHomeScreen } from "@/screens/student/StudentHomeScreen";
 import { StudentProfileScreen } from "@/screens/student/StudentProfileScreen";
 import { SecuritySettingsScreen } from "@/screens/student/SecuritySettingsScreen";
@@ -39,7 +38,6 @@ import {
   PUBLIC_SCREEN_PATHS,
 } from "@/navigation/publicRoutes";
 import { buildAppUrl, getDomainConfig } from "@/utils/domains";
-import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import { isGymAdminUser, isStudentUser } from "@/utils/roles";
 import { hardClearAllEldojoItems } from "@/utils/storage";
 import { hardClearSessionHint } from "@/utils/sessionHint";
@@ -276,7 +274,6 @@ export function AppNavigator() {
     redirectToPublicHome,
     signOut,
   } = useAuth();
-  const publicAttendanceRoute = getPublicAttendanceRoute();
   const domainCfg = useMemo(() => getDomainConfig(), []);
   const [ticketRedeemState, setTicketRedeemState] = useState<
     "idle" | "redeeming" | "success" | "error"
@@ -385,14 +382,6 @@ export function AppNavigator() {
 
   const showTicketError =
     domainCfg.isAppHostname && ticketRedeemState === "error" && !!ticketRedeemError;
-
-  if (publicAttendanceRoute) {
-    return (
-      <NavigationContainer linking={linking} theme={navigationTheme}>
-        <PublicAttendanceScreen routeParams={publicAttendanceRoute} />
-      </NavigationContainer>
-    );
-  }
 
   if (Platform.OS === "web") {
     if (domainCfg.isAppHostname) {

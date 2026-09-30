@@ -2,9 +2,15 @@ import { Platform } from "react-native";
 
 import type { PublicAttendanceRouteParams } from "@/types/publicAttendance";
 
+import { ADMIN_ROUTE_SEGMENTS } from "@/navigation/publicRoutes";
+
 const PUBLIC_ATTENDANCE_PATH = /^\/([^/]+)\/([^/]+)\/asistencia(?:s)?\/?$/i;
 
-function slugifyPublicSegment(value: string): string {
+/**
+ * NOTA: Usado por QrKioskLauncherModal para armar slugs de display.
+ * No confundir con armado de URLs de asistencia (hoy privadas vía buildAdminKioskUrl).
+ */
+export function slugifyPublicSegment(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -13,64 +19,59 @@ function slugifyPublicSegment(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function buildPublicAttendancePath(
-  organizationSlug: string,
-  branchName: string,
-  opts?: { classId?: number; kiosk?: boolean }
+/**
+ * @deprecated Ruta pública eliminada por requerimiento de seguridad.
+ * Usar buildAdminKioskUrl.
+ */
+// @ts-ignore - deprecated, kept for reference
+function buildPublicAttendancePath(
+  _organizationSlug: string,
+  _branchName: string,
+  _opts?: { classId?: number; kiosk?: boolean }
 ): string {
-  const path = `/${encodeURIComponent(organizationSlug.trim())}/${encodeURIComponent(slugifyPublicSegment(branchName))}/asistencia`;
+  return "";
+}
+
+/**
+ * @deprecated Ruta pública eliminada por requerimiento de seguridad.
+ * Usar buildAdminKioskUrl.
+ */
+// @ts-ignore - deprecated, kept for reference
+function buildPublicAttendanceUrl(
+  _origin: string,
+  _organizationSlug: string,
+  _branchName: string,
+  _opts?: { classId?: number; kiosk?: boolean }
+): string {
+  return "";
+}
+
+/**
+ * Legacy: PublicAttendanceScreen lo usa como fallback interno para routeParams.
+ * El bypass en AppNavigator fue REMOVIDO — esta función ya NO habilita acceso sin sesión.
+ */
+export function getPublicAttendanceRoute(): PublicAttendanceRouteParams | null {
+  if (Platform.OS !== "web" || typeof window === "undefined") return null;
+  const match = window.location.pathname.match(PUBLIC_ATTENDANCE_PATH);
+  if (!match) return null;
+  return null;
+}
+
+export function buildAdminKioskUrl(
+  origin: string,
+  branchId: number,
+  opts?: { classId?: number }
+): string {
+  const adminRoot = ADMIN_ROUTE_SEGMENTS.root ?? "admin";
+  const kioskSegment = ADMIN_ROUTE_SEGMENTS.attendanceKiosk ?? "asistencias-kiosk";
+  const path = `/${adminRoot}/${kioskSegment}`;
   const qs = new URLSearchParams();
-  if (typeof opts?.classId === "number") {
+  if (Number.isFinite(branchId) && branchId > 0) {
+    qs.set("branch", String(branchId));
+  }
+  if (typeof opts?.classId === "number" && opts.classId > 0) {
     qs.set("class", String(opts.classId));
   }
-  if (opts?.kiosk) {
-    qs.set("kiosk", "1");
-  }
   const qsStr = qs.toString();
-  return qsStr ? `${path}?${qsStr}` : path;
-}
-
-export function buildPublicAttendanceUrl(
-  origin: string,
-  organizationSlug: string,
-  branchName: string,
-  opts?: { classId?: number; kiosk?: boolean }
-): string {
-  return `${origin.replace(/\/$/, "")}${buildPublicAttendancePath(organizationSlug, branchName, opts)}`;
-}
-
-export function getPublicAttendanceRoute(): PublicAttendanceRouteParams | null {
-  if (Platform.OS !== "web" || typeof window === "undefined") {
-    return null;
-  }
-
-  const match = window.location.pathname.match(PUBLIC_ATTENDANCE_PATH);
-  if (!match) {
-    return null;
-  }
-
-  const [, organizationSlug, branchSlug] = match;
-
-  const params: PublicAttendanceRouteParams = {
-    organizationSlug: decodeURIComponent(organizationSlug),
-    branchSlug: decodeURIComponent(branchSlug),
-  };
-
-  try {
-    const url = new URL(window.location.href);
-    const rawClass = url.searchParams.get("class");
-    if (rawClass) {
-      const parsed = Number(rawClass);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        params.classId = parsed;
-      }
-    }
-    if (url.searchParams.get("kiosk") === "1") {
-      params.kiosk = true;
-    }
-  } catch {
-    /* noop */
-  }
-
-  return params;
+  return `${origin.replace(/\/$/, "")}${path}${qsStr ? `?${qsStr}` : ""}`;
 }

@@ -49,7 +49,7 @@ import { useCameraAvailability } from "@/hooks/useCameraAvailability";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { formatCurrency, formatDate, formatDateTime, formatPaymentMethod, formatPaymentRecordStatus, formatPaymentStatus } from "@/utils/format";
-import { buildPublicAttendanceUrl } from "@/utils/publicAttendanceRoute";
+import { buildAdminKioskUrl } from "@/utils/publicAttendanceRoute";
 import { getDomainConfig } from "@/utils/domains";
 
 import type { AdminDashboardSection } from "@/navigation/types";
@@ -535,10 +535,10 @@ function buildAttendanceUpdatePayload(
   };
 }
 
-async function openPublicAttendancePage(organizationSlug: string, branchName: string): Promise<void> {
+async function openAdminKioskPage(branchId: number, opts?: { classId?: number }): Promise<void> {
   const cfg = getDomainConfig();
-  const origin = cfg.publicWebOrigin;
-  const path = buildPublicAttendanceUrl(origin, organizationSlug, branchName);
+  const origin = cfg.appWebOrigin || (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "");
+  const path = buildAdminKioskUrl(origin, branchId, opts);
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
     window.open(path, "_blank", "noopener,noreferrer");
@@ -616,7 +616,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const { completeFirstTimeTutorial, user } = useAuth();
   const queryClient = useQueryClient();
   const domainConfig = getDomainConfig();
-  const publicAttendanceOrigin = domainConfig.publicWebOrigin;
+  const adminKioskOrigin = domainConfig.appWebOrigin || (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "");
   const currentAssignment = user?.admin_assignments[0] ?? null;
   const organizationId = currentAssignment?.organization_id ?? null;
   const scopedBranchId = currentAssignment?.branch_id ?? null;
@@ -1622,14 +1622,14 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const inactiveStudents = Math.max(visibleStudents.length - activeStudents, 0);
   const inactiveBranches = Math.max(visibleBranches.length - activeBranches, 0);
 
-  const copyPublicAttendanceUrl = async (url: string) => {
+  const copyAdminKioskUrl = async (url: string) => {
     if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url);
-      setFeedback({ tone: "success", message: "La liga publica se copio al portapapeles." });
+      setFeedback({ tone: "success", message: "Enlace de tablet copiado al portapapeles." });
       return;
     }
 
-    setFeedback({ tone: "danger", message: "No fue posible copiar la liga desde este dispositivo." });
+    setFeedback({ tone: "danger", message: "No fue posible copiar el enlace desde este dispositivo." });
   };
 
   useEffect(() => {
@@ -2105,15 +2105,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       },
       {
         key: "open-attendance-route",
-        label: "Abrir registro público",
+        label: "Abrir tablet de recepción",
         icon: "external-link",
         tone: "warning",
         onPress: () => {
-          if (organization && currentBranch) {
-            void openPublicAttendancePage(organization.slug, currentBranch.name);
+          if (currentBranch) {
+            void openAdminKioskPage(currentBranch.id);
           }
         },
-        disabled: !organization || !currentBranch || !currentBranch.is_active,
+        disabled: !currentBranch || !currentBranch.is_active,
       },
       {
         key: "new-class",
@@ -2162,28 +2162,24 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
       return [
         {
           key: "branch-open-attendance",
-          label: "Abrir asistencia pública",
+          label: "Abrir pantalla de tablet",
           icon: "external-link",
           tone: "warning",
           onPress: () => {
-            if (organization) {
-              void openPublicAttendancePage(organization.slug, branch.name);
-            }
+            void openAdminKioskPage(branch.id);
           },
-          disabled: !branch.is_active || !organization,
+          disabled: !branch.is_active,
         },
         {
           key: "branch-copy-route",
-          label: "Copiar liga de asistencia",
+          label: "Copiar enlace tablet",
           icon: "link",
           onPress: () => {
-            if (organization) {
-              void copyPublicAttendanceUrl(
-                buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name),
-              );
-            }
+            void copyAdminKioskUrl(
+              buildAdminKioskUrl(adminKioskOrigin, branch.id),
+            );
           },
-          disabled: !organization,
+          disabled: false,
         },
         {
           key: "branch-edit",
@@ -2265,7 +2261,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   }, [
     rowContext,
     organization,
-    publicAttendanceOrigin,
+    adminKioskOrigin,
     canEditVisibleBranches,
     canDeactivateBranches,
     openEditBranchModal,
@@ -3286,20 +3282,18 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                   </View>
                 </View>
                 <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={styles.branchActionLinks} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
-                  {organization ? (
                     <Pressable
                       accessibilityRole="link"
                       nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                      onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
+                      onPress={() => void openAdminKioskPage(branch.id)}
                       style={({ pressed }) => [styles.operationsInlineLink, (!branch.is_active || pressed) ? styles.operationsInlineLinkPressed : null]}
                       testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
                       disabled={!branch.is_active}
                     >
                       <Text nativeID={`screens-admin-dashboard-branch-open-attendance-label-${branch.id}`} style={styles.operationsInlineLinkLabel} testID={`screens-admin-dashboard-branch-open-attendance-label-${branch.id}`}>
-                        Ir rapido a asistencias
+                        Ir a tablet recepción
                       </Text>
                     </Pressable>
-                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`}
@@ -4439,15 +4433,15 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                           tone="success"
                         />
                         <QuickAction
-                          description="Abre la liga pública para capturar asistencia desde recepción."
+                          description="Abre la pantalla de tablet para capturar asistencia desde recepción (requiere sesión admin)."
                           idPrefix="screens-admin-dashboard-focus-open-attendance-action"
-                          label="Abrir registro de asistencias"
+                          label="Abrir tablet de recepción"
                           onPress={() => {
-                            if (organization && currentBranch) {
-                              void openPublicAttendancePage(organization.slug, currentBranch.name);
+                            if (currentBranch) {
+                              void openAdminKioskPage(currentBranch.id);
                             }
                           }}
-                          disabled={!organization || !currentBranch || !currentBranch.is_active}
+                          disabled={!currentBranch || !currentBranch.is_active}
                         />
                         <QuickAction
                           description="Da de alta una clase nueva en la sucursal visible."
@@ -4704,16 +4698,14 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                           <View nativeID={`screens-admin-dashboard-branch-actions-${branch.id}`} style={[styles.branchActions, !isDesktop ? styles.mobileRowActions : null]} testID={`screens-admin-dashboard-branch-actions-${branch.id}`}>
                             {isDesktop ? (
                               <>
-                                {organization ? (
-                                  <AppButton
-                                    label="Abrir asistencia"
-                                    nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                                    onPress={() => void openPublicAttendancePage(organization.slug, branch.name)}
-                                    testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
-                                    variant="secondary"
-                                    disabled={!branch.is_active}
-                                  />
-                                ) : null}
+                                <AppButton
+                                  label="Abrir tablet"
+                                  nativeID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                  onPress={() => void openAdminKioskPage(branch.id)}
+                                  testID={`screens-admin-dashboard-branch-open-attendance-button-${branch.id}`}
+                                  variant="secondary"
+                                  disabled={!branch.is_active}
+                                />
                                 <AppButton label={branch.id === 1 ? "Editar matriz" : "Editar"} nativeID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-edit-button-${branch.id}`} variant="secondary" />
                                 {canDeactivateBranches && branch.is_active ? (
                                   <AppButton label="Desactivar" nativeID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} onPress={() => openEditBranchModal(branch)} testID={`screens-admin-dashboard-branch-deactivate-button-${branch.id}`} variant="danger" />
@@ -4722,20 +4714,20 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                             ) : (
                               <>
                                 <Pressable
-                                  accessibilityLabel="Abrir asistencia pública"
+                                  accessibilityLabel="Abrir tablet de recepción"
                                   accessibilityRole="button"
                                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                   nativeID={`screens-admin-dashboard-branch-open-attendance-link-${branch.id}`}
                                   onPress={() => {
-                                    if (organization && branch.is_active) {
-                                      void openPublicAttendancePage(organization.slug, branch.name);
+                                    if (branch.is_active) {
+                                      void openAdminKioskPage(branch.id);
                                     }
                                   }}
-                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null, !branch.is_active || !organization ? { opacity: 0.5 } : null]}
+                                  style={({ pressed }) => [styles.mobileActionLink, pressed ? styles.mobileActionLinkPressed : null, !branch.is_active ? { opacity: 0.5 } : null]}
                                   testID={`screens-admin-dashboard-branch-open-attendance-link-${branch.id}`}
                                 >
                                   <Text nativeID={`screens-admin-dashboard-branch-open-attendance-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-open-attendance-link-label-${branch.id}`}>
-                                    Abrir asistencia
+                                    Abrir tablet
                                   </Text>
                                 </Pressable>
                                 <Pressable
@@ -4768,38 +4760,73 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                               </>
                             )}
                           </View>
-                          {organization && branch.is_active ? (
+                          {branch.is_active ? (
                             <View nativeID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`} style={styles.publicRouteBlock} testID={`screens-admin-dashboard-branch-public-route-wrap-${branch.id}`}>
-                              <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
-                                {buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name)}
+                              <Text style={[styles.helperText, { fontWeight: "600", marginBottom: spacing.xs ?? 4 }]}>
+                                Tablet de recepción (sesión admin requerida)
                               </Text>
-                              {isDesktop ? (
-                                <AppButton
-                                  label="Copiar liga"
-                                  nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                                  onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
-                                  testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
-                                  variant="secondary"
-                                />
-                              ) : (
-                                <Pressable
-                                  accessibilityLabel="Copiar liga de asistencia"
-                                  accessibilityRole="button"
-                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                  nativeID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
-                                  onPress={() => void copyPublicAttendanceUrl(buildPublicAttendanceUrl(publicAttendanceOrigin, organization.slug, branch.name))}
-                                  style={({ pressed }) => [
-                                    styles.mobileActionLink,
-                                    { alignItems: "flex-start", alignSelf: "flex-start" },
-                                    pressed ? styles.mobileActionLinkPressed : null,
-                                  ]}
-                                  testID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
-                                >
-                                  <Text nativeID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`}>
-                                    Copiar liga
-                                  </Text>
-                                </Pressable>
-                              )}
+                              <Text nativeID={`screens-admin-dashboard-branch-public-route-${branch.id}`} style={styles.helperText} testID={`screens-admin-dashboard-branch-public-route-${branch.id}`}>
+                                {buildAdminKioskUrl(adminKioskOrigin, branch.id)}
+                              </Text>
+                              <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm ?? 8, flexWrap: "wrap" }}>
+                                {isDesktop ? (
+                                  <>
+                                    <AppButton
+                                      label="Abrir"
+                                      nativeID={`screens-admin-dashboard-branch-open-tablet-button-${branch.id}`}
+                                      onPress={() => void openAdminKioskPage(branch.id)}
+                                      style={{ flex: 1, minWidth: 120 }}
+                                      testID={`screens-admin-dashboard-branch-open-tablet-button-${branch.id}`}
+                                      variant="primary"
+                                    />
+                                    <AppButton
+                                      label="Copiar enlace"
+                                      nativeID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                      onPress={() => void copyAdminKioskUrl(buildAdminKioskUrl(adminKioskOrigin, branch.id))}
+                                      style={{ flex: 1, minWidth: 140 }}
+                                      testID={`screens-admin-dashboard-branch-copy-route-button-${branch.id}`}
+                                      variant="secondary"
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pressable
+                                      accessibilityLabel="Abrir pantalla de tablet"
+                                      accessibilityRole="button"
+                                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                      nativeID={`screens-admin-dashboard-branch-open-tablet-link-${branch.id}`}
+                                      onPress={() => void openAdminKioskPage(branch.id)}
+                                      style={({ pressed }) => [
+                                        styles.mobileActionLink,
+                                        { alignItems: "flex-start", alignSelf: "flex-start" },
+                                        pressed ? styles.mobileActionLinkPressed : null,
+                                      ]}
+                                      testID={`screens-admin-dashboard-branch-open-tablet-link-${branch.id}`}
+                                    >
+                                      <Text nativeID={`screens-admin-dashboard-branch-open-tablet-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-open-tablet-link-label-${branch.id}`}>
+                                        Abrir en nueva pestaña
+                                      </Text>
+                                    </Pressable>
+                                    <Pressable
+                                      accessibilityLabel="Copiar enlace tablet"
+                                      accessibilityRole="button"
+                                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                      nativeID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
+                                      onPress={() => void copyAdminKioskUrl(buildAdminKioskUrl(adminKioskOrigin, branch.id))}
+                                      style={({ pressed }) => [
+                                        styles.mobileActionLink,
+                                        { alignItems: "flex-start", alignSelf: "flex-start" },
+                                        pressed ? styles.mobileActionLinkPressed : null,
+                                      ]}
+                                      testID={`screens-admin-dashboard-branch-copy-route-link-${branch.id}`}
+                                    >
+                                      <Text nativeID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`} style={styles.mobileActionLinkLabel} testID={`screens-admin-dashboard-branch-copy-route-link-label-${branch.id}`}>
+                                        Copiar enlace
+                                      </Text>
+                                    </Pressable>
+                                  </>
+                                )}
+                              </View>
                             </View>
                           ) : null}
                         </View>
