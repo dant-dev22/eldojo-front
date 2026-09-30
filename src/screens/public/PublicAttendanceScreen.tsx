@@ -43,6 +43,7 @@ import {
 import { useCameraAvailability } from "@/hooks/useCameraAvailability";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
+import { buildStudentUrl, getDomainConfig } from "@/utils/domains";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
 import QRCode from "react-native-qrcode-svg";
 
@@ -536,14 +537,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
       return "";
     }
     try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("kiosk");
-      if (preselectedClassId) {
-        url.searchParams.set("class", String(preselectedClassId));
-      }
-      return url.toString();
+      const domainCfg = getDomainConfig();
+      const classNum = typeof preselectedClassId === "number" ? preselectedClassId : undefined;
+      return buildStudentUrl("/alumno/asistencia/registrar", {
+        class: typeof classNum === "number" ? String(classNum) : undefined,
+        source: "qr",
+      });
     } catch {
-      return "";
+      const fallbackOrigin = typeof window !== "undefined" ? window.location.origin : "";
+      const qs = new URLSearchParams();
+      if (typeof preselectedClassId === "number") qs.set("class", String(preselectedClassId));
+      qs.set("source", "qr");
+      const qsStr = qs.toString();
+      return `${fallbackOrigin.replace(/\/$/, "")}/alumno/asistencia/registrar${qsStr ? `?${qsStr}` : ""}`;
     }
   }, [preselectedClassId]);
 
