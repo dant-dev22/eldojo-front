@@ -1517,6 +1517,7 @@ export function StudentsListScreen({ navigation, route }: Props) {
         headerBottomContent={studentsHeaderBottomContent}
         headerMainContent={studentsHeaderMainContent}
         headerSearch={studentsHeaderSearch}
+        onGoAttendance={() => navigation.navigate("AdminHome", { section: "attendance" })}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}

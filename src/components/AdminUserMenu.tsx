@@ -77,21 +77,10 @@ export function AdminUserMenu({ user, actions }: AdminUserMenuProps) {
         nativeID="components-admin-user-menu-trigger"
         onPress={() => setOpen(true)}
         testID="components-admin-user-menu-trigger"
-        style={({ pressed }) => [styles.trigger, pressed ? styles.triggerPressed : null]}
+        style={({ pressed }) => [styles.triggerCompact, pressed ? styles.triggerPressed : null]}
       >
-        <View nativeID="components-admin-user-menu-trigger-avatar" style={styles.avatar} testID="components-admin-user-menu-trigger-avatar">
+        <View nativeID="components-admin-user-menu-trigger-avatar" style={styles.avatarCompact} testID="components-admin-user-menu-trigger-avatar">
           <Text nativeID="components-admin-user-menu-trigger-avatar-label" style={styles.avatarLabel} testID="components-admin-user-menu-trigger-avatar-label">{displayInitial}</Text>
-        </View>
-        <View nativeID="components-admin-user-menu-trigger-copy" style={styles.triggerCopy} testID="components-admin-user-menu-trigger-copy">
-          <Text nativeID="components-admin-user-menu-trigger-name" style={styles.triggerName} testID="components-admin-user-menu-trigger-name">
-            {displayName}
-          </Text>
-          <Text nativeID="components-admin-user-menu-trigger-role" style={styles.triggerRole} testID="components-admin-user-menu-trigger-role">
-            {formatAdminRole(user?.role)}
-          </Text>
-        </View>
-        <View nativeID="components-admin-user-menu-trigger-glyph" style={styles.triggerGlyph} testID="components-admin-user-menu-trigger-glyph">
-          <Feather color={colors.textMuted} name="chevron-down" size={16} />
         </View>
       </Pressable>
 
@@ -167,6 +156,15 @@ const styles = StyleSheet.create({
   triggerPressed: {
     opacity: 0.82,
   },
+  triggerCompact: {
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderRadius: radius.pill,
+    borderWidth: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    padding: 0,
+  },
   avatar: {
     alignItems: "center",
     backgroundColor: colors.actionSoft,
@@ -174,6 +172,16 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "center",
     width: 34,
+  },
+  avatarCompact: {
+    alignItems: "center",
+    backgroundColor: colors.actionSoft,
+    borderColor: "rgba(255, 124, 57, 0.45)",
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
   avatarLabel: {
     color: colors.action,

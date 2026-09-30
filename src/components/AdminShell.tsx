@@ -17,6 +17,7 @@ export type AdminSection =
   | "dashboard"
   | "students"
   | "trajectory"
+  | "attendance"
   | "branches"
   | "operations"
   | "payments"
@@ -32,6 +33,7 @@ interface AdminShellProps extends PropsWithChildren {
   onGoDashboard: () => void;
   onGoStudents: () => void;
   onGoTrajectory: () => void;
+  onGoAttendance: () => void;
   onGoBranches: () => void;
   onGoOperations: () => void;
   onGoPayments: () => void;
@@ -96,6 +98,7 @@ export function AdminShell({
   onGoDashboard,
   onGoStudents,
   onGoTrajectory,
+  onGoAttendance,
   onGoBranches,
   onGoOperations,
   onGoPayments,
@@ -124,8 +127,8 @@ export function AdminShell({
 
   const viewportHeight = Dimensions.get("window").height;
   const shellPadding = spacing.md;
-  const desktopSidebarWidth = 300;
-  const tabletSidebarWidth = 272;
+  const desktopSidebarWidth = 88;
+  const tabletSidebarWidth = 80;
 
   const navItems = useMemo<NavItem[]>(
     () => {
@@ -152,10 +155,17 @@ export function AdminShell({
           onPress: onGoTrajectory,
         },
         {
+          key: "attendance",
+          label: "Asistencias",
+          description: "Registro diario y gestión de asistencias",
+          icon: "clipboard",
+          onPress: onGoAttendance,
+        },
+        {
           key: "operations",
           label: "Clases",
           description: "Registro diario y operación",
-          icon: "clipboard",
+          icon: "book-open",
           onPress: onGoOperations,
         },
         {
@@ -207,7 +217,7 @@ export function AdminShell({
       });
       return base;
     },
-    [onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoQrCodes, onGoReports, onGoSettings, onGoStudents, onGoTrajectory],
+    [onGoAttendance, onGoBranches, onGoDashboard, onGoDojo, onGoOperations, onGoPayments, onGoQrCodes, onGoReports, onGoSettings, onGoStudents, onGoTrajectory],
   );
 
   const displayName = useMemo(
@@ -237,69 +247,77 @@ export function AdminShell({
   const renderSidebarContent = (mode: "desktop" | "mobile") => (
     <View
       nativeID={mode === "desktop" ? "components-admin-shell-sidebar-card" : "components-admin-shell-mobile-menu-card"}
-      style={styles.sidebarCard}
+      style={[styles.sidebarCard, mode === "desktop" ? styles.sidebarCardIconOnly : null]}
       testID={mode === "desktop" ? "components-admin-shell-sidebar-card" : "components-admin-shell-mobile-menu-card"}
     >
-      <View nativeID="components-admin-shell-brand-block" style={styles.brandBlock} testID="components-admin-shell-brand-block">
-        <View nativeID="components-admin-shell-brand-row" style={styles.brandRow} testID="components-admin-shell-brand-row">
-            <View nativeID="components-admin-shell-brand-logo" style={styles.logoMark} testID="components-admin-shell-brand-logo">
-              <LogoSvg size={50} variant="mark-only" />
+      <View nativeID="components-admin-shell-brand-block" style={[styles.brandBlock, mode === "desktop" ? styles.brandBlockIconOnly : null]} testID="components-admin-shell-brand-block">
+        <View nativeID="components-admin-shell-brand-row" style={[styles.brandRow, mode === "desktop" ? styles.brandRowIconOnly : null]} testID="components-admin-shell-brand-row">
+            <View nativeID="components-admin-shell-brand-logo" style={[styles.logoMark, mode === "desktop" ? styles.logoMarkIconOnly : null]} testID="components-admin-shell-brand-logo">
+              <LogoSvg size={mode === "desktop" ? 32 : 50} variant="mark-only" />
             </View>
-          <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
-            <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
-              ElDojo Admin
-            </Text>
-            <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
-              Operación diaria del dojo
-            </Text>
-          </View>
+          {mode === "mobile" ? (
+            <View nativeID="components-admin-shell-brand-copy" style={styles.brandCopy} testID="components-admin-shell-brand-copy">
+              <Text nativeID="components-admin-shell-brand-title" style={styles.brandTitle} testID="components-admin-shell-brand-title">
+                ElDojo Admin
+              </Text>
+              <Text nativeID="components-admin-shell-brand-subtitle" style={styles.brandSubtitle} testID="components-admin-shell-brand-subtitle">
+                Operación diaria del dojo
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
-      <View nativeID="components-admin-shell-nav-block" style={styles.navBlock} testID="components-admin-shell-nav-block">
+      <View nativeID="components-admin-shell-nav-block" style={[styles.navBlock, mode === "desktop" ? styles.navBlockIconOnly : null]} testID="components-admin-shell-nav-block">
         {navItems.map((item) => (
           <Pressable
             key={item.key}
             accessibilityRole="button"
+            accessibilityLabel={`${item.label}. ${item.description}`}
             nativeID={`components-admin-shell-nav-item-${item.key}`}
             onPress={() => (mode === "desktop" ? item.onPress() : handleMobileNavigation(item))}
             testID={`components-admin-shell-nav-item-${item.key}`}
+            title={mode === "desktop" ? `${item.label}\n${item.description}` : undefined}
             style={(state) => {
               const hovered = (state as typeof state & { hovered?: boolean }).hovered;
 
               return [
                 styles.navItem,
+                mode === "desktop" ? styles.navItemIconOnly : null,
                 item.key === activeSection ? styles.navItemActive : null,
+                item.key === activeSection && mode === "desktop" ? styles.navItemActiveIconOnly : null,
                 hovered ? styles.navItemHovered : null,
                 state.pressed ? styles.navItemPressed : null,
               ];
             }}
           >
-            <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
-              <Feather color={item.key === activeSection ? colors.text : colors.sidebarMuted} name={item.icon} size={16} />
+            <View nativeID={`components-admin-shell-nav-item-icon-wrap-${item.key}`} style={[styles.navItemIconWrap, item.key === activeSection ? styles.navItemIconWrapActive : null, mode === "desktop" ? styles.navItemIconWrapIconOnly : null]} testID={`components-admin-shell-nav-item-icon-wrap-${item.key}`}>
+              <Feather color={item.key === activeSection ? colors.text : colors.sidebarMuted} name={item.icon} size={mode === "desktop" ? 20 : 16} />
             </View>
-            <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
-              <Text
-                nativeID={`components-admin-shell-nav-item-label-${item.key}`}
-                style={[
-                  styles.navItemLabel,
-                  item.key === activeSection ? styles.navItemLabelActive : null,
-                ]}
-                testID={`components-admin-shell-nav-item-label-${item.key}`}
-              >
-                {item.label}
-              </Text>
-              <Text
-                nativeID={`components-admin-shell-nav-item-description-${item.key}`}
-                style={[
-                  styles.navItemDescription,
-                  item.key === activeSection ? styles.navItemDescriptionActive : null,
-                ]}
-                testID={`components-admin-shell-nav-item-description-${item.key}`}
-              >
-                {item.description}
-              </Text>
-            </View>
+            {mode === "mobile" ? (
+              <View nativeID={`components-admin-shell-nav-item-copy-${item.key}`} style={styles.navItemCopy} testID={`components-admin-shell-nav-item-copy-${item.key}`}>
+                <Text
+                  nativeID={`components-admin-shell-nav-item-label-${item.key}`}
+                  style={[
+                    styles.navItemLabel,
+                    item.key === activeSection ? styles.navItemLabelActive : null,
+                  ]}
+                  testID={`components-admin-shell-nav-item-label-${item.key}`}
+                >
+                  {item.label}
+                </Text>
+                <Text
+                  nativeID={`components-admin-shell-nav-item-description-${item.key}`}
+                  style={[
+                    styles.navItemDescription,
+                    item.key === activeSection ? styles.navItemDescriptionActive : null,
+                  ]}
+                  testID={`components-admin-shell-nav-item-description-${item.key}`}
+                >
+                  {item.description}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         ))}
       </View>
@@ -679,13 +697,26 @@ const styles = StyleSheet.create({
     height: "100%",
     padding: spacing.xl,
   },
+  sidebarCardIconOnly: {
+    alignItems: "center",
+    gap: spacing.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+  },
   brandBlock: {
     gap: spacing.lg,
+  },
+  brandBlockIconOnly: {
+    gap: 0,
+    width: "100%",
   },
   brandRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.sm,
+  },
+  brandRowIconOnly: {
+    justifyContent: "center",
   },
   brandCopy: {
     flex: 1,
@@ -700,6 +731,11 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: "center",
     width: 56,
+  },
+  logoMarkIconOnly: {
+    borderRadius: 16,
+    height: 44,
+    width: 44,
   },
   logoMarkText: {
     color: colors.onPrimary,
@@ -723,6 +759,10 @@ const styles = StyleSheet.create({
   navBlock: {
     gap: spacing.xs,
   },
+  navBlockIconOnly: {
+    alignItems: "center",
+    width: "100%",
+  },
   navItem: {
     alignItems: "center",
     backgroundColor: "transparent",
@@ -733,8 +773,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
   },
+  navItemIconOnly: {
+    flexDirection: "row",
+    gap: 0,
+    justifyContent: "center",
+    padding: spacing.sm,
+    width: "100%",
+  },
   navItemActive: {
     backgroundColor: colors.primarySoft,
+    borderLeftColor: colors.activeIndicator,
+    borderLeftWidth: activeBorderWidth,
+  },
+  navItemActiveIconOnly: {
     borderLeftColor: colors.activeIndicator,
     borderLeftWidth: activeBorderWidth,
   },
@@ -772,6 +823,11 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: "center",
     width: 36,
+  },
+  navItemIconWrapIconOnly: {
+    borderRadius: 14,
+    height: 44,
+    width: 44,
   },
   navItemIconWrapActive: {
     backgroundColor: colors.primarySoft,

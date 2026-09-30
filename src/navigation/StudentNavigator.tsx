@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 
 import { AttendanceHistoryScreen } from "@/screens/student/AttendanceHistoryScreen";
 import { SecuritySettingsScreen } from "@/screens/student/SecuritySettingsScreen";
+import { SelfAttendanceScreen } from "@/screens/student/SelfAttendanceScreen";
 import { StudentHomeScreen } from "@/screens/student/StudentHomeScreen";
 import { StudentProfileScreen } from "@/screens/student/StudentProfileScreen";
 import { getDomainConfig } from "@/utils/domains";
@@ -47,6 +48,7 @@ export function StudentNavigator() {
         StudentProfile: "alumno/perfil",
         AttendanceHistory: "alumno/asistencia",
         SecuritySettings: "alumno/seguridad",
+        SelfAttendance: "alumno/asistencia/registrar",
       },
     },
   };
@@ -58,6 +60,7 @@ export function StudentNavigator() {
         <Stack.Screen name="StudentProfile" component={StudentProfileScreen} />
         <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
         <Stack.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} />
+        <Stack.Screen name="SelfAttendance" component={SelfAttendanceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

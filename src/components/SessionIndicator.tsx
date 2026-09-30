@@ -12,6 +12,7 @@ import { useState } from "react";
 
 interface SessionIndicatorProps {
   idPrefix?: string;
+  variant?: "home" | "default";
 }
 
 type SessionKind = "admin" | "student" | "unknown";
@@ -60,7 +61,7 @@ function roleLabel(kind: SessionKind): string {
   return "Sesión activa";
 }
 
-export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndicatorProps) {
+export function SessionIndicator({ idPrefix = "session-indicator", variant = "default" }: SessionIndicatorProps) {
   const { status, user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -99,33 +100,66 @@ export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndi
 
   const portalLabel = sessionKind === "student" ? "Mi portal" : "Ir al panel";
 
+  const handleTriggerPress = () => {
+    if (variant === "home") {
+      goToPortal();
+    } else {
+      setMenuOpen(true);
+    }
+  };
+
+  const triggerAccessibilityLabel =
+    variant === "home"
+      ? "Sesión activa. Ir al panel."
+      : "Sesión activa. Abrir menú de cuenta.";
+
   return (
     <>
       <Pressable
-        accessibilityLabel="Sesión activa. Abrir menú de cuenta."
+        accessibilityLabel={triggerAccessibilityLabel}
         accessibilityRole="button"
         nativeID={`${idPrefix}-trigger`}
-        onPress={() => setMenuOpen(true)}
-        style={({ pressed }) => [styles.trigger, pressed ? styles.triggerPressed : null]}
+        onPress={handleTriggerPress}
+        style={({ pressed }) => [
+          variant === "home" ? styles.triggerHome : styles.trigger,
+          pressed ? styles.triggerPressed : null,
+        ]}
         testID={`${idPrefix}-trigger`}
       >
-        <View nativeID={`${idPrefix}-avatar`} style={styles.avatar} testID={`${idPrefix}-avatar`}>
-          <Text nativeID={`${idPrefix}-avatar-initial`} style={styles.avatarLabel} testID={`${idPrefix}-avatar-initial`}>
+        <View
+          nativeID={`${idPrefix}-avatar`}
+          style={[
+            variant === "home" ? styles.avatarHome : styles.avatar,
+          ]}
+          testID={`${idPrefix}-avatar`}
+        >
+          <Text
+            nativeID={`${idPrefix}-avatar-initial`}
+            style={[
+              variant === "home" ? styles.avatarLabelHome : styles.avatarLabel,
+            ]}
+            testID={`${idPrefix}-avatar-initial`}
+          >
             {initial}
           </Text>
         </View>
-        <View nativeID={`${idPrefix}-copy`} style={styles.copy} testID={`${idPrefix}-copy`}>
-          <Text nativeID={`${idPrefix}-name`} style={styles.name} numberOfLines={1} testID={`${idPrefix}-name`}>
-            {displayName}
-          </Text>
-          <Text nativeID={`${idPrefix}-role`} style={styles.roleLabel} numberOfLines={1} testID={`${idPrefix}-role`}>
-            {roleLabel(sessionKind)}
-          </Text>
-        </View>
-        <Feather color={colors.textMuted} name="chevron-down" size={14} />
+        {variant !== "home" ? (
+          <>
+            <View nativeID={`${idPrefix}-copy`} style={styles.copy} testID={`${idPrefix}-copy`}>
+              <Text nativeID={`${idPrefix}-name`} style={styles.name} numberOfLines={1} testID={`${idPrefix}-name`}>
+                {displayName}
+              </Text>
+              <Text nativeID={`${idPrefix}-role`} style={styles.roleLabel} numberOfLines={1} testID={`${idPrefix}-role`}>
+                {roleLabel(sessionKind)}
+              </Text>
+            </View>
+            <Feather color={colors.textMuted} name="chevron-down" size={14} />
+          </>
+        ) : null}
       </Pressable>
 
-      <Modal animationType="fade" onRequestClose={() => setMenuOpen(false)} transparent visible={menuOpen}>
+      {variant !== "home" ? (
+        <Modal animationType="fade" onRequestClose={() => setMenuOpen(false)} transparent visible={menuOpen}>
         <View nativeID={`${idPrefix}-overlay`} style={styles.overlay} testID={`${idPrefix}-overlay`}>
           <Pressable
             nativeID={`${idPrefix}-backdrop`}
@@ -182,6 +216,7 @@ export function SessionIndicator({ idPrefix = "session-indicator" }: SessionIndi
           </View>
         </View>
       </Modal>
+      ) : null}
     </>
   );
 }
@@ -201,6 +236,15 @@ const styles = StyleSheet.create({
   triggerPressed: {
     opacity: 0.82,
   },
+  triggerHome: {
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderRadius: radius.pill,
+    borderWidth: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    padding: 0,
+  },
   avatar: {
     alignItems: "center",
     backgroundColor: colors.actionSoft,
@@ -209,10 +253,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 28,
   },
+  avatarHome: {
+    alignItems: "center",
+    backgroundColor: colors.actionSoft,
+    borderColor: "rgba(255, 124, 57, 0.45)",
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
   avatarLabel: {
     color: colors.action,
     fontFamily: typography.headingFamily,
     fontSize: 12,
+    fontWeight: "700",
+  },
+  avatarLabelHome: {
+    color: colors.action,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
     fontWeight: "700",
   },
   copy: {

@@ -30,6 +30,7 @@ import { StudentHomeScreen } from "@/screens/student/StudentHomeScreen";
 import { StudentProfileScreen } from "@/screens/student/StudentProfileScreen";
 import { SecuritySettingsScreen } from "@/screens/student/SecuritySettingsScreen";
 import { AttendanceHistoryScreen } from "@/screens/student/AttendanceHistoryScreen";
+import { SelfAttendanceScreen } from "@/screens/student/SelfAttendanceScreen";
 import {
   ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT,
   ADMIN_PATH_SEGMENT_TO_DASHBOARD_SECTION,
@@ -116,6 +117,7 @@ const linking: LinkingOptions<RootPathParamList> = {
       StudentProfile: `alumno/perfil`,
       AttendanceHistory: `alumno/asistencia`,
       SecuritySettings: `alumno/seguridad`,
+      SelfAttendance: `alumno/asistencia/registrar`,
     },
   },
 };
@@ -241,6 +243,10 @@ function StudentFlow() {
       <StudentStack.Screen
         component={AttendanceHistoryScreen}
         name="AttendanceHistory"
+      />
+      <StudentStack.Screen
+        component={SelfAttendanceScreen}
+        name="SelfAttendance"
       />
     </StudentStack.Navigator>
   );

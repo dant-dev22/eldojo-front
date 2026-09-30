@@ -25,6 +25,8 @@ export const PUBLIC_ROUTE_SEGMENTS = {
 
 export const ADMIN_ROUTE_SEGMENTS = {
   root: slugifyRouteSegment("admin"),
+  attendance: slugifyRouteSegment("asistencias"),
+  attendanceKiosk: slugifyRouteSegment("asistencias kiosk"),
   branches: slugifyRouteSegment("sucursales"),
   operations: slugifyRouteSegment("operaciones"),
   payments: slugifyRouteSegment("pagos"),
@@ -35,6 +37,8 @@ export const ADMIN_DASHBOARD_SECTION_TO_PATH_SEGMENT: Record<
   Exclude<import("./types").AdminDashboardSection, "overview">,
   string
 > = {
+  attendance: ADMIN_ROUTE_SEGMENTS.attendance,
+  attendanceKiosk: ADMIN_ROUTE_SEGMENTS.attendanceKiosk,
   branches: ADMIN_ROUTE_SEGMENTS.branches,
   operations: ADMIN_ROUTE_SEGMENTS.operations,
   payments: ADMIN_ROUTE_SEGMENTS.payments,

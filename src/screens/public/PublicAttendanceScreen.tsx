@@ -44,6 +44,7 @@ import { useCameraAvailability } from "@/hooks/useCameraAvailability";
 import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { navigateToPublicPageKey, type PublicPageKey } from "@/navigation/publicRoutes";
 import { getPublicAttendanceRoute } from "@/utils/publicAttendanceRoute";
+import QRCode from "react-native-qrcode-svg";
 
 import type {
   PublicAttendanceClassOption,
@@ -297,6 +298,19 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     []
   );
 
+  const submitAttendance = useCallback(() => {
+    if (!selectedClassId || !studentLookupQuery.data) {
+      setFormError("Seleccioná una clase y confirmá el alumno antes de continuar.");
+      return;
+    }
+    setFormError(null);
+    if (attendanceSource === "manual") {
+      openManualProcessModal();
+    }
+    setAttendanceSource(attendanceSource);
+    registerMutation.mutate();
+  }, [selectedClassId, studentLookupQuery.data, attendanceSource]);
+
   const registerMutation = useMutation({
     mutationFn: async () =>
       publicAttendanceApi.register(
@@ -513,6 +527,56 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     [contextQuery.data?.classes, selectedClassId]
   );
 
+  const kioskMode = Boolean(resolvedRoute?.kiosk);
+  const preselectedClassId = resolvedRoute?.classId;
+  const [manualModeOpen, setManualModeOpen] = useState(false);
+
+  const studentScannableUrl = useMemo(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      return "";
+    }
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("kiosk");
+      if (preselectedClassId) {
+        url.searchParams.set("class", String(preselectedClassId));
+      }
+      return url.toString();
+    } catch {
+      return "";
+    }
+  }, [preselectedClassId]);
+
+  useEffect(() => {
+    if (!preselectedClassId || !contextQuery.data?.classes) return;
+    const exists = contextQuery.data.classes.some((c) => c.id === preselectedClassId);
+    if (!exists) return;
+    const target = String(preselectedClassId);
+    if (selectedClassId !== target) {
+      setSelectedClassId(target);
+    }
+  }, [preselectedClassId, contextQuery.data?.classes, selectedClassId]);
+
+  useEffect(() => {
+    if (!kioskMode) return;
+    if (!manualProcessState) return;
+    if (manualProcessState.successCountdown === null) return;
+    if (manualProcessState.successCountdown > 0) return;
+    setStudentIdentifier("");
+    setDebouncedStudentIdentifier("");
+    setManualModeOpen(false);
+    setFormError(null);
+  }, [kioskMode, manualProcessState, manualProcessState?.successCountdown]);
+
+  useEffect(() => {
+    if (!kioskMode) return;
+    if (!result || successCountdown === null || successCountdown > 0) return;
+    setStudentIdentifier("");
+    setDebouncedStudentIdentifier("");
+    setManualModeOpen(false);
+    setFormError(null);
+  }, [kioskMode, result, successCountdown]);
+
   useEffect(() => {
     if (!contextQuery.data) {
       return;
@@ -563,14 +627,6 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
   }, [scannerProcessState, clearScannerProcessTimeout]);
 
   useEffect(() => {
-    if (!scannerProcessState) return;
-    if (scannerProcessState.successCountdown === null) return;
-    if (scannerProcessState.successCountdown > 0) return;
-
-    resetScannerAndOpenCamera();
-  }, [scannerProcessState, resetScannerAndOpenCamera]);
-
-  useEffect(() => {
     if (!manualProcessState) return;
     if (manualProcessState.successCountdown === null) return;
     if (manualProcessState.successCountdown <= 0) return;
@@ -586,100 +642,49 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
   }, [manualProcessState]);
 
   useEffect(() => {
-    if (!manualProcessState) return;
-    if (manualProcessState.successCountdown === null) return;
-    if (manualProcessState.successCountdown > 0) return;
+    if (successCountdown !== 0) return;
+    setResult(null);
+    setSuccessCountdown(null);
+  }, [successCountdown]);
 
+  useEffect(() => {
+    if (!scannerProcessState) return;
+    if (scannerProcessState.successCountdown !== 0) return;
+    setScannerVisible(false);
+    closeScannerProcess();
+  }, [scannerProcessState, closeScannerProcess]);
+
+  useEffect(() => {
+    if (!manualProcessState) return;
+    if (manualProcessState.successCountdown !== 0) return;
     closeManualProcessModal();
   }, [manualProcessState, closeManualProcessModal]);
 
   useEffect(() => {
-    if (!result || successCountdown === null || successCountdown > 0) {
-      return;
-    }
-
-    setResult(null);
-    setSuccessCountdown(null);
-    setFormError(null);
-    setStudentIdentifier("");
-    setDebouncedStudentIdentifier("");
-    setSelectedClassId(recommendedClassId);
-  }, [recommendedClassId, result, successCountdown]);
-
-  const submitAttendance = useCallback(() => {
-    if (!normalizedStudentIdentifier) {
-      setFormError("Ingresa el ID o codigo del alumno para continuar.");
-      return;
-    }
-    if (!studentLookupQuery.data) {
-      setFormError("Debes esperar a que el sistema confirme al alumno antes de registrar.");
-      return;
-    }
-    if (!selectedClassId) {
-      setFormError("Selecciona una clase disponible para continuar.");
-      return;
-    }
-
-    setFormError(null);
-    setAttendanceSource("manual");
-    openManualProcessModal();
-    registerMutation.mutate();
-  }, [
-    normalizedStudentIdentifier,
-    openManualProcessModal,
-    registerMutation,
-    selectedClassId,
-    studentLookupQuery.data,
-  ]);
-
-  const studentLookupError =
-    normalizedStudentIdentifier &&
-    debouncedStudentIdentifier === normalizedStudentIdentifier &&
-    studentLookupQuery.isError
-      ? getErrorMessage(studentLookupQuery.error)
-      : null;
-
-  const resolvedStudent =
-    normalizedStudentIdentifier &&
-    debouncedStudentIdentifier === normalizedStudentIdentifier &&
-    studentLookupQuery.isSuccess
-      ? studentLookupQuery.data
-      : null;
-
-  useEffect(() => {
-    if (attendanceSource !== "qr") return;
-    if (!scannerProcessState) return;
-
+    const normalizedCode = normalizedStudentIdentifier;
+    if (!normalizedCode || !scannerProcessState) return;
     if (scannerProcessState.overallStatus !== "processing") return;
+    if (scannerProcessState.lookupStatus === "done") return;
+    if (!studentLookupQuery.isFetched && !studentLookupQuery.isError && !studentLookupQuery.data) return;
 
-    const isLookupError =
-      Boolean(studentLookupError) &&
-      debouncedStudentIdentifier === normalizedStudentIdentifier;
-
-    const isLookupSuccess =
-      Boolean(resolvedStudent) &&
-      debouncedStudentIdentifier === normalizedStudentIdentifier;
-
-    if (isLookupError) {
-      setScannerProcessState({
-        lookupStatus: "error",
-        registerStatus: "pending",
-        overallStatus: "error",
-        errorMessage: studentLookupError,
-        successPayload: null,
-        successCountdown: null,
-      });
-      return;
-    }
-
-    if (isLookupSuccess) {
+    if (studentLookupError) {
       setScannerProcessState((current) =>
-        current && current.lookupStatus !== "done"
+        current
           ? {
               ...current,
-              lookupStatus: "done",
-              registerStatus: "active",
+              lookupStatus: "error",
+              overallStatus: "error",
+              errorMessage: studentLookupError,
             }
+          : current
+      );
+      return;
+    }
+
+    if (resolvedStudent) {
+      setScannerProcessState((current) =>
+        current
+          ? { ...current, lookupStatus: "done", overallStatus: "processing" }
           : current
       );
     }
@@ -720,6 +725,9 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
     selectedClassId,
   ]);
 
+  const resolvedStudent = studentLookupQuery.data ?? null;
+  const studentLookupError = studentLookupQuery.isError ? getErrorMessage(studentLookupQuery.error) : null;
+
   const lookupHelperText = studentLookupQuery.isFetching
     ? "Buscando alumno..."
     : resolvedStudent
@@ -739,6 +747,463 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
 
   const desktopClass = isDesktop ? "eldojo-public-desktop-fade-in-delay-2" : "";
   const formClass = `eldojo-public-desktop-form-fade-in ${desktopClass}`;
+
+  const windowWidth = useCallback(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return 420;
+    return window.innerWidth;
+  }, []);
+
+  const SkeletonList = useCallback(
+    ({ count, idPrefix }: { count: number; idPrefix: string }) => (
+      <View style={{ gap: spacing.sm, width: "100%" }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <View
+            key={`${idPrefix}-skel-${i}`}
+            nativeID={`${idPrefix}-skel-${i}`}
+            style={[
+              styles.skeletonBlock,
+              { width: i % 3 === 0 ? "100%" : i % 3 === 1 ? "70%" : "52%", height: i === 0 ? 64 : 48, borderRadius: radius.md },
+            ]}
+            testID={`${idPrefix}-skel-${i}`}
+          />
+        ))}
+      </View>
+    ),
+    []
+  );
+
+  const sharedFloatingLayer = (
+    <>
+      <QrScanner
+        visible={scannerVisible}
+        onClose={() => {
+          if (scannerProcessState?.overallStatus === "processing") {
+            return;
+          }
+          if (registerMutation.isPending) {
+            registerMutation.reset();
+          }
+          closeScannerProcess();
+          setScannerVisible(false);
+        }}
+        onCodeScanned={handleQrCodeScanned}
+        title="Escanear credencial"
+        description="Apunta la cámara al código QR del alumno para registrar su asistencia."
+        nativeID="screens-public-attendance-qr-scanner"
+        testID="screens-public-attendance-qr-scanner"
+        attendanceProcess={scannerProcessState}
+        onAttendanceProcessRetry={resetScannerAndOpenCamera}
+      />
+      <AppModal
+        visible={manualProcessVisible}
+        title="Registro de asistencia"
+        onClose={closeManualProcessModal}
+        nativeID="screens-public-attendance-manual-process-modal"
+        testID="screens-public-attendance-manual-process-modal"
+      >
+        {manualProcessState ? (
+          <AttendanceProgressView
+            mode="manual"
+            lookupStatus={manualProcessState.lookupStatus}
+            registerStatus={manualProcessState.registerStatus}
+            overallStatus={manualProcessState.overallStatus}
+            errorMessage={manualProcessState.errorMessage}
+            successPayload={manualProcessState.successPayload}
+            successCountdown={manualProcessState.successCountdown}
+            onRetry={retryManualProcess}
+            nativeID="screens-public-attendance-manual-progress"
+            testID="screens-public-attendance-manual-progress"
+          />
+        ) : null}
+      </AppModal>
+    </>
+  );
+
+  const manualRegistrationCard = (
+    <AppCard
+      nativeID="screens-public-attendance-kiosk-manual-card"
+      style={styles.kioskManualCard}
+      testID="screens-public-attendance-kiosk-manual-card"
+    >
+      <View
+        nativeID="screens-public-attendance-kiosk-manual-header"
+        style={styles.kioskManualHeader}
+        testID="screens-public-attendance-kiosk-manual-header"
+      >
+        <Feather name="edit-3" size={18} color={colors.text} />
+        <Text style={styles.kioskManualTitle}>Registro manual</Text>
+      </View>
+
+      {contextQuery.isSuccess && selectedClassName ? (
+        <View style={styles.selectionSummary}>
+          <AppBadge
+            label={selectedClassId === recommendedClassId ? "Clase sugerida · ahora" : "Clase elegida"}
+            nativeID="screens-public-attendance-kiosk-selection-summary-badge"
+            testID="screens-public-attendance-kiosk-selection-summary-badge"
+            tone="success"
+          />
+          <View style={styles.selectionTextWrap}>
+            <Feather name="chevron-right" size={13} color={indigo} />
+            <Text style={styles.selectionSummaryText}>{selectedClassName}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {classItems.length > 0 ? (
+        <View style={styles.fieldWrap}>
+          <AppSelect
+            enabled={!registerMutation.isPending}
+            emptyMessage="No hay clases disponibles para hoy."
+            helperText="Elegí la clase a la que asistís hoy."
+            items={classItems}
+            label="Clase de hoy"
+            nativeID="screens-public-attendance-kiosk-class-select"
+            onValueChange={(value) => {
+              setSelectedClassId(value);
+              setFormError(null);
+            }}
+            placeholder="Seleccionar clase"
+            testID="screens-public-attendance-kiosk-class-select"
+            value={selectedClassId}
+          />
+        </View>
+      ) : null}
+
+      <View
+        nativeID="screens-public-attendance-kiosk-input-wrap"
+        style={styles.fieldWrap}
+        testID="screens-public-attendance-kiosk-input-wrap"
+      >
+        <AppInput
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!registerMutation.isPending}
+          keyboardType="default"
+          label="Código o nombre del alumno"
+          nativeID="screens-public-attendance-kiosk-student-input"
+          onChangeText={(value) => {
+            setStudentIdentifier(value);
+            setFormError(null);
+          }}
+          placeholder="Ej: 125 · ELD-A1B2 · Juan Pérez"
+          style={styles.underlinedInput}
+          testID="screens-public-attendance-kiosk-student-input"
+          value={studentIdentifier}
+        />
+      </View>
+
+      {lookupHelperText ? (
+        <View
+          nativeID="screens-public-attendance-kiosk-helper"
+          style={styles.helperRow}
+          testID="screens-public-attendance-kiosk-helper"
+        >
+          <Feather
+            name={studentLookupQuery.isFetching ? "loader" : "search"}
+            size={13}
+            color={studentLookupQuery.isFetching ? indigo : woodAged}
+          />
+          <Text style={styles.helper}>{lookupHelperText}</Text>
+        </View>
+      ) : null}
+
+      {studentLookupQuery.isFetching ? (
+        <View
+          nativeID="screens-public-attendance-kiosk-lookup-skel"
+          style={styles.lookupSkeleton}
+          testID="screens-public-attendance-kiosk-lookup-skel"
+        >
+          <View style={[styles.skeletonBlock, { width: 40, height: 40, borderRadius: 999 }]} />
+          <View style={{ flex: 1, gap: spacing.xs }}>
+            <View style={[styles.skeletonBlock, { width: 180, height: 16 }]} />
+            <View style={[styles.skeletonBlock, { width: 120, height: 12 }]} />
+          </View>
+        </View>
+      ) : null}
+
+      {resolvedStudent ? (
+        <View
+          nativeID="screens-public-attendance-kiosk-student-summary"
+          style={styles.studentSummary}
+          testID="screens-public-attendance-kiosk-student-summary"
+        >
+          <View
+            nativeID="screens-public-attendance-kiosk-student-avatar"
+            style={styles.studentAvatar}
+            testID="screens-public-attendance-kiosk-student-avatar"
+          >
+            <Text style={styles.studentAvatarText}>
+              {resolvedStudent.student_name
+                .split(" ")
+                .map((segment) => segment[0])
+                .filter(Boolean)
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={styles.studentSummaryBadgeRow}>
+              <Feather name="check" size={12} color={matchaGreen} />
+              <Text style={[styles.helper, { color: matchaGreen }]}>Alumno confirmado</Text>
+            </View>
+            <Text
+              nativeID="screens-public-attendance-kiosk-student-summary-name"
+              style={styles.studentSummaryName}
+              testID="screens-public-attendance-kiosk-student-summary-name"
+            >
+              {resolvedStudent.student_name}
+            </Text>
+            <Text
+              nativeID="screens-public-attendance-kiosk-student-summary-meta"
+              style={styles.studentSummaryMeta}
+              testID="screens-public-attendance-kiosk-student-summary-meta"
+            >
+              Código · {resolvedStudent.unique_code}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {studentLookupError ? (
+        <View
+          nativeID="screens-public-attendance-kiosk-student-error"
+          style={styles.errorRow}
+          testID="screens-public-attendance-kiosk-student-error"
+        >
+          <Feather name="alert-circle" size={13} color={judogiRed} />
+          <Text style={styles.error}>{studentLookupError}</Text>
+        </View>
+      ) : null}
+      {formError ? (
+        <View
+          nativeID="screens-public-attendance-kiosk-form-error"
+          style={styles.errorRow}
+          testID="screens-public-attendance-kiosk-form-error"
+        >
+          <Feather name="alert-triangle" size={13} color={judogiRed} />
+          <Text style={styles.error}>{formError}</Text>
+        </View>
+      ) : null}
+
+      <View
+        nativeID="screens-public-attendance-kiosk-submit-wrap"
+        style={styles.submitWrap}
+        testID="screens-public-attendance-kiosk-submit-wrap"
+      >
+        <Pressable
+          disabled={!resolvedStudent || !selectedClassId || registerMutation.isPending}
+          style={(state) => {
+            const hovered = (state as unknown as { hovered?: boolean }).hovered;
+            const hoverState = Boolean(hovered) || Boolean(state.pressed);
+            return [
+              styles.submitButton,
+              !resolvedStudent || !selectedClassId ? styles.submitButtonDisabled : null,
+              hoverState ? styles.submitButtonHover : null,
+            ];
+          }}
+          onPress={submitAttendance}
+        >
+          {registerMutation.isPending ? (
+            <Feather name="loader" size={16} color={colors.surface} />
+          ) : (
+            <Feather name="user-check" size={16} color={colors.surface} />
+          )}
+          <Text style={styles.submitButtonText}>
+            {registerMutation.isPending ? "Registrando…" : "Registrar asistencia"}
+          </Text>
+        </Pressable>
+      </View>
+    </AppCard>
+  );
+
+  if (kioskMode) {
+    const kioskQrSize = Math.min(
+      isDesktop ? 420 : Math.max(240, Math.min(windowWidth() - spacing.xl * 4, 420)),
+      460
+    );
+
+    return (
+      <View style={styles.kioskRoot}>
+        <View style={[styles.kioskContainer, { maxWidth: isDesktop ? 780 : contentMaxWidth }]}>
+          <View
+            nativeID="screens-public-attendance-kiosk-header"
+            style={styles.kioskHeader}
+            testID="screens-public-attendance-kiosk-header"
+          >
+            <View style={styles.kioskHeaderLogo}>
+              <LogoSvg
+                nativeID="screens-public-attendance-kiosk-glyph"
+                size={isDesktop ? 40 : 32}
+                variant="brand-red"
+                testID="screens-public-attendance-kiosk-glyph"
+              />
+            </View>
+            {contextQuery.isSuccess && contextQuery.data ? (
+              <View style={styles.kioskHeaderCopy}>
+                <Text style={styles.kioskTitle}>{contextQuery.data.organization_name}</Text>
+                <Text style={styles.kioskSubtitle}>
+                  {contextQuery.data.branch_name}
+                  {typeof preselectedClassId === "number" && selectedClassName ? ` · ${selectedClassName}` : ""}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.kioskHeaderCopy}>
+                <View style={[styles.skeletonBlock, { width: 220, height: 24 }]} />
+                <View style={[styles.skeletonBlock, { width: 280, height: 14, marginTop: 4 }]} />
+              </View>
+            )}
+          </View>
+
+          <AppCard
+            nativeID="screens-public-attendance-kiosk-qr-card"
+            style={styles.kioskQrCard}
+            testID="screens-public-attendance-kiosk-qr-card"
+          >
+            <View style={styles.kioskQrFrame}>
+              {studentScannableUrl ? (
+                <QRCode
+                  value={studentScannableUrl}
+                  size={kioskQrSize}
+                  color={colors.text}
+                  backgroundColor={colors.surface}
+                  quietZone={6}
+                  logo={undefined}
+                  logoSize={0}
+                  logoBackgroundColor="transparent"
+                  ecl="M"
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.kioskQrFallback,
+                    { width: kioskQrSize, height: kioskQrSize },
+                  ]}
+                >
+                  <StatusView
+                    title="Preparando pantalla de recepción"
+                    description="Cargando la URL del QR. En segundos aparecerá el código para escanear."
+                    loading
+                  />
+                </View>
+              )}
+            </View>
+            <Text style={styles.kioskQrTitle}>Escaneá con tu teléfono</Text>
+            <Text style={styles.kioskQrSubtitle}>
+              Abrí la cámara o un lector de QR y apuntá al código. Registrarás tu asistencia desde tu propio dispositivo.
+            </Text>
+          </AppCard>
+
+          {result ? (
+            <AppCard
+              nativeID="screens-public-attendance-kiosk-success-card"
+              style={[styles.successCard, styles.kioskSuccessCard]}
+              testID="screens-public-attendance-kiosk-success-card"
+            >
+              <View
+                nativeID="screens-public-attendance-kiosk-success-top"
+                style={styles.successTopRow}
+                testID="screens-public-attendance-kiosk-success-top"
+              >
+                <View
+                  nativeID="screens-public-attendance-kiosk-success-icon"
+                  style={styles.successIconWrap}
+                  testID="screens-public-attendance-kiosk-success-icon"
+                >
+                  <Feather name="check-circle" size={22} color={matchaGreen} />
+                </View>
+                <AppBadge
+                  label="Asistencia confirmada"
+                  nativeID="screens-public-attendance-kiosk-success-badge"
+                  testID="screens-public-attendance-kiosk-success-badge"
+                  tone="success"
+                />
+              </View>
+              <View style={styles.successDivider} />
+              <Text style={styles.successTitle}>{result.message}</Text>
+              <View style={styles.successMetaGrid}>
+                <View style={styles.successMetaItem}>
+                  <Feather name="user" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Alumno</Text>
+                  <Text style={styles.successTextValue}>{result.student_name}</Text>
+                </View>
+                <View style={styles.successMetaItem}>
+                  <Feather name="calendar" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Clase</Text>
+                  <Text style={styles.successTextValue}>
+                    {result.class_name ?? selectedClassName ?? "Clase general"}
+                  </Text>
+                </View>
+                <View style={styles.successMetaItem}>
+                  <Feather name="hash" size={14} color={woodAged} />
+                  <Text style={styles.successTextLabel}>Folio</Text>
+                  <Text style={styles.successTextValue}>#{result.attendance_id}</Text>
+                </View>
+              </View>
+              <Text style={styles.countdownText}>
+                Reiniciando en {successCountdown ?? 0} segundo{successCountdown === 1 ? "" : "s"}…
+              </Text>
+            </AppCard>
+          ) : (
+            <>
+              <Pressable
+                style={(state) => {
+                  const hovered = (state as unknown as { hovered?: boolean }).hovered;
+                  return [
+                    styles.kioskManualToggle,
+                    hovered ? styles.kioskManualToggleHover : null,
+                    state.pressed ? styles.kioskManualTogglePressed : null,
+                  ];
+                }}
+                onPress={() => {
+                  setManualModeOpen((open) => !open);
+                  if (manualModeOpen) {
+                    setStudentIdentifier("");
+                    setDebouncedStudentIdentifier("");
+                    setFormError(null);
+                  }
+                }}
+              >
+                <Feather
+                  name={manualModeOpen ? "x" : "edit-3"}
+                  size={18}
+                  color={colors.onPrimary}
+                />
+                <Text style={styles.kioskManualToggleLabel}>
+                  {manualModeOpen ? "Cerrar registro manual" : "No tenés teléfono? Registro manual"}
+                </Text>
+                <Feather
+                  name={manualModeOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color="rgba(255,255,255,0.72)"
+                />
+              </Pressable>
+
+              {manualModeOpen ? (
+                <View style={{ width: "100%" }}>
+                  {contextQuery.isLoading ? (
+                    <SkeletonList count={3} idPrefix="screens-public-attendance-kiosk-manual-skeleton" />
+                  ) : contextQuery.isError ? (
+                    <StatusView
+                      title="No pudimos cargar las clases"
+                      description={getErrorMessage(contextQuery.error)}
+                    />
+                  ) : (
+                    manualRegistrationCard
+                  )}
+                </View>
+              ) : null}
+            </>
+          )}
+
+          <Text style={styles.kioskFooterHint}>
+            Registro privado · Los datos se usan únicamente para validar tu asistencia al dojo.
+          </Text>
+        </View>
+        {sharedFloatingLayer}
+      </View>
+    );
+  }
 
   return (
     <PublicPageChrome
@@ -1095,48 +1560,7 @@ export function PublicAttendanceScreen({ routeParams }: PublicAttendanceScreenPr
           )}
         </View>
       </View>
-      <QrScanner
-        visible={scannerVisible}
-        onClose={() => {
-          if (scannerProcessState?.overallStatus === "processing") {
-            return;
-          }
-          if (registerMutation.isPending) {
-            registerMutation.reset();
-          }
-          closeScannerProcess();
-          setScannerVisible(false);
-        }}
-        onCodeScanned={handleQrCodeScanned}
-        title="Escanear credencial"
-        description="Apunta la cámara al código QR del alumno para registrar su asistencia."
-        nativeID="screens-public-attendance-qr-scanner"
-        testID="screens-public-attendance-qr-scanner"
-        attendanceProcess={scannerProcessState}
-        onAttendanceProcessRetry={resetScannerAndOpenCamera}
-      />
-      <AppModal
-        visible={manualProcessVisible}
-        title="Registro de asistencia"
-        onClose={closeManualProcessModal}
-        nativeID="screens-public-attendance-manual-process-modal"
-        testID="screens-public-attendance-manual-process-modal"
-      >
-        {manualProcessState ? (
-          <AttendanceProgressView
-            mode="manual"
-            lookupStatus={manualProcessState.lookupStatus}
-            registerStatus={manualProcessState.registerStatus}
-            overallStatus={manualProcessState.overallStatus}
-            errorMessage={manualProcessState.errorMessage}
-            successPayload={manualProcessState.successPayload}
-            successCountdown={manualProcessState.successCountdown}
-            onRetry={retryManualProcess}
-            nativeID="screens-public-attendance-manual-progress"
-            testID="screens-public-attendance-manual-progress"
-          />
-        ) : null}
-      </AppModal>
+      {sharedFloatingLayer}
     </PublicPageChrome>
   );
 }
@@ -1653,5 +2077,183 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.25,
+  },
+  kioskRoot: {
+    alignItems: "center",
+    backgroundColor: colors.appBackground,
+    flex: 1,
+    minHeight: "100%",
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xxl ?? spacing.xl * 2,
+    width: "100%",
+  },
+  kioskContainer: {
+    alignItems: "center",
+    alignSelf: "center",
+    gap: spacing.lg,
+    width: "100%",
+  },
+  kioskHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.lg,
+    justifyContent: "flex-start",
+    width: "100%",
+  },
+  kioskHeaderLogo: {
+    alignItems: "center",
+    backgroundColor: woodSoftAccent,
+    borderColor: "rgba(141,110,99,0.24)",
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
+  },
+  kioskHeaderCopy: {
+    alignItems: "flex-start",
+    flex: 1,
+    gap: 2,
+  },
+  kioskTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 26,
+    fontWeight: "900",
+    lineHeight: 30,
+  },
+  kioskSubtitle: {
+    color: woodAged,
+    fontFamily: typography.bodyFamily,
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+  },
+  kioskQrCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: "rgba(141,110,99,0.16)",
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: spacing.lg,
+    padding: spacing.xl,
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    width: "100%",
+  },
+  kioskQrFrame: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.xl ?? 24,
+    borderWidth: 1,
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  kioskQrFallback: {
+    alignItems: "center",
+    backgroundColor: woodSoftAccent,
+    borderRadius: radius.lg,
+    justifyContent: "center",
+    padding: spacing.md,
+  },
+  kioskQrTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  kioskQrSubtitle: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 13,
+    lineHeight: 20,
+    maxWidth: 460,
+    textAlign: "center",
+  },
+  kioskManualToggle: {
+    alignItems: "center",
+    backgroundColor: woodAged,
+    borderColor: woodAged,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    width: "100%",
+    ...Platform.select({
+      web: {
+        transition: `background-color ${transitions.base}ms ease, transform ${transitions.fast}ms ease, box-shadow ${transitions.base}ms ease, border-color ${transitions.base}ms ease`,
+      } as any,
+    }),
+  },
+  kioskManualToggleHover: {
+    backgroundColor: woodAgedHover,
+    borderColor: woodAgedHover,
+    shadowOpacity: 0.24,
+    transform: [{ translateY: -1 }],
+  },
+  kioskManualTogglePressed: {
+    shadowOpacity: 0.1,
+    transform: [{ translateY: 0 }],
+  },
+  kioskManualToggleLabel: {
+    color: colors.onPrimary,
+    flex: 1,
+    fontFamily: typography.headingFamily,
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  kioskManualCard: {
+    backgroundColor: colors.surface,
+    borderColor: "rgba(141,110,99,0.16)",
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    padding: spacing.xl,
+    shadowColor: shadows.cardElevated.shadowColor,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    width: "100%",
+  },
+  kioskManualHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  kioskManualTitle: {
+    color: colors.text,
+    fontFamily: typography.headingFamily,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  kioskSuccessCard: {
+    marginTop: spacing.sm,
+    width: "100%",
+  },
+  kioskFooterHint: {
+    color: colors.textMuted,
+    fontFamily: typography.bodyFamily,
+    fontSize: 11,
+    letterSpacing: 0.3,
+    marginTop: spacing.md,
+    opacity: 0.72,
+    textAlign: "center",
   },
 });

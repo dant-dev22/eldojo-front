@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Image, Linking, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 
 import { attendanceApi } from "@/api/attendanceApi";
 import { branchesApi } from "@/api/branchesApi";
@@ -23,6 +24,7 @@ import { AdminSectionDashboardTemplate } from "@/components/AdminSectionDashboar
 import { AdminShell } from "@/components/AdminShell";
 import { BottomSheet, type BottomSheetAction } from "@/components/BottomSheet";
 import { DashboardQuickActionsModal, type QuickActionItem } from "@/components/DashboardQuickActionsModal";
+import { QrKioskLauncherModal } from "@/components/QrKioskLauncherModal";
 import { AttendanceProgressView, type AttendanceSuccessPayload, type AttendanceStepStatus } from "@/components/AttendanceProgressView";
 import { QrScanner, type QrScannerAttendanceProcessState } from "@/components/QrScanner";
 import { SkeletonCardGrid, SkeletonList } from "@/components/SkeletonLoader";
@@ -609,7 +611,7 @@ function formatAttendanceMethod(method: AttendanceMethod): string {
 
 export function AdminDashboardScreen({ navigation, route }: Props) {
   const { isDesktop, isMobile, width } = useResponsiveLayout();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const isCompact = width < 480;
   const { completeFirstTimeTutorial, user } = useAuth();
   const queryClient = useQueryClient();
@@ -754,6 +756,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   });
   const [dashboardSheetVisible, setDashboardSheetVisible] = useState(false);
   const [rowContextVisible, setRowContextVisible] = useState(false);
+  const [showQrKioskLauncherModal, setShowQrKioskLauncherModal] = useState(false);
   const [rowContext, setRowContext] = useState<
     | { type: "branch"; entity: Branch }
     | { type: "attendance"; entity: Attendance }
@@ -1510,43 +1513,96 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         : null;
   const heroTitle = organization?.name ?? currentBranch?.name ?? "Tu dojo";
   const focusedSection: AdminDashboardSection = route.params?.section ?? "overview";
+
+  const resolvedKioskBranchId = useMemo<number | null>(() => {
+    let candidate: number | undefined = route.params?.attendanceKioskBranchId;
+    if (typeof candidate !== "number") {
+      const rawUrl = Platform.OS === "web" && typeof window !== "undefined" ? window.location.search : "";
+      if (rawUrl) {
+        try {
+          const url = new URL(window.location.href);
+          const raw = url.searchParams.get("branch");
+          if (raw) {
+            const parsed = Number(raw);
+            if (Number.isFinite(parsed) && parsed > 0) candidate = parsed;
+          }
+        } catch {
+          /* noop */
+        }
+      }
+    }
+    return typeof candidate === "number" && candidate > 0 ? candidate : null;
+  }, [route.params]);
+
+  const resolvedKioskClassId = useMemo<number | null>(() => {
+    let candidate: number | undefined = route.params?.attendanceKioskClassId;
+    if (typeof candidate !== "number") {
+      const rawUrl = Platform.OS === "web" && typeof window !== "undefined" ? window.location.search : "";
+      if (rawUrl) {
+        try {
+          const url = new URL(window.location.href);
+          const raw = url.searchParams.get("class");
+          if (raw) {
+            const parsed = Number(raw);
+            if (Number.isFinite(parsed) && parsed > 0) candidate = parsed;
+          }
+        } catch {
+          /* noop */
+        }
+      }
+    }
+    return typeof candidate === "number" && candidate > 0 ? candidate : null;
+  }, [route.params]);
+
   const isOverviewSection = focusedSection === "overview";
+  const isAttendanceSection = focusedSection === "attendance";
+  const isAttendanceKioskSection = focusedSection === "attendanceKiosk";
   const isBranchesSection = focusedSection === "branches";
   const isOperationsSection = focusedSection === "operations";
   const isPaymentsSection = focusedSection === "payments";
   const isDojoSection = focusedSection === "dojo";
   const activeShellSection =
-    focusedSection === "branches"
-      ? "branches"
-      : focusedSection === "operations"
-        ? "operations"
-        : focusedSection === "payments"
-          ? "payments"
-        : focusedSection === "dojo"
-          ? "dojo"
-          : "dashboard";
+    focusedSection === "attendance" || focusedSection === "attendanceKiosk"
+      ? "attendance"
+      : focusedSection === "branches"
+        ? "branches"
+        : focusedSection === "operations"
+          ? "operations"
+          : focusedSection === "payments"
+            ? "payments"
+            : focusedSection === "dojo"
+              ? "dojo"
+              : "dashboard";
   const pageTitle =
-    focusedSection === "branches"
-      ? "Sucursales"
-      : focusedSection === "operations"
-        ? "Asistencia y clases"
-        : focusedSection === "payments"
-          ? "Pagos"
-        : focusedSection === "dojo"
-          ? "Mi Dojo"
-          : "Resumen general";
+    focusedSection === "attendance"
+      ? "Asistencias"
+      : focusedSection === "attendanceKiosk"
+        ? "Pantalla tablet · Registro asistencia"
+        : focusedSection === "branches"
+          ? "Sucursales"
+          : focusedSection === "operations"
+            ? "Asistencia y clases"
+            : focusedSection === "payments"
+              ? "Pagos"
+              : focusedSection === "dojo"
+                ? "Mi Dojo"
+                : "Resumen general";
   const pageSubtitle =
-    focusedSection === "branches"
-      ? "Administra sedes, comparte la liga pública de asistencia y mantén al día la operación de cada sucursal."
-      : focusedSection === "operations"
-        ? "Controla las asistencias del día, abre el registro público y gestiona las clases activas desde un solo lugar."
-        : focusedSection === "payments"
-          ? "Selecciona una sucursal para revisar cobranza, registrar movimientos y mantener el historial financiero al día."
-        : focusedSection === "dojo"
-          ? "Consulta los datos principales de tu dojo y edita cada bloque disponible desde esta misma vista."
-          : visibleBranches.length === 1
-            ? `Resumen operativo de ${visibleBranches[0]?.name ?? "tu sucursal"} con métricas y gráficas de seguimiento.`
-            : "Vista consolidada de la academia con métricas, gráficas y accesos rápidos para la operación diaria.";
+    focusedSection === "attendance"
+      ? `Registro diario · ${visibleAttendanceRecords.length} registros totales · ${todayAttendanceCount} asistencias de hoy`
+      : focusedSection === "attendanceKiosk"
+        ? "Vista diseñada para dejarla fija en la tablet de recepción. Si cerrás sesión esta pantalla deja de ser accesible."
+        : focusedSection === "branches"
+          ? "Administra sedes, comparte la liga pública de asistencia y mantén al día la operación de cada sucursal."
+          : focusedSection === "operations"
+            ? "Controla las asistencias del día, abre el registro público y gestiona las clases activas desde un solo lugar."
+            : focusedSection === "payments"
+              ? "Selecciona una sucursal para revisar cobranza, registrar movimientos y mantener el historial financiero al día."
+              : focusedSection === "dojo"
+                ? "Consulta los datos principales de tu dojo y edita cada bloque disponible desde esta misma vista."
+                : visibleBranches.length === 1
+                  ? `Resumen operativo de ${visibleBranches[0]?.name ?? "tu sucursal"} con métricas y gráficas de seguimiento.`
+                  : "Vista consolidada de la academia con métricas, gráficas y accesos rápidos para la operación diaria.";
   const availablePaymentStudents = isPaymentsSection ? paymentScopedStudents : visibleStudents;
   const paymentStudentOptions = useMemo(
     () =>
@@ -3759,6 +3815,501 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
     </AnimatedSurface>
   ) : null;
 
+  const attendanceHeaderMainContent = isAttendanceSection ? (
+    <AnimatedSurface delay={340} style={styles.fullWidthPanel}>
+      <AppCard nativeID="screens-admin-attendance-central-card" style={[styles.panelCard, styles.fullWidthPanel]} testID="screens-admin-attendance-central-card">
+        <View nativeID="screens-admin-attendance-actions-row" style={[styles.heroRow, { flexWrap: "wrap", marginBottom: spacing.lg }]} testID="screens-admin-attendance-actions-row">
+          <View style={{ flex: 1, minWidth: 220, gap: spacing.xs }}>
+            <Text style={typography.titleLg}>Registro de asistencias</Text>
+            <Text style={[typography.bodyMd, { color: colors.textMuted }]}>
+              Gestioná los ingresos por QR individual, por clase, o abrí la pantalla de recepción para dejarla abierta en una tablet.
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" }}>
+            <AppButton
+              label="Abrir pantalla tablet"
+              leftIcon={<Feather name="monitor" size={16} color={colors.onPrimary} />}
+              nativeID="screens-admin-attendance-open-kiosk-button"
+              onPress={() => setShowQrKioskLauncherModal(true)}
+              testID="screens-admin-attendance-open-kiosk-button"
+              variant="primary"
+            />
+          </View>
+        </View>
+
+        <View nativeID="screens-admin-attendance-tabs" style={styles.amTabsRow} testID="screens-admin-attendance-tabs">
+          <Pressable
+            accessibilityRole="tab"
+            nativeID="screens-admin-attendance-tab-by-class"
+            onPress={() => setAttendanceManagerTab("by-class")}
+            style={(state: any) => [
+              styles.amTabButton,
+              attendanceManagerTab === "by-class" ? styles.amTabButtonActive : null,
+              state.hovered && attendanceManagerTab !== "by-class" ? styles.amTabButtonHovered : null,
+              state.pressed ? styles.amTabButtonPressed : null,
+            ]}
+            testID="screens-admin-attendance-tab-by-class"
+          >
+            <Feather name="book-open" size={14} color={attendanceManagerTab === "by-class" ? colors.onPrimary : colors.textMuted} />
+            <Text
+              nativeID="screens-admin-attendance-tab-by-class-label"
+              style={[styles.amTabLabel, attendanceManagerTab === "by-class" ? styles.amTabLabelActive : null]}
+              testID="screens-admin-attendance-tab-by-class-label"
+            >
+              Por clase
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            nativeID="screens-admin-attendance-tab-by-student"
+            onPress={() => setAttendanceManagerTab("by-student")}
+            style={(state: any) => [
+              styles.amTabButton,
+              attendanceManagerTab === "by-student" ? styles.amTabButtonActive : null,
+              state.hovered && attendanceManagerTab !== "by-student" ? styles.amTabButtonHovered : null,
+              state.pressed ? styles.amTabButtonPressed : null,
+            ]}
+            testID="screens-admin-attendance-tab-by-student"
+          >
+            <Feather name="user" size={14} color={attendanceManagerTab === "by-student" ? colors.onPrimary : colors.textMuted} />
+            <Text
+              nativeID="screens-admin-attendance-tab-by-student-label"
+              style={[styles.amTabLabel, attendanceManagerTab === "by-student" ? styles.amTabLabelActive : null]}
+              testID="screens-admin-attendance-tab-by-student-label"
+            >
+              Por alumno
+            </Text>
+          </Pressable>
+        </View>
+
+        {attendanceManagerTab === "by-class" ? (
+          <View nativeID="screens-admin-attendance-by-class" style={styles.amPanelBody} testID="screens-admin-attendance-by-class">
+            <AppSelect
+              label="Clase"
+              nativeID="screens-admin-attendance-class-select"
+              testID="screens-admin-attendance-class-select"
+              value={operationsClassPickerValue}
+              onValueChange={setOperationsClassPickerValue}
+              items={operationsClassOptions}
+              placeholder={operationsClassOptions.length > 0 ? "Selecciona una clase o ver todos los registros" : "Sin clases disponibles"}
+              enabled={operationsClassOptions.length > 0}
+            />
+          </View>
+        ) : (
+          <View nativeID="screens-admin-attendance-by-student" style={styles.amPanelBody} testID="screens-admin-attendance-by-student">
+            <AppInput
+              label="Buscar alumno por nombre, código o ID"
+              nativeID="screens-admin-attendance-student-input"
+              testID="screens-admin-attendance-student-input"
+              placeholder="Ej: Juan Pérez, A-0012, 38"
+              value={attendanceManagerStudentQuery}
+              onChangeText={setAttendanceManagerStudentQuery}
+            />
+            {attendanceManagerStudentId ? (
+              attendanceManagerSelectedStudent ? (
+                <View nativeID="screens-admin-attendance-selected-student" style={styles.amSelectedChip} testID="screens-admin-attendance-selected-student">
+                  <Feather name="user" size={14} color={colors.action} />
+                  <Text style={styles.amSelectedChipText}>
+                    {attendanceManagerSelectedStudent.first_name} {attendanceManagerSelectedStudent.last_name} · {attendanceManagerSelectedStudent.unique_code}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    nativeID="screens-admin-attendance-clear-student"
+                    onPress={() => {
+                      setAttendanceManagerStudentId(null);
+                      setAttendanceManagerStudentQuery("");
+                    }}
+                    style={({ pressed }) => [styles.amChipClose, pressed ? styles.amChipClosePressed : null]}
+                    testID="screens-admin-attendance-clear-student"
+                  >
+                    <Feather name="x" size={12} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              ) : null
+            ) : normalizedAttendanceManagerStudentQuery ? (
+              <View nativeID="screens-admin-attendance-student-suggestions" style={[styles.amSuggestionList, isDesktop ? desktopStyles.amSuggestionList : null]} testID="screens-admin-attendance-student-suggestions">
+                {attendanceManagerStudentMatches.length === 0 ? (
+                  <Text style={styles.amSuggestionEmpty}>Sin coincidencias para tu búsqueda.</Text>
+                ) : (
+                  paginatedAmSuggestions.map((student) => (
+                    <Pressable
+                      key={student.id}
+                      accessibilityRole="button"
+                      nativeID={`screens-admin-attendance-student-suggestion-${student.id}`}
+                      onPress={() => {
+                        setAttendanceManagerStudentId(student.id);
+                        setAttendanceManagerStudentQuery(`${student.first_name} ${student.last_name}`);
+                      }}
+                      style={(state: any) => [
+                        styles.amSuggestionRow,
+                        isDesktop ? desktopStyles.amSuggestionRow : null,
+                        state.hovered ? styles.amSuggestionRowHovered : null,
+                        state.pressed ? styles.amSuggestionRowPressed : null,
+                      ]}
+                      testID={`screens-admin-attendance-student-suggestion-${student.id}`}
+                    >
+                      <View style={styles.amSuggestionAvatar}>
+                        <Text style={styles.amSuggestionAvatarText}>
+                          {`${student.first_name[0] ?? ""}${student.last_name[0] ?? ""}`.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.amSuggestionCopy}>
+                        <Text style={styles.amSuggestionTitle}>{student.first_name} {student.last_name}</Text>
+                        <Text style={styles.amSuggestionSubtitle}>Código {student.unique_code} · ID {student.id}</Text>
+                      </View>
+                      <Feather name="chevron-right" size={16} color={colors.textMuted} />
+                    </Pressable>
+                  ))
+                )}
+                {attendanceManagerStudentMatches.length > AM_SUGGESTIONS_PAGE_SIZE ? (
+                  <View nativeID="screens-admin-attendance-suggestions-pagination" style={[styles.paymentsPaginationControls, { width: "100%" }]} testID="screens-admin-attendance-suggestions-pagination">
+                    <AppButton
+                      label="Anterior"
+                      variant="secondary"
+                      nativeID="screens-admin-attendance-suggestions-prev"
+                      testID="screens-admin-attendance-suggestions-prev"
+                      onPress={() => setAttendanceManagerSuggestionsPage((current) => Math.max(1, current - 1))}
+                      disabled={attendanceManagerSuggestionsPage === 1}
+                    />
+                    <Text nativeID="screens-admin-attendance-suggestions-pagination-label" style={styles.paymentsPaginationLabel} testID="screens-admin-attendance-suggestions-pagination-label">
+                      {`Página ${attendanceManagerSuggestionsPage} de ${amSuggestionsTotalPages} · ${attendanceManagerStudentMatches.length} coincidencias`}
+                    </Text>
+                    <AppButton
+                      label="Siguiente"
+                      variant="secondary"
+                      nativeID="screens-admin-attendance-suggestions-next"
+                      testID="screens-admin-attendance-suggestions-next"
+                      onPress={() => setAttendanceManagerSuggestionsPage((current) => Math.min(amSuggestionsTotalPages, current + 1))}
+                      disabled={attendanceManagerSuggestionsPage === amSuggestionsTotalPages}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.amSuggestionEmpty}>Escribe para buscar alumnos por nombre, código o ID.</Text>
+            )}
+          </View>
+        )}
+
+        <View nativeID="screens-admin-attendance-records" style={styles.amRecordsWrap} testID="screens-admin-attendance-records">
+          <View style={styles.amRecordsHeader}>
+            <Text style={styles.amRecordsTitle}>
+              {attendanceManagerTab === "by-class" ? (operationsClassPickerValue ? "Registros de la clase" : "Todos los registros") : (attendanceManagerStudentId ? "Historial del alumno" : "Selecciona un alumno")}
+            </Text>
+            <Text style={styles.amRecordsCount}>
+              {attendanceManagerAttendances.length} {attendanceManagerAttendances.length === 1 ? "registro" : "registros"}
+            </Text>
+          </View>
+          {attendanceManagerAttendances.length === 0 ? (
+            <View style={styles.amEmptyRecords}>
+              <Feather name="clipboard" size={28} color={colors.textMuted} />
+              <Text style={styles.amEmptyRecordsTitle}>Sin asistencias que mostrar</Text>
+              <Text style={styles.amEmptyRecordsSubtitle}>
+                {attendanceManagerTab === "by-class"
+                  ? operationsClassPickerValue
+                    ? "Esta clase no cuenta con registros de asistencia."
+                    : "Selecciona una clase para ver sus registros o usa el botón de registrar."
+                  : attendanceManagerStudentId
+                    ? "Este alumno no tiene asistencias registradas."
+                    : "Elige un alumno para ver su historial de asistencias."}
+              </Text>
+              {attendanceManagerTab === "by-student" && attendanceManagerStudentId ? (
+                <AppButton
+                  label="Registrar asistencia"
+                  nativeID="screens-admin-attendance-empty-new"
+                  testID="screens-admin-attendance-empty-new"
+                  variant="success"
+                  onPress={() => {
+                    const target = visibleStudents.find((s) => s.id === attendanceManagerStudentId) ?? null;
+                    openCreateAttendanceModal(target);
+                  }}
+                />
+              ) : null}
+            </View>
+          ) : (
+            <View style={[styles.amRecordsList, isDesktop ? desktopStyles.amRecordsList : null]}>
+              {paginatedAmRecords.map((attendance) => {
+                const student = visibleStudents.find((s) => s.id === attendance.student_id) ?? null;
+                const className = visibleClasses.find((c) => c.id === attendance.class_id)?.name ?? `Clase ${attendance.class_id}`;
+                return (
+                  <View
+                    key={attendance.id}
+                    nativeID={`screens-admin-attendance-record-${attendance.id}`}
+                    style={[styles.amRecordRow, isDesktop ? desktopStyles.amRecordRow : null]}
+                    testID={`screens-admin-attendance-record-${attendance.id}`}
+                  >
+                    <View style={styles.amRecordIcon}>
+                      <Feather name="check-circle" size={14} color={colors.success} />
+                    </View>
+                    <View style={styles.amRecordCopy}>
+                      <Text style={styles.amRecordTitle}>
+                        {student ? `${student.first_name} ${student.last_name}` : `Alumno #${attendance.student_id}`}
+                      </Text>
+                      <Text style={styles.amRecordSubtitle}>
+                        {className} · {formatDate(attendance.check_in_at.split("T")[0] ?? "")} · {formatAttendanceMethod(attendance.method)}
+                      </Text>
+                    </View>
+                    <View style={styles.amRecordActions}>
+                      <AppButton
+                        label="Editar"
+                        nativeID={`screens-admin-attendance-record-edit-${attendance.id}`}
+                        testID={`screens-admin-attendance-record-edit-${attendance.id}`}
+                        variant="secondary"
+                        onPress={() => openEditAttendanceModal(attendance)}
+                      />
+                      <AppButton
+                        label="Eliminar"
+                        nativeID={`screens-admin-attendance-record-delete-${attendance.id}`}
+                        testID={`screens-admin-attendance-record-delete-${attendance.id}`}
+                        variant="danger"
+                        onPress={() => {
+                          setDestructiveAction({
+                            type: "attendance",
+                            entity: attendance,
+                          });
+                        }}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          {attendanceManagerAttendances.length > AM_RECORDS_PAGE_SIZE ? (
+            <View nativeID="screens-admin-attendance-records-pagination" style={[styles.paymentsPaginationControls, { marginTop: spacing.md, width: "100%" }]} testID="screens-admin-attendance-records-pagination">
+              <AppButton
+                label="Anterior"
+                variant="secondary"
+                nativeID="screens-admin-attendance-records-prev"
+                testID="screens-admin-attendance-records-prev"
+                onPress={() => setAttendanceManagerRecordsPage((current) => Math.max(1, current - 1))}
+                disabled={attendanceManagerRecordsPage === 1}
+              />
+              <Text nativeID="screens-admin-attendance-records-pagination-label" style={styles.paymentsPaginationLabel} testID="screens-admin-attendance-records-pagination-label">
+                {`Página ${attendanceManagerRecordsPage} de ${amRecordsTotalPages} · ${attendanceManagerAttendances.length} registros`}
+              </Text>
+              <AppButton
+                label="Siguiente"
+                variant="secondary"
+                nativeID="screens-admin-attendance-records-next"
+                testID="screens-admin-attendance-records-next"
+                onPress={() => setAttendanceManagerRecordsPage((current) => Math.min(amRecordsTotalPages, current + 1))}
+                disabled={attendanceManagerRecordsPage === amRecordsTotalPages}
+              />
+            </View>
+          ) : null}
+        </View>
+      </AppCard>
+    </AnimatedSurface>
+  ) : null;
+
+  const onOpenKioskFromModal = useCallback(
+    (payload: { branchId: number; classId?: number | null }) => {
+      navigation.navigate("AdminHome", {
+        section: "attendanceKiosk",
+        attendanceKioskBranchId: payload.branchId,
+        attendanceKioskClassId:
+          typeof payload.classId === "number" ? payload.classId : undefined,
+      });
+    },
+    [navigation],
+  );
+
+  const kioskEffectiveBranchId = useMemo<number | null>(() => {
+    if (resolvedKioskBranchId) return resolvedKioskBranchId;
+    if (scopedBranchId) return scopedBranchId;
+    if (visibleBranches.length === 1) return visibleBranches[0]?.id ?? null;
+    return null;
+  }, [resolvedKioskBranchId, scopedBranchId, visibleBranches]);
+
+  const kioskEffectiveBranch = useMemo(() => {
+    return visibleBranches.find((b) => b.id === kioskEffectiveBranchId) ?? null;
+  }, [kioskEffectiveBranchId, visibleBranches]);
+
+  const kioskEffectiveClass = useMemo(() => {
+    if (!resolvedKioskClassId) return null;
+    return (
+      allClasses.find((c: MartialClass) => c.id === resolvedKioskClassId) ?? null
+    );
+  }, [resolvedKioskClassId, allClasses]);
+
+  const kioskStudentQrUrl = useMemo(() => {
+    try {
+      const domainCfg = getDomainConfig();
+      const origin =
+        domainCfg.studentWebOrigin ||
+        (Platform.OS === "web" && typeof window !== "undefined"
+          ? window.location.origin
+          : "");
+      if (!origin) return "";
+      const qs = new URLSearchParams();
+      if (resolvedKioskClassId) qs.set("class", String(resolvedKioskClassId));
+      qs.set("source", "qr");
+      const qsStr = qs.toString();
+      return `${origin.replace(/\/$/, "")}/alumno/asistencia/registrar${qsStr ? `?${qsStr}` : ""}`;
+    } catch {
+      return "";
+    }
+  }, [resolvedKioskClassId]);
+
+  const attendanceKioskHeaderMainContent = isAttendanceKioskSection ? (
+    <AnimatedSurface delay={220} style={styles.fullWidthPanel}>
+      <AppCard style={[styles.panelCard, styles.fullWidthPanel]}>
+        <View style={[styles.heroRow, { flexWrap: "wrap" }]}>
+          <View style={{ flex: 1, minWidth: 240, gap: spacing.xs }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+              <AppBadge label="Modo tablet · SÓLO recepción" tone="neutral" />
+            </View>
+            <Text style={typography.titleLg}>Pantalla de recepción</Text>
+            <Text style={[typography.bodyMd, { color: colors.textMuted }]}>
+              {kioskEffectiveBranch ? `Sucursal: ${kioskEffectiveBranch.name}` : "Seleccioná una sucursal"}
+              {kioskEffectiveClass ? ` · Clase: ${kioskEffectiveClass.name}` : ""}
+            </Text>
+            <Text style={[typography.bodySm, { color: colors.textMuted, marginTop: spacing.xs ?? 4 }]}>
+              Dejá esta vista abierta en la tablet. Si cerrás sesión deja de ser accesible para los alumnos.
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" }}>
+            <AppButton
+              label="Cambiar sucursal / clase"
+              variant="secondary"
+              leftIcon={<Feather name="sliders" size={16} color={colors.text} />}
+              onPress={() => setShowQrKioskLauncherModal(true)}
+            />
+            <AppButton
+              label="Volver a Asistencias"
+              variant="ghost"
+              leftIcon={<Feather name="arrow-left" size={16} color={colors.text} />}
+              onPress={() => navigation.navigate("AdminHome", { section: "attendance" })}
+            />
+          </View>
+        </View>
+      </AppCard>
+    </AnimatedSurface>
+  ) : null;
+
+  const attendanceKioskContent = isAttendanceKioskSection ? (
+    <AnimatedSurface delay={280} style={styles.fullWidthPanel}>
+      <AppCard style={[styles.panelCard, styles.fullWidthPanel]}>
+        <View style={[styles.container, { gap: spacing.xl }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ gap: spacing.xs }}>
+              <Text style={typography.titleMd}>Código QR · Registro automático</Text>
+              <Text style={[typography.bodySm, { color: colors.textMuted }]}>
+                Los alumnos escanean con su teléfono. Deben tener sesión iniciada en el portal del alumno.
+              </Text>
+            </View>
+            {resolvedKioskClassId && kioskEffectiveClass ? (
+              <AppBadge
+                label={kioskEffectiveClass.name}
+                tone="success"
+              />
+            ) : (
+              <AppBadge label="Clase no seleccionada" tone="neutral" />
+            )}
+          </View>
+
+          <View
+            style={{
+              alignItems: "center",
+              alignSelf: "center",
+              backgroundColor: colors.surface,
+              borderCurve: "continuous",
+              borderRadius: radius.xl ?? 24,
+              borderWidth: 1,
+              borderColor: colors.border,
+              gap: spacing.lg,
+              justifyContent: "center",
+              maxWidth: isDesktop ? 680 : "100%",
+              padding: spacing.xxl ?? spacing.xl * 1.5,
+              width: isDesktop ? 680 : "100%",
+            }}
+          >
+            {kioskStudentQrUrl ? (
+              <QRCode
+                value={kioskStudentQrUrl}
+                size={isDesktop ? 380 : Math.max(260, Math.min(windowWidth - spacing.xl * 4, 380))}
+                color={colors.text}
+                backgroundColor={colors.surface}
+                quietZone={6}
+                ecl="M"
+              />
+            ) : (
+              <View
+                style={{
+                  alignItems: "center",
+                  borderColor: colors.border,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  height: isDesktop ? 380 : 300,
+                  justifyContent: "center",
+                  width: isDesktop ? 380 : 300,
+                }}
+              >
+                <StatusView
+                  title="No se pudo generar el QR"
+                  description="Revisá la configuración de dominio o seleccioná una clase."
+                />
+              </View>
+            )}
+
+            <Text style={[typography.titleSm, { fontWeight: "700", textAlign: "center" }]}>
+              Apuntá la cámara del teléfono
+            </Text>
+            <Text style={[typography.bodySm, { color: colors.textMuted, textAlign: "center" }]}>
+              Abrirá tu portal del alumno y la asistencia quedará registrada en 2 segundos.
+            </Text>
+
+            <View style={{ width: "100%", backgroundColor: "rgba(0,0,0,0.04)", borderRadius: radius.md, padding: spacing.md }}>
+              <Text style={[typography.caption ?? typography.bodySm, { color: colors.textMuted, fontSize: 10, fontWeight: "600", textTransform: "uppercase", marginBottom: 4 }]}>
+                Enlace QR alumno
+              </Text>
+              <Text numberOfLines={2} style={[typography.bodySm, { fontFamily: typography.mono?.fontFamily ?? typography.bodySm.fontFamily }]}>
+                {kioskStudentQrUrl || "-"}
+              </Text>
+            </View>
+
+            <View style={{ width: "100%", flexDirection: "row", gap: spacing.sm }}>
+              <AppButton
+                label="Copiar enlace QR"
+                variant="secondary"
+                style={{ flex: 1 }}
+                leftIcon={<Feather name="copy" size={16} color={colors.text} />}
+                onPress={async () => {
+                  if (!kioskStudentQrUrl) return;
+                  try {
+                    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+                      await navigator.clipboard.writeText(kioskStudentQrUrl);
+                      setFeedback({ tone: "success", message: "Enlace QR del alumno copiado al portapapeles." });
+                    }
+                  } catch {
+                    setFeedback({ tone: "danger", message: "No fue posible copiar el enlace desde este dispositivo." });
+                  }
+                }}
+              />
+              <AppButton
+                label="Registro manual"
+                variant="primary"
+                style={{ flex: 1 }}
+                leftIcon={<Feather name="edit-3" size={16} color={colors.onPrimary} />}
+                onPress={() => navigation.navigate("AdminHome", {
+                  section: "attendance",
+                  openAttendanceManager: true,
+                  openAttendanceManagerTab: "by-class",
+                  attendanceManagerPrefillStudentId: undefined,
+                })}
+              />
+            </View>
+
+            <Text style={[typography.bodySm, { color: colors.textMuted, textAlign: "center" }]}>
+              Si un alumno no puede escanear el QR, usá "Registro manual" para buscarlo y registrarlo desde este mismo panel.
+            </Text>
+          </View>
+        </View>
+      </AppCard>
+    </AnimatedSurface>
+  ) : null;
+
   return (
     <Screen
       key={screenRefreshKey}
@@ -3771,8 +4322,9 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         activeSection={activeShellSection}
         headerActions={dashboardHeaderActions}
         headerBottomContent={isOverviewSection ? overviewHeaderBottomContent : isBranchesSection ? branchesHeaderBottomContent : isOperationsSection ? operationsHeaderBottomContent : isPaymentsSection ? paymentsHeaderBottomContent : undefined}
-        headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : isPaymentsSection ? paymentsHeaderMainContent : isDojoSection ? dojoHeaderMainContent : undefined}
+        headerMainContent={isOverviewSection ? overviewHeaderMainContent : isBranchesSection ? branchesHeaderMainContent : isOperationsSection ? operationsHeaderMainContent : isPaymentsSection ? paymentsHeaderMainContent : isDojoSection ? dojoHeaderMainContent : isAttendanceSection ? attendanceHeaderMainContent : isAttendanceKioskSection ? attendanceKioskHeaderMainContent : undefined}
         headerSearch={isPaymentsSection ? paymentsHeaderSearch : null}
+        onGoAttendance={() => navigation.navigate("AdminHome", { section: "attendance" })}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
@@ -3829,7 +4381,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
             </AnimatedSurface>
           ) : (
             <>
-              {!isOverviewSection && !isBranchesSection && !isPaymentsSection && !isOperationsSection && !isDojoSection ? (
+              {!isOverviewSection && !isBranchesSection && !isPaymentsSection && !isOperationsSection && !isDojoSection && !isAttendanceKioskSection ? (
                 <AnimatedSurface delay={120}>
                   <AppCard nativeID="screens-admin-dashboard-section-focus-card" style={styles.sectionFocusCard} testID="screens-admin-dashboard-section-focus-card">
                     <View nativeID="screens-admin-dashboard-section-focus-header" style={styles.cardHeaderRow} testID="screens-admin-dashboard-section-focus-header">
@@ -3983,7 +4535,7 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 </AnimatedSurface>
               ) : null}
 
-              {!isOverviewSection && !isBranchesSection && !isOperationsSection && !isPaymentsSection && !isDojoSection ? (
+              {!isOverviewSection && !isBranchesSection && !isOperationsSection && !isPaymentsSection && !isDojoSection && !isAttendanceKioskSection ? (
               <View nativeID="screens-admin-dashboard-panels-grid" style={[styles.contentGrid, isDesktop ? desktopStyles.contentGrid : mobileStyles.contentGrid]} testID="screens-admin-dashboard-panels-grid">
                 {isOverviewSection ? (
                 <AnimatedSurface delay={270}>
@@ -4602,6 +5154,8 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
                 ) : null}
               </View>
               ) : null}
+
+              {attendanceKioskContent}
             </>
           )}
         </View>
@@ -4612,6 +5166,16 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
         visible={dashboardSheetVisible}
         onClose={() => setDashboardSheetVisible(false)}
         actions={dashboardQuickActions}
+      />
+
+      <QrKioskLauncherModal
+        visible={showQrKioskLauncherModal}
+        onClose={() => setShowQrKioskLauncherModal(false)}
+        assignments={user?.admin_assignments ?? []}
+        branches={branches ?? []}
+        onOpenKiosk={onOpenKioskFromModal}
+        nativeID="screens-admin-attendance-qr-kiosk-launcher"
+        testID="screens-admin-attendance-qr-kiosk-launcher"
       />
 
       <BottomSheet

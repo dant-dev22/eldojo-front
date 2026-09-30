@@ -49,4 +49,6 @@ export interface PublicAttendanceResult {
 export interface PublicAttendanceRouteParams {
   organizationSlug: string;
   branchSlug: string;
+  classId?: number;
+  kiosk?: boolean;
 }

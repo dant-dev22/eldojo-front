@@ -314,7 +314,7 @@ export function PublicPageChrome({
 
                   {actionItems.length === 0 ? (
                     hintShowsAuth ? (
-                      <SessionIndicator idPrefix={idPrefix} />
+                      <SessionIndicator idPrefix={idPrefix} variant="home" />
                     ) : (
                       <View
                         style={styles.publicAuthActionsRow}

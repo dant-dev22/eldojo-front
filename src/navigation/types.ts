@@ -1,4 +1,4 @@
-export type AdminDashboardSection = "overview" | "branches" | "operations" | "payments" | "dojo";
+export type AdminDashboardSection = "overview" | "attendance" | "attendanceKiosk" | "branches" | "operations" | "payments" | "dojo";
 
 export type HomeInitialSection = "home" | "about" | "events" | "stores";
 
@@ -23,6 +23,8 @@ export type AdminStackParamList = {
     openAttendanceManager?: boolean;
     openAttendanceManagerTab?: "by-class" | "by-student";
     attendanceManagerPrefillStudentId?: number;
+    attendanceKioskClassId?: number;
+    attendanceKioskBranchId?: number;
   } | undefined;
   StudentsList: { openCreate?: boolean } | undefined;
   QrCodesList: undefined;
@@ -39,4 +41,10 @@ export type StudentStackParamList = {
   StudentProfile: undefined;
   AttendanceHistory: undefined;
   SecuritySettings: undefined;
+  SelfAttendance: {
+    organizationSlug?: string;
+    branchSlug?: string;
+    classId?: number;
+    source?: "qr" | "manual";
+  } | undefined;
 };

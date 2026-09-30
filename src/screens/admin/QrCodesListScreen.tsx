@@ -771,6 +771,7 @@ export function QrCodesListScreen({ navigation }: Props) {
         activeSection="qr-codes"
         headerBottomContent={null}
         headerMainContent={qrHeaderMainContent}
+        onGoAttendance={() => navigation.navigate("AdminHome", { section: "attendance" })}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}

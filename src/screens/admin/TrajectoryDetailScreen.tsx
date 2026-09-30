@@ -681,6 +681,7 @@ export function TrajectoryDetailScreen({ navigation, route }: Props) {
     >
       <AdminShell
         activeSection="trajectory"
+        onGoAttendance={() => navigation.navigate("AdminHome", { section: "attendance" })}
         onGoBranches={() => navigation.navigate("AdminHome", { section: "branches" })}
         onGoDashboard={() => navigation.navigate("AdminHome")}
         onGoDojo={() => navigation.navigate("AdminHome", { section: "dojo" })}
