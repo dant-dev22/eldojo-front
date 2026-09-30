@@ -389,35 +389,80 @@ const env = ((typeof process !== "undefined" && process.env) || {}) as Record<st
 const _num = (v: string | undefined, fallback: number) =>
   v && !isNaN(Number(v)) ? Number(v) : fallback;
 
-const mergedTypography = {
-  displayFamily: Platform.select({
-    web: resolvedWebDisplay,
-    default: resolvedNativeDisplay,
-  }),
-  headingFamily: Platform.select({
-    web: resolvedWebHeading,
-    default: resolvedNativeHeading,
-  }),
-  bodyFamily: Platform.select({
-    web: resolvedWebBody,
-    default: resolvedNativeBody,
-  }),
-  monoFamily: Platform.select({
-    web: resolvedWebMono,
-    default: resolvedNativeMono,
-  }),
-  displaySize:
-    (storageTypography.displaySize as number) ??
-    _num(env.EXPO_PUBLIC_THEME_DISPLAY_SIZE, 56),
-  titleSize:
-    (storageTypography.titleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_TITLE_SIZE, 36),
-  subtitleSize:
-    (storageTypography.subtitleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_SUBTITLE_SIZE, 20),
-  bodySize:
-    (storageTypography.bodySize as number) ?? _num(env.EXPO_PUBLIC_THEME_BODY_SIZE, 16),
-  captionSize:
-    (storageTypography.captionSize as number) ?? _num(env.EXPO_PUBLIC_THEME_CAPTION_SIZE, 13),
-};
+const mergedTypography = (() => {
+  const base = {
+    displayFamily: Platform.select({
+      web: resolvedWebDisplay,
+      default: resolvedNativeDisplay,
+    }),
+    headingFamily: Platform.select({
+      web: resolvedWebHeading,
+      default: resolvedNativeHeading,
+    }),
+    bodyFamily: Platform.select({
+      web: resolvedWebBody,
+      default: resolvedNativeBody,
+    }),
+    monoFamily: Platform.select({
+      web: resolvedWebMono,
+      default: resolvedNativeMono,
+    }),
+    displaySize:
+      (storageTypography.displaySize as number) ??
+      _num(env.EXPO_PUBLIC_THEME_DISPLAY_SIZE, 56),
+    titleSize:
+      (storageTypography.titleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_TITLE_SIZE, 36),
+    subtitleSize:
+      (storageTypography.subtitleSize as number) ?? _num(env.EXPO_PUBLIC_THEME_SUBTITLE_SIZE, 20),
+    bodySize:
+      (storageTypography.bodySize as number) ?? _num(env.EXPO_PUBLIC_THEME_BODY_SIZE, 16),
+    captionSize:
+      (storageTypography.captionSize as number) ?? _num(env.EXPO_PUBLIC_THEME_CAPTION_SIZE, 13),
+  } as const;
+
+  const fontFamilyBody = base.bodyFamily as string | undefined;
+  const fontFamilyHeading = base.headingFamily as string | undefined;
+  const fontFamilyMono = base.monoFamily as string | undefined;
+
+  const displaySize = Number(base.displaySize);
+  const titleSize = Number(base.titleSize);
+  const subtitleSize = Number(base.subtitleSize);
+  const bodySize = Number(base.bodySize);
+  const captionSize = Number(base.captionSize);
+
+  const caption = { fontFamily: fontFamilyBody, fontSize: captionSize };
+
+  return {
+    displayFamily: base.displayFamily,
+    headingFamily: base.headingFamily,
+    bodyFamily: base.bodyFamily,
+    monoFamily: base.monoFamily,
+
+    displaySize,
+    titleSize,
+    subtitleSize,
+    bodySize,
+    captionSize,
+
+    fontSizeXs: captionSize - 2,
+
+    mono: {
+      fontFamily: fontFamilyMono ?? fontFamilyBody,
+      fontSize: bodySize,
+    },
+
+    titleLg: { fontFamily: fontFamilyHeading, fontSize: displaySize, fontWeight: "700" },
+    titleMd: { fontFamily: fontFamilyHeading, fontSize: titleSize, fontWeight: "700" },
+    titleSm: { fontFamily: fontFamilyHeading, fontSize: subtitleSize, fontWeight: "700" },
+
+    bodyLg: { fontFamily: fontFamilyBody, fontSize: subtitleSize, fontWeight: "500" },
+    bodyMd: { fontFamily: fontFamilyBody, fontSize: bodySize, fontWeight: "500" },
+    bodySm: { fontFamily: fontFamilyBody, fontSize: captionSize, fontWeight: "500" },
+
+    caption,
+    captionSm: { fontFamily: fontFamilyBody, fontSize: captionSize - 1, opacity: 0.8 },
+  };
+})();
 
 /* ---------- 7. Sombras + ancho activo ------------------------------------ */
 const storageShadows = (storageOvr.shadows || {}) as Record<string, any>;
