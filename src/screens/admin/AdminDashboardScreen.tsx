@@ -4123,9 +4123,9 @@ export function AdminDashboardScreen({ navigation, route }: Props) {
   const kioskEffectiveClass = useMemo(() => {
     if (!resolvedKioskClassId) return null;
     return (
-      allClasses.find((c: MartialClass) => c.id === resolvedKioskClassId) ?? null
+      classes.find((c: MartialClass) => c.id === resolvedKioskClassId) ?? null
     );
-  }, [resolvedKioskClassId, allClasses]);
+  }, [resolvedKioskClassId, classes]);
 
   const kioskStudentQrUrl = useMemo(() => {
     try {
